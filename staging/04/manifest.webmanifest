@@ -1,0 +1,23 @@
+{
+  "name": "Lists",
+  "short_name": "Lists",
+  "id": "./?mode=live",
+  "start_url": "./?mode=live",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f8f4",
+  "theme_color": "#f8f8f4",
+  "icons": [
+    {
+      "src": "../../assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../../assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

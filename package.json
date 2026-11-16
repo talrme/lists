@@ -1,0 +1,10 @@
+{
+  "name": "lists",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node --test tests/core.test.js",
+    "serve": "node tools/serve.cjs"
+  }
+}
