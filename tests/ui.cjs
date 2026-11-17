@@ -5,7 +5,7 @@ async function assign(page,person){
   else{await page.locator('#composer [data-sharing=shared]').click();await page.locator(`#composer [data-assignee="${person}"]`).click();}
 }
 async function add(page,title,{when='asap',person='private',description}={}){
-  await page.locator('#new-title').fill(title);await page.locator(`#composer [data-timing=${when}]`).click();
+  await page.locator('#new-title').fill(title);const timing=page.locator(`#composer [data-timing=${when}]`);if(await timing.isVisible())await timing.click();
   if(person!=='private')await assign(page,person);
   if(description!==undefined){await options(page);await page.locator('#new-description').fill(description);}
   await page.getByRole('button',{name:'Add task',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#composer [type=submit]').disabled);
@@ -13,7 +13,7 @@ async function add(page,title,{when='asap',person='private',description}={}){
 }
 async function scope(page,value,person='all'){
   await page.locator('[data-action=views]').click();await page.locator(`[data-scope=${value}]`).click();
-  if(value==='shared')await page.locator('#person-filter').selectOption(person);
+  if(value==='shared')await page.locator(`[data-person="${person}"]`).click();
   await page.getByRole('button',{name:'Done',exact:true}).click();
 }
 async function editorMode(page,mode){

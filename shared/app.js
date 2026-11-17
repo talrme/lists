@@ -1,8 +1,8 @@
 import {config} from '../config.js?v=lists-95c4f';
-import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder} from './core.js?v=planning1';
-import {isAdministrator} from './households.js';
+import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,assignedTo,unassigned} from './core.js?v=sharing2';
+import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=playground1';
-import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=compact1';
+import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=sharing2';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=1';
 import {taskGestures} from './gestures.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
@@ -21,7 +21,7 @@ let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],
 let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
 let gestures=null,undoAction=null,lastRealSpace='';
-function listPrefs(){return {scope:category==='todo'?'mine':'all',person:'all',editor:'inline',...(prefs.lists?.[category]||{})};}
+function listPrefs(){return {scope:'mine',person:'all',editor:'inline',...(prefs.lists?.[category]||{})};}
 function persist(){try{localStorage.setItem(preferenceKey,JSON.stringify(prefs));}catch{notify('Settings could not be saved on this device.');}}
 function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=Object.values(prefs.animations).some(Boolean)?'custom':'off';motion.sync();}
 function saveListPrefs(patch){prefs.lists||={};prefs.lists[category]={...listPrefs(),...patch};persist();}
@@ -42,21 +42,27 @@ function notify(message,undo=null){
 }
 function errorText(error){
   const code=error?.code||'';
-  if(code.includes('permission-denied'))return 'Access denied. Publish the latest Firebase rules for descriptions, photos and task ordering; check household access too.';
+  if(code.includes('permission-denied'))return 'Access denied. Publish the latest Firebase rules for sharing, descriptions and task ordering; check household invitations too.';
   if(code.includes('popup-blocked'))return 'Allow the Google sign-in window, then try again.';
   if(code.includes('unauthorized-domain'))return 'Add this domain under Firebase Authentication → Settings → Authorized domains.';
   return error?.message||'Something went wrong. Please try again.';
 }
 function status(message){$('#connection').textContent=message==='Live'?'Live · Changes sync between devices':message;}
-function updatePeople(){composerFields.updatePeople(members,profiles,user?.uid);inlineEditor?.controller.updatePeople(members,profiles,user?.uid);}
-function mine(task){return task.visibility==='private'&&task.ownerUid===user?.uid||task.visibility==='shared'&&(!task.assigneeUid||task.assigneeUid===user?.uid);}
+function updatePeople(){
+  composerFields.updatePeople(members,profiles,user?.uid);$('#edit-form')?._controller?.updatePeople(members,profiles,user?.uid);
+  if(person.startsWith('email:')){const id=Object.keys(profiles).find(id=>!id.startsWith('email:')&&profiles[id].email===person.slice(6));if(id){person=id;saveListPrefs({person});}}
+  if($('.view-choice-track'))bindViews();
+}
+function mine(task){return task.visibility==='private'&&task.ownerUid===user?.uid||task.visibility==='shared'&&(unassigned(task)||assignedTo(task,user?.uid,user?.email));}
+function matchesPerson(task,key){return key==='all'||(key==='unassigned'?unassigned(task):assignedTo(task,key,key.startsWith('email:')?key.slice(6):profiles[key]?.email));}
 function currentTasks(){
   return tasks.filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
-    .filter(task=>scope==='mine'?mine(task):scope==='shared'?task.visibility==='shared'&&(person==='all'||(person==='unassigned'?!task.assigneeUid:task.assigneeUid===person)):true)
+    .filter(task=>scope==='mine'?mine(task):scope==='shared'?task.visibility==='shared'&&matchesPerson(task,person):true)
     .filter(task=>category==='todo'?view==='today'?!!taskDay(task,today,picks)&&taskDay(task,today,picks)<=addDays(today,prefs.daysShown-1):inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
     .sort(taskOrder);
 }
 function rowMarkup(task){
+  task={...task,assigneeUid:task.assigneeUid||(task.assigneeEmail?'email:'+task.assigneeEmail:null)};
   const suggestion=category==='todo'&&view==='today'&&!task.dueDate&&!task.waiting&&picks.includes(task.id);
   const date=task.waiting?`Follow up ${shortDate(task.followUp)}`:task.dueDate&&task.dueDate!==today?`${task.dueDate<today?'Since':'Due'} ${shortDate(task.dueDate)}`:'';
   const metadata=[suggestion?'A little nudge':null,date].filter(Boolean),hasDetails=!!task.description?.trim();
@@ -129,6 +135,7 @@ function draftFrom(form,task=null){
   if(raw.category!=='todo'){raw.mode='later';raw.waiting=false;}
   if(!raw.description&&!task?.description)delete raw.description;
   const draft=taskDraft(raw);
+  if(task?.assigneeEmail&&!draft.assigneeEmail)draft.assigneeEmail=null;
   if(raw.waiting){if(!raw.followUp||!/^\d{4}-\d{2}-\d{2}$/.test(raw.followUp))throw new Error('Choose a follow-up date.');draft.waiting=true;draft.followUp=raw.followUp;}
   if(task)draft.completed=task.completed;
   return {raw,draft};
@@ -198,9 +205,9 @@ async function taskEditor(task,{modal=false,existing=null}={}){
   if(inModal)open('Edit task',form);else{inlineEditor={id:task.id,rev:task.rev,form,controller:form._controller,initial:form._initial};render();motion.enter([form]);form.scrollIntoView({block:'nearest',behavior:motion.enabled('navigation')?'smooth':'instant'});}icons();
 }
 function viewMarkup(){
-  return `<fieldset class="view-options"><legend>Show</legend><div class="choice-track view-choice-track" role="group" aria-label="List view"><span class="choice-indicator" aria-hidden="true"></span>${[['mine','My list'],['shared','Shared'],['all','All']].map(([id,label])=>`<button data-scope="${id}" aria-pressed="${scope===id}">${label}</button>`).join('')}</div></fieldset><div class="view-people" ${scope==='shared'?'':'hidden'}><label class="field">Assigned to<select id="person-filter"><option value="all">Everyone</option><option value="unassigned">Anyone · unassigned</option>${Object.entries(members).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('')}</select></label></div>`;
+  return `<fieldset class="view-options"><legend>Show</legend><div class="choice-track view-choice-track" role="group" aria-label="List view"><span class="choice-indicator" aria-hidden="true"></span>${[['mine','For me'],['shared','Shared'],['all','Both views']].map(([id,label])=>`<button data-scope="${id}" aria-pressed="${scope===id}">${label}</button>`).join('')}</div><p class="view-explanation"></p></fieldset><div class="view-people" ${scope==='shared'?'':'hidden'}><span class="view-label">Assigned to</span><div class="view-person-choices" role="group" aria-label="Filter by person"></div></div>`;
 }
-function bindViews(){const root=$('.view-choice-track');if(!root)return;root.style.setProperty('--choice',['mine','shared','all'].indexOf(scope));root.querySelectorAll('[data-scope]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scope===scope)));$('.view-people').hidden=scope!=='shared';$('#person-filter').value=person;$('#person-filter').onchange=async event=>{if(!await leaveInline())return;person=event.target.value;saveListPrefs({person});render();};}
+function bindViews(){const root=$('.view-choice-track');if(!root)return;root.style.setProperty('--choice',['mine','shared','all'].indexOf(scope));root.querySelectorAll('[data-scope]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scope===scope)));$('.view-people').hidden=scope!=='shared';$('.view-explanation').textContent=scope==='mine'?'Your private tasks, shared tasks assigned to you, and unassigned shared tasks.':scope==='shared'?'Household shared tasks only.':'Your private tasks and all household shared tasks.';$('.view-person-choices').innerHTML=`<button data-person="all" aria-pressed="${person==='all'}">Everyone</button>`+Object.keys(members).concat('unassigned').map(id=>`<button data-person="${esc(id)}" aria-pressed="${person===id}">${avatar(id==='unassigned'?null:id,members,profiles)}<span>${esc(id==='unassigned'?'Unassigned':members[id])}</span></button>`).join('');}
 function views(){open('View · '+names[category],viewMarkup()+'<div class="modal-footer"><button class="primary" data-close>Done</button></div>');bindViews();}
 function householdPicker(){return `<label class="field">Household<select id="household-select"><option value="" disabled ${households.some(h=>h.id===currentSpace.id)?'':'selected'}>Choose household</option>${households.map(h=>`<option value="${esc(h.id)}" ${h.id===currentSpace.id?'selected':''}>${esc(h.title||h.id)}</option>`).join('')}</select></label>`;}
 function resetWorkspace(){undoAction=null;clearTimeout(notify.timer);$('#toast').classList.remove('visible');$('#toast').inert=true;inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';restoreView();pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();}
@@ -242,6 +249,7 @@ document.addEventListener('click',async event=>{
   if(button.id==='exit-preview'){store.exitPreview();const url=new URL(location.href);url.searchParams.set('household',currentSpace.id);history.replaceState(null,'',url);}
   if(button.dataset.view){if(!await leaveInline())return;view=button.dataset.view;render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.scope){if(!await leaveInline())return;scope=button.dataset.scope;person='all';saveListPrefs({scope,person});bindViews();render();}
+  if(button.dataset.person){if(!await leaveInline())return;person=button.dataset.person;saveListPrefs({person});bindViews();render();}
   if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';restoreView();composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task){if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);}}
   if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Reopened':'Done. Nicely done.',task.completed?null:{id:task.id,rev:task.rev+1,patch:{completed:false}});if(!task.completed){motion.burst(rect);motion.travel(rect,category==='todo'?$('[data-view=done]'):$('.simple-completed'));}}}
@@ -264,7 +272,7 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="../../FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=playground1');
+    const {connectFirebase}=await import('./firebase.js?v=sharing2');
     store=await connectFirebase(config,{
       tasks:onTasks,status,
       preview(profile){preview=profile;user=profile||signedInAccount;document.documentElement.toggleAttribute('data-preview',!!profile);$('#preview-banner').hidden=!profile;$('#preview-name').textContent=profile?'Viewing as '+profile.name:'';close();},

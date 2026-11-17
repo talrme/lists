@@ -2,6 +2,17 @@
 
 Last updated November 16, 2026. Read this, README.md and FIREBASE_SETUP.md before changes. Keep all three current.
 
+## Current task-detail controls (supersedes earlier toolbar/member-join notes)
+
+- Description is a plain textarea, no Markdown insertion toolbar or preview toggle. Preserve existing text. Keep descriptionHtml sanitization for read-only admin rendering.
+- Date is always visible inside task options, initially blank on new tasks. Clicking anywhere in the native input calls showPicker when supported; unsupported browsers keep normal native input behavior. No Choose a date switch.
+- Waiting for a response comes BEFORE Date. It replaces that field with Follow-up date, 3/7/14/30/90-day buttons, compact date input and Custom badge. Manual changes deselect all presets, even if the chosen date happens to match a preset. First enabling defaults to one week; existing saved dates show Custom on reopen (no misleading preset inference).
+- View defaults to For me (private owned + shared assigned to self + shared unassigned), on every category. Shared uses person buttons; Both views means own private plus ALL household shared. Explain each scope. Existing per-list choices remain remembered.
+- householdPeople builds options from household invitations PLUS actual member profiles. Invited-but-unregistered identities use an `email:` UI key and optional `assigneeEmail` task field; assigneeUid remains null. Never put an email into assigneeUid, hardcode real UIDs, forge membership, or read a global directory as a normal user. Registered identities continue using real UIDs.
+- core assignedTo/unassigned and candidateTasks take pending email assignment into account, including daily receipts and filters. After joining, old email tasks appear automatically; editing converts them to a UID assignment and explicitly clears assigneeEmail to null. No bulk migration or extra polling.
+- Rules permit email assignments only for invited emails on shared tasks with null UID; deny outsiders, dual targets and private email assignment. Preserve historical assignment on unrelated edits after invite revocation, but do not allow new assignment to revoked people. Read/write privacy and admin boundaries stay unchanged.
+- Latest sharing rules MUST be manually published. No production deployment or production data writes were performed by the agent. Pending-invite assignment fails visibly and retains the draft under older rules.
+
 ## Location and scope
 
 - Canonical repo: `/Users/talg/Desktop/Websites For Fun/lists`; remote `https://github.com/talrme/lists.git`; main branch; Pages root `https://talrme.github.io/lists/`.
@@ -59,11 +70,11 @@ Phone installation: all ten generated heads include Apple standalone/title/statu
 
 The composer is the first normal workspace element. Do not restore the top logo, date, To-do heading or Mine/Shared strip. Keep household/connection notices visible BELOW footer utilities. Ten distinct styling directions remain intentionally selectable.
 
-ASAP / Soon / Later is a segmented control with a sliding selection. Soon means the next five weekdays. The chevron reveals Description, Private/Shared, member avatars/Anyone, exact date and waiting/follow-up. Private is default; switching from Private to Shared selects the current registered user. Clicking an already-selected Shared button preserves the existing assignee. Shared rows show assignee photo/initials or a question mark for Anyone; private rows have no avatar. Waiting is a detail flag, not a row quick action. Footer View holds My list / Shared / All and assignment filtering.
+ASAP / Soon / Later is a segmented control with a sliding selection. Soon means the next five weekdays. The chevron reveals Description, Private/Shared, invited-member avatars/Unassigned, waiting/follow-up and Date. Private is default; switching from Private to Shared selects the current user. Clicking an already-selected Shared preserves the assignee. Private rows have no avatar. Footer View holds For me / Shared / Both views and person-button filters.
 
 Settings contain global Appearance, a CURRENT-LIST settings group (To-do/Groceries/Movies/Other) for view/editor behavior, Account & privacy, Scheduling, and Tal-only Admin. Store view/editor preferences per category under prefs.lists; do not force groceries to use the To-do visibility filter. The default editor is inline; its expand icon moves the SAME form node/draft into the modal. Keyed rendering preserves an open form and active keyboard through snapshot updates. Never rebuild the whole task-list DOM while typing. Dirty inline navigation asks before discarding. Preserve due date, waiting state and completion on unrelated edits; do not reroll a Soon date when editing a description.
 
-Descriptions are optional Markdown strings bounded to 10,000 characters. Bold/italic/bullets/checklist buttons insert syntax; the eye previews it. Checklist preview boxes are read-only formatting, not standalone subtask writes. Vendored Marked 18.2.1 + DOMPurify 3.4.18 parse/sanitize using a restricted tag/attribute allowlist, no images/scripts/styles; normalize links to safe new tabs and inputs to disabled checkboxes. Do not persist/trust raw rich HTML. Old task documents without description remain valid. Admin previews can open a read-only description modal, never an editable form.
+Descriptions are optional strings bounded to 10,000 characters, edited as plain text. Existing Markdown is preserved. Read-only admin descriptions use vendored Marked 18.2.1 + DOMPurify 3.4.18 with a restricted tag/attribute allowlist, no images/scripts/styles, safe new-tab links and disabled checkboxes. Do not persist/trust raw rich HTML. Old task documents without description remain valid. No formatting toolbar or edit-preview toggle remains.
 
 Member and directory photoURL is optional, HTTPS Google user-content only. Store it from the authenticated Google account, never use client photo fields as authorization. Members can update only their own name/photo, not email/invitations. Failed images fall back to initials. Older deployed rules rejecting photo fields trigger legacy name/email registration so normal access does not break; a nonempty description still requires the new rules and failed saves keep drafts. After rule publication, both people should revisit to populate profile photos.
 
@@ -77,7 +88,7 @@ Waiting is `waiting:true,dueDate:null,followUp:date`; don't draw waiting tasks a
 
 - `shared/core.js`: pure calendar/scheduling, task validation, visibility pool and list selectors; imported by browser and Node tests.
 - `shared/app.js`: compact composer-first UI, keyed task-row rendering, preserved inline editor nodes/drafts/focus, inline/modal draft transfer, footer View filters, category-scoped local settings, daily-pick orchestration and sign-in gate.
-- `shared/task-fields.js`: shared create/edit field controls, segmented scheduling/privacy, member avatars and trusted photo URLs, Markdown formatting toolbar and allowlisted sanitized description preview. No rich HTML stored in Firestore.
+- `shared/task-fields.js`: shared create/edit controls, segmented scheduling/privacy, invited/member avatars, compact date/follow-up controls, plain description and sanitized read-only rendering. No rich HTML stored in Firestore.
 - `tests/fixtures/store.js`: synthetic test-only store, loaded only by Playwright's intercepted Firebase module in tests/ui.cjs. Not imported by public application code. Test-person hooks exist only in intercepted test responses, never in deployed application JS. Do not add a product URL flag to activate it.
 - `shared/firebase.js`: dynamically loads official Firebase CDN v13.3.0 only in live mode; Google popup + browserLocalPersistence; admin metadata/member invitation discovery, selected household listener, self-registration and member names, then two scoped task listeners. Global directory registration is an identity-only upsert; task/daily/household writes are transactions. Reconnect revoked-then-reinvited membership from discovery, not polling.
 - `shared/households.js`: pure admin display identity, invitation/slug validation and legacy/new membership helpers; the server still independently enforces privileges.
@@ -103,7 +114,7 @@ listSpaces/HOUSEHOLD_ID/members/UID
   email(authenticated user's exact email), name, photoURL(optional Google URL), joinedAt
 # Legacy memberUids/names are retained when present, not repopulated for new households.
 listSpaces/HOUSEHOLD_ID/environments/staging/tasks/TASK_ID
-  title, description(optional Markdown string, max 10000), category(todo|grocery|movies|other), ownerUid, assigneeUid(null|memberUID),
+  title, description(optional string, max 10000), category(todo|grocery|movies|other), ownerUid, assigneeUid(null|memberUID), assigneeEmail(optional null|invitedEmail),
   visibility(private|shared), dueDate(null|date), waiting, followUp(null|date),
   completed, rev, createdAt(client ms), updatedAt(server timestamp)
 listSpaces/HOUSEHOLD_ID/environments/staging/daily/YYYY-MM-DD/picks/UID

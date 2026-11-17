@@ -19,3 +19,14 @@ export function belongsTo(household,account){
 export function memberLabel(account){
   return account.email==='talrme@gmail.com'?'Tal':account.email==='sophiegreen2@gmail.com'?'Sophie':String(account.displayName||account.email?.split('@')[0]||'Member').trim().slice(0,80);
 }
+export function householdPeople(household,registered){
+  const names=household.schemaVersion===2?{}:{...(household.names||{})},profiles={};
+  for(const {uid,...profile} of registered){
+    if(household.memberEmails?.includes(profile.email)||household.schemaVersion!==2){names[uid]=memberLabel({email:profile.email,displayName:profile.name});profiles[uid]=profile;}
+  }
+  for(const email of household.memberEmails||[]){
+    if(Object.values(profiles).some(profile=>profile.email===email))continue;
+    const key='email:'+email;names[key]=memberLabel({email});profiles[key]={email,name:names[key]};
+  }
+  return {names,profiles};
+}

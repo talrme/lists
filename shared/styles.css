@@ -41,3 +41,18 @@ html[data-fx-ambient] .bottom-nav [aria-current] svg{animation:lists-idle 4s eas
 @media(max-width:380px){.compact-workspace{padding:10px 10px 96px}.compact-workspace .utilities{gap:16px}.task-edit-form{padding-left:9px;padding-right:9px}.sharing-track{width:170px}.task-summary{padding-inline:0}.task-avatar{margin-inline:3px}.defer-task{width:32px}.compact-workspace .task-title{font-size:13px}.task-check{width:40px}}
 @media(prefers-reduced-motion:reduce){.task-options{animation:none}.choice-track .choice-indicator{transition:none}}
 .task-edit-form{background:var(--surface)}
+.description-field textarea{margin-top:8px}
+.compact-date{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font-size:12px;font-weight:650}
+.compact-date input[type=date]{font:inherit;font-size:16px;font-weight:400;min-height:42px;width:164px;max-width:100%;padding:8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);cursor:pointer;color-scheme:light}
+html[data-palette=night] .compact-date input{color-scheme:dark}
+.followup-heading{font-size:12px;font-weight:650;margin:4px 0 10px;display:flex;align-items:center;gap:8px}
+.custom-date{font-size:10px;font-weight:500;color:var(--muted);background:var(--soft);padding:3px 6px;border-radius:4px}
+.waiting-options .compact-date{justify-content:flex-start;margin-top:8px}
+.followup-choices{gap:5px}.followup-choices button{color:var(--muted);background:var(--bg)}
+.followup-choices [aria-pressed=true]{color:var(--accent-text);background:var(--accent)}
+.view-explanation{font-size:12px;color:var(--muted);line-height:1.5;margin:10px 0 0}
+.view-label{font-size:12px;font-weight:650}
+.view-person-choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.view-person-choices button{display:flex;align-items:center;gap:6px;min-height:44px;padding:7px 10px;border-radius:6px;background:var(--bg);color:var(--muted);font-size:12px}
+.view-person-choices [aria-pressed=true]{background:var(--soft);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.view-person-choices .task-avatar{margin:0}

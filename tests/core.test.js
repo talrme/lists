@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder} from '../shared/core.js';
+import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,unassigned,assignedTo} from '../shared/core.js';
+import {householdPeople} from '../shared/households.js';
+
+test('Invited people remain assignable before their first visit without duplicate profiles',()=>{
+ const household={schemaVersion:2,memberEmails:['talrme@gmail.com','sophiegreen2@gmail.com']};
+ const pending=householdPeople(household,[{uid:'tal',email:'talrme@gmail.com',name:'Tal'}]);
+ assert.equal(pending.names['email:sophiegreen2@gmail.com'],'Sophie');assert.equal(Object.keys(pending.names).length,2);
+ const joined=householdPeople(household,[{uid:'tal',email:'talrme@gmail.com',name:'Tal'},{uid:'sophie',email:'sophiegreen2@gmail.com',name:'Sophie Green'},{uid:'outsider',email:'outsider@example.com',name:'No'}]);
+ assert.deepEqual(joined.names,{tal:'Tal',sophie:'Sophie'});
+ const task={id:'email-task',...taskDraft({title:'For Sophie',ownerUid:'tal',assigneeEmail:'sophiegreen2@gmail.com',mode:'later',day:'2026-11-16'})};
+ assert.equal(task.visibility,'shared');assert(!unassigned(task));assert(assignedTo(task,'sophie','sophiegreen2@gmail.com'));
+ assert.deepEqual(candidateTasks([task],'tal','talrme@gmail.com'),[]);assert.deepEqual(candidateTasks([task],'sophie','sophiegreen2@gmail.com'),[task]);
+});
 test('Household uses Pacific dates, including DST boundaries',()=>{
  assert.equal(dayKey(Date.parse('2026-11-17T07:30:00Z')),'2026-11-16');
  assert.equal(dayKey(Date.parse('2026-03-08T10:30:00Z')),'2026-03-08');

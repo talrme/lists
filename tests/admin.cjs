@@ -27,8 +27,14 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   for(let i=0;i<100;i++){if(emulator.exitCode!==null)throw Error(logs);try{await fetch(`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/ready`);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   const {page:tal}=await openPerson('Tal');await tal.locator('#gate [data-action=settings]').waitFor();await admin(tal);
   await tal.locator('#create-home').click();assert.equal(await tal.locator('#household-form [name=id]').inputValue(),'home');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await tal.locator('#workspace').waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
-  const {page:sophie}=await openPerson('Sophie');await sophie.locator('#workspace').waitFor();await settings(sophie);assert.equal(await sophie.locator('#settings-admin').count(),0);await sophie.getByRole('button',{name:'Done',exact:true}).click();
+  await ui.add(tal,'Assigned before first visit',{person:'email:sophiegreen2@gmail.com'});assert.equal(await tal.getByText('Assigned before first visit',{exact:true}).count(),0);
+  await ui.scope(tal,'shared','email:sophiegreen2@gmail.com');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
+  await ui.add(tal,'Pending later suggestion',{person:'email:sophiegreen2@gmail.com',when:'later'});
+  const {page:sophie}=await openPerson('Sophie');await sophie.locator('#workspace').waitFor();await sophie.getByText('Assigned before first visit',{exact:true}).waitFor();await sophie.getByText('Pending later suggestion',{exact:true}).waitFor();
+  await settings(sophie);assert.equal(await sophie.locator('#settings-admin').count(),0);await sophie.getByRole('button',{name:'Done',exact:true}).click();
   await tal.locator('#composer [data-assignee=test-sophie]').waitFor({state:'attached'});
+  await ui.scope(tal,'shared','test-sophie');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
+  const pending=tal.locator('.task-row').filter({hasText:'Assigned before first visit'});await pending.locator('[data-edit]').click();assert.equal(await tal.locator('#edit-form [name=person]').inputValue(),'test-sophie');await tal.locator('#edit-form [data-assignee=shared]').click();await tal.locator('#edit-form [type=submit]').click();await ui.scope(tal,'shared','unassigned');await pending.waitFor();await ui.scope(tal,'mine');
   await add(tal,'Tal private entry');await tal.getByText('Tal private entry',{exact:true}).waitFor();assert.equal(await sophie.getByText('Tal private entry',{exact:true}).count(),0);
   await ui.add(tal,'Shared across devices',{person:'test-sophie',description:'**Shared notes**\n- [ ] A checklist'});await sophie.getByText('Shared across devices',{exact:true}).waitFor();
   const shared=page=>page.locator('.task-row').filter({hasText:'Shared across devices'});
@@ -38,7 +44,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await add(sophie,'Shared sync during editing','shared');await tal.getByText('Shared sync during editing',{exact:true}).waitFor();assert.equal(await tal.locator('#edit-form [name=description]').inputValue(),'Draft survives real Firestore sync');assert(await tal.locator('#edit-form [name=description]').evaluate(input=>document.activeElement===input));await tal.locator('#edit-form .cancel-editor').click();
   const ordering=page=>page.locator('.task-row').filter({hasText:'Shared sync during editing'});
   await ordering(sophie).locator('.drag-handle').click();await sophie.locator('[data-move-direction="-1"]').click();
-  await tal.waitForFunction(()=>document.querySelector('.task-row .task-name')?.textContent==='Shared sync during editing');
+  await tal.waitForFunction(()=>{const titles=[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent);return titles.indexOf('Shared sync during editing')<titles.indexOf('Shared across devices');});
   await shared(sophie).locator('[data-complete]').click();await shared(tal).waitFor({state:'detached'});await sophie.locator('.toast-undo').click();await shared(tal).waitFor();
   const bulk=await sophie.evaluate(async()=>{
     const rows=[...document.querySelectorAll('.task-row')],state=await Promise.all(rows.slice(0,2).map(async row=>{const id=row.dataset.task;const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk');const app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');const db=sdk.getFirestore(app.getApp('lists'));const snap=await sdk.getDoc(sdk.doc(db,'listSpaces','home','environments','staging','tasks',id));return {id,rev:snap.data().rev,patch:{sortOrder:rows.indexOf(row)*1024}};}));

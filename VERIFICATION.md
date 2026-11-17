@@ -2,6 +2,10 @@
 
 ## Passed locally
 
+Latest task-details/sharing update: 14 core tests, 84 actual local-emulator permission checks, real-SDK two-account admin workflows, all ten browser workflows/160 layouts, 40 small-phone editor/palette combinations, and ten planning workflows/120 layouts passed. Pending-invite tests assign to Sophie before her first household visit, verify it is NOT treated as unassigned/Tal's suggestion, verify appearance and daily suggestion eligibility on joining, filter by the registered identity, and convert to Unassigned. Rules reject outsider email, dual UID/email assignment and private email assignment; clearing historical assignment after revocation works. No production writes or production rules deployment.
+
+Date checks include blank initial value, exact-date override/reset, clicking the text area rather than just calendar icon, first waiting default, preset selection and Custom deselection. Description is plain text; existing read-only Markdown sanitization still rejects scripts/images/unsafe links. Manually inspected final phone details, View modal, desktop and night-editor screenshots under `/private/tmp/lists-*`. Physical-phone native date picker and actual Google sign-in remain owner checks.
+
 - Pure scheduling/admin-model suite: **13 tests**. Pacific day/DST, Monday/Friday/weekend windows, next-week Monday semantics, exact/ASAP/later scheduling, due-date rollover, the personal suggestion pool including shared unassigned tasks, waiting follow-ups, privacy defaults and explicit synthetic seed.
 - Browser workflows: **all 10 designs**, add/edit/complete/reopen/defer/follow-up/assign/filter/delete confirmation, other categories, settings persistence, local QR and locked unconfigured live pages.
 - Responsive/palette checks: **160 combinations** (10 designs × 4 widths × 4 palettes), including 320px phone, 390px phone, landscape phone and desktop. No horizontal page overflow or task-text overflow.

@@ -1,6 +1,6 @@
-import {candidateTasks,choose,dayKey} from './core.js';
-import {belongsTo,householdDraft,isAdministrator,memberLabel} from './households.js';
-import {photoUrl} from './task-fields.js?v=compact1';
+import {candidateTasks,choose,dayKey} from './core.js?v=sharing2';
+import {belongsTo,householdDraft,isAdministrator,memberLabel,householdPeople} from './households.js?v=sharing2';
+import {photoUrl} from './task-fields.js?v=sharing2';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
@@ -50,8 +50,7 @@ export async function connectFirebase(config,events) {
         if(run!==spaceVersion||authRun!==authVersion)return;
         children.push(dbSdk.onSnapshot(dbSdk.collection(db,'listSpaces',id,'members'),snapshot=>{
           if(run!==spaceVersion)return;
-          const names=household.schemaVersion===2?{}:{...(household.names||{})},profiles={};
-          snapshot.docs.forEach(doc=>{if(household.memberEmails?.includes(doc.data().email)||household.schemaVersion!==2){names[doc.id]=doc.data().name;profiles[doc.id]=doc.data();}});
+          const {names,profiles}=householdPeople(household,snapshot.docs.map(doc=>({uid:doc.id,...doc.data()})));
           events.members(names,profiles);
         },error=>{if(run===spaceVersion)events.error(error);}));
         const rows=[[],[]],received=[false,false],collection=dbSdk.collection(db,'listSpaces',id,'environments',environment,'tasks');
@@ -186,7 +185,7 @@ export async function connectFirebase(config,events) {
       await dbSdk.runTransaction(db,async transaction=>{const snap=await transaction.get(ref);if(!snap.exists()||snap.data().rev!==rev)throw new Error('This task changed. Close and reopen it.');transaction.delete(ref);});
     },
     async pick(day,uid){
-      const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(tasks,uid);
+      const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(tasks,uid,subject()?.email);
       if(preview){const old=await dbSdk.getDoc(ref);return old.exists()?old.data().taskId:null;}
       return dbSdk.runTransaction(db,async transaction=>{
         const old=await transaction.get(ref);if(old.exists())return old.data().taskId;

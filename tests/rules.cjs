@@ -41,6 +41,13 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await write('listSpaces/home',household(['talrme@gmail.com','sophiegreen2@gmail.com']),tal,true,'Tal creates household',['createdAt','updatedAt']);
   await read('listSpaces/home',sophie,true,'Invited Sophie reads household');await read('listSpaces/home',alice,false,'Uninvited Alice denied');
   await write('listSpaces/home/members/test-tal',{email:'talrme@gmail.com',name:'Tal'},tal,true,'Tal registers only authorized identity',['joinedAt']);
+  const pending='listSpaces/home/environments/staging/tasks/pending-sophie';
+  await write(pending,{...task('test-tal','shared'),assigneeEmail:'sophiegreen2@gmail.com'},tal,true,'Assign invited Sophie before member registration');
+  await write(pending+'-outsider',{...task('test-tal','shared'),assigneeEmail:'bob@example.com'},tal,false,'Cannot email-assign uninvited outsider');
+  await write(pending+'-dual',{...task('test-tal','shared','test-tal'),assigneeEmail:'sophiegreen2@gmail.com'},tal,false,'Cannot assign UID and email simultaneously');
+  await write(pending+'-private',{...task('test-tal'),assigneeEmail:'sophiegreen2@gmail.com'},tal,false,'Email assignment cannot leak into private task');
+  await write('listSpaces/home/environments/staging/daily/2026-11-15/picks/test-tal',{taskId:'pending-sophie'},tal,false,'Other person email task excluded from daily pool',['createdAt']);
+  await write('listSpaces/home/environments/staging/daily/2026-11-15/picks/test-sophie',{taskId:'pending-sophie'},sophie,true,'Own email task eligible before registration',['createdAt']);
   await write('listSpaces/home/members/test-sophie',{email:'sophiegreen2@gmail.com',name:'Sophie'},sophie,true,'Sophie registers own identity',['joinedAt']);
   await write('listSpaces/home/members/test-sophie',{photoURL:'https://lh3.googleusercontent.com/synthetic-photo'},sophie,true,'Member updates own Google photo',[],true);
   await write('listSpaces/home/members/test-tal',{photoURL:'https://lh3.googleusercontent.com/synthetic-photo'},sophie,false,'Cannot change another member photo',[],true);
@@ -105,6 +112,8 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await write('listSpaces/home',{memberEmails:['talrme@gmail.com'],rev:2},tal,true,'Admin can revoke invitation',['updatedAt'],true);
   await read(home+'shared',sophie,false,'Removed member immediately loses task access');
   await write(home+'shared',{title:'Reassignable after removal',rev:3},tal,true,'Remaining owner can still edit shared task after member removal',['updatedAt'],true);
+  await write(pending,{title:'Preserve historical email assignment',rev:2},tal,true,'Existing email task editable after invite revoked',['updatedAt'],true);
+  await write(pending,{assigneeEmail:null,rev:3},tal,true,'Clear email assignment after invite revoked',['updatedAt'],true);
   console.log(JSON.stringify({result:'PASS',checks,project:PROJECT,coverage:'Actual local Firestore rules: admin-only create/manage, verified identities, self-registration, scoped queries, private/shared isolation, new households and invited third parties, revision checks, daily choices, legacy migration and revoked access',productionWrites:0}));
  }catch(error){console.error(logs.slice(-6000));throw error;}finally{emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

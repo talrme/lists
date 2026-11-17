@@ -12,7 +12,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    const title='Test task '+number;await ui.add(page,title,{description:'**Bring these**\n- Apples\n- [ ] Bananas'});
    let row=page.locator('.task-row').filter({hasText:title});await row.locator('.details-hint').waitFor();await row.locator('[data-edit]').click();
    assert(!await page.locator('#dialog').isVisible());await page.locator('#edit-form [name=title]').fill('Edited '+number);
-   await page.locator('#edit-form .description-preview-toggle').click();assert.equal(await page.locator('#edit-form .description-preview strong').textContent(),'Bring these');assert.equal(await page.locator('#edit-form .description-preview input[type=checkbox]').count(),1);
+   assert.equal(await page.locator('#edit-form [name=description]').inputValue(),'**Bring these**\n- Apples\n- [ ] Bananas');assert.equal(await page.locator('#edit-form [data-format]').count(),0);
    await page.locator('#edit-form .popout-editor').click();assert(await page.locator('#dialog').isVisible());assert.equal(await page.locator('#edit-form [name=title]').inputValue(),'Edited '+number);
    await page.getByRole('button',{name:'Save',exact:true}).click();await page.locator('#dialog').waitFor({state:'hidden'});
    row=page.locator('.task-row').filter({hasText:'Edited '+number});await row.locator('[data-complete]').click();await page.locator('[data-view=done]').click();await row.locator('[data-complete]').click();await page.locator('[data-view=today]').click();
