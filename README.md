@@ -4,15 +4,15 @@
 
 **Repository:** [talrme/lists](https://github.com/talrme/lists)
 
-Phone-first private and shared lists for Tal and Sophie. Ten fully interactive design options share the same scheduling code and device sandbox, so you can compare layouts without re-entering tasks.
+Phone-first private and shared lists for Tal and Sophie. Ten fully interactive staging designs use Google sign-in and the same live household data, so you can compare layouts without re-entering tasks.
 
 ## Try the designs
 
 Open the live website to pick from Clear Day, Ticket Office, High Tide, The Edit, Little Wins, Command Line, Daybook, Metro, Block Party and After Hours. Each lives in `staging/01/` through `staging/10/`.
 
-**The default previews are explicitly sample data, stored only in this browser. They are not authenticated, private storage or cross-phone sync.** Sandbox Tal/Sophie switching is for testing, not a security boundary. No sample data is automatically sent to Firebase. All sandbox designs share `lists-sandbox-v1`; changes carry between designs on the same origin/device. No sensitive tasks belong in this sandbox.
+**All staging designs are live.** Every design link requires Google sign-in (or reuses your existing session). Changes affect the same real household tasks across all ten designs; these are layout options, not isolated databases. There is no local sandbox, pretend-person switch, sample reset, or unconfigured fallback. Old local sample data is ignored, never uploaded or automatically deleted. Legacy mode query parameters no longer select a different backend.
 
-Each design's **Google sign-in** link (`?mode=live`) connects to Firebase project `lists-95c4f`. The owner confirmed publishing the admin/household rules. The newer description/avatar schema needs one further rules publication; see FIREBASE_SETUP.md. There is no public-data fallback. Grocery, Movies and Other lists have working basic add/edit/complete/remove functionality; To-do has the full scheduling workflow.
+Each design's **Open** link connects to Firebase project `lists-95c4f`. The owner confirmed publishing the admin/household rules. The newer description/avatar schema needs one further rules publication; see FIREBASE_SETUP.md. There is no public-data fallback. Grocery, Movies and Other lists have working basic add/edit/complete/remove functionality; To-do has the full scheduling workflow.
 
 ## Firebase setup
 
@@ -53,7 +53,7 @@ The first prototype listens to all of your private tasks and all household share
 
 ## Phone settings
 
-Each design starts directly with the add field and ASAP / Soon / Later timing segments. No logo/date/category heading or top Mine/Shared controls. A chevron reveals description formatting, privacy/assignment, exact date and waiting/follow-up options. Sandbox/live connection notices are at the bottom, not above the task list.
+Each design starts directly with the add field and ASAP / Soon / Later timing segments. No logo/date/category heading or top Mine/Shared controls. A chevron reveals description formatting, privacy/assignment, exact date and waiting/follow-up options. Household/connection notices are at the bottom, not above the task list.
 
 Descriptions are bounded plain Markdown (10,000 characters), with Bold / Italic / Bullets / Checklist toolbar buttons and a sanitized formatted preview. This is a lightweight editor, not a full document processor. Checklist formatting is supported; preview checkboxes are read-only and their checked state is edited in the text before Save. A subtle ellipsis marks tasks containing descriptions. No raw user HTML is trusted, no description images are loaded, and external description links open separately.
 
@@ -65,6 +65,8 @@ Save / Share includes a local QR code, link copying and iPhone/Android installat
 
 ## Run and verify
 
+Future testing idea, **not implemented**: an admin-only Playground household with the same Google sign-in, isolated sample tasks, a clear Testing label and a reset limited to Playground. The owner wants to approve the design before implementation. No test household has been created by the agent.
+
 With Node installed:
 
 ```sh
@@ -75,6 +77,6 @@ node tools/serve.cjs
 
 Open **http://localhost:5195/lists/**. Port can be changed with `PORT=5196`. The preview server serves only this project, handles `/lists/` like GitHub Pages, and disables caching. Static files are also GitHub Pages compatible without a build server.
 
-Browser checks use Playwright and Chrome: `node tests/browser.cjs` and `node tests/review.cjs`. They cover the sandboxes, responsive settings and fail-closed unconfigured pages. `node tests/rules.cjs` uses a local Firestore emulator for 68 permission checks. `node tests/admin.cjs` drives real Firestore SDK transactions/listeners against that emulator with synthetic Google identities: household creation, two-browser shared completion, private isolation, household switching, membership revocation/reinstatement and all ten small-phone admin forms. Set `LISTS_TEST_JAVA` and `LISTS_TEST_FIRESTORE_JAR` to a Java 21 executable and Google's Firestore emulator JAR. No production records are used or written. Actual Google OAuth and physical-phone behavior still require the owner's live setup checks. See VERIFICATION.md.
+Browser checks use Playwright and Chrome: `node tests/browser.cjs` and `node tests/review.cjs`. They use a test-only intercepted backend for synthetic UI workflows, responsive settings and fail-closed unconfigured pages. The sample store lives under tests/fixtures; no production module imports it and no URL/settings flag enables it. `node tests/rules.cjs` uses a local Firestore emulator for 68 permission checks. `node tests/admin.cjs` drives real Firestore SDK transactions/listeners against that emulator with synthetic Google identities: household creation, two-browser shared completion, private isolation, household switching, membership revocation/reinstatement and all ten small-phone admin forms. Set `LISTS_TEST_JAVA` and `LISTS_TEST_FIRESTORE_JAR` to a Java 21 executable and Google's Firestore emulator JAR. No production records are used or written. Actual Google OAuth and physical-phone behavior still require the owner's live setup checks. See VERIFICATION.md.
 
 `tools/build.mjs` generates the chooser, ten HTML entry points and manifests. Edit shared application modules and styles for behavior; do not manually fork ten logic implementations. See [AI_README.md](AI_README.md) for invariants and handoff context.

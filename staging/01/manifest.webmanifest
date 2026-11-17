@@ -2,7 +2,7 @@
   "name": "Lists",
   "short_name": "Lists",
   "id": "./?mode=live",
-  "start_url": "./?mode=live",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#edf5ee",

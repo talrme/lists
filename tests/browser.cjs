@@ -5,9 +5,9 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
  try{
   for(let design=1;design<=10;design++){
    const number=String(design).padStart(2,'0'),context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push({design,error:e.message}));
-   await page.goto(new URL(`staging/${number}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await ui.mockBackend(page,BASE);await page.goto(new URL(`staging/${number}/`,BASE).href);await page.locator('#workspace').waitFor();
    assert.equal(await page.locator('.topbar,.page-heading,.scope-strip').count(),0);assert((await page.locator('#new-title').boundingBox()).y<30);
-   assert((await page.locator('#mode-status').innerText()).includes('sample data'));assert((await page.locator('#mode-status').boundingBox()).y>(await page.locator('.utilities').boundingBox()).y);
+   assert((await page.locator('#mode-status').innerText()).includes('Test household'));assert((await page.locator('#mode-status').boundingBox()).y>(await page.locator('.utilities').boundingBox()).y);
    assert.equal(await page.getByText('Order a new bike helmet',{exact:true}).count(),0);assert.equal(await page.locator('[data-quick=waiting]').count(),0);
    const title='Test task '+number;await ui.add(page,title,{description:'**Bring these**\n- Apples\n- [ ] Bananas'});
    let row=page.locator('.task-row').filter({hasText:title});await row.locator('.details-hint').waitFor();await row.locator('[data-edit]').click();
@@ -30,6 +30,6 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    await page.route('**/config.js*',route=>route.fulfill({contentType:'text/javascript',body:'export const config={firebase:null,space:"home",environment:"staging",timeZone:"America/Los_Angeles",liveUrl:"https://talrme.github.io/lists/"};'}));await page.goto(new URL(`staging/${number}/?mode=live`,BASE).href);await page.getByText('Google sign-in is not connected yet.',{exact:true}).waitFor();assert(!await page.locator('#workspace').isVisible());
    workflows++;await context.close();console.log('Checked compact design '+number);
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',workflows,layouts,coverage:'Compact top composer, formatted descriptions, inline/modal draft transfer, save, completion, defer, waiting details, sharing/avatar filtering, delete confirmation, per-list editor persistence, four categories, 160 responsive/palette combinations, fail-closed unconfigured live mode'}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',workflows,layouts,testing:'Test-only backend interception; public staging always requires Google sign-in',coverage:'Compact top composer, formatted descriptions, inline/modal draft transfer, save, completion, defer, waiting details, sharing/avatar filtering, delete confirmation, per-list editor persistence, four categories, 160 responsive/palette combinations, fail-closed unconfigured live mode'}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

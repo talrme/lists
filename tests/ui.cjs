@@ -19,4 +19,17 @@ async function scope(page,value,person='all'){
 async function editorMode(page,mode){
   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
 }
-module.exports={options,assign,add,scope,editorMode};
+async function mockBackend(page,base){
+  const fixture=new URL('tests/fixtures/store.js',base).href;
+  await page.route('https://firestore.googleapis.com/**',route=>route.abort());
+  await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:`
+    import {sandboxStore} from ${JSON.stringify(fixture)};
+    export async function connectFirebase(config,events){
+      const store=sandboxStore(events.tasks,events.status);
+      const select=async uid=>{events.account({uid,email:uid+'@test.invalid',emailVerified:false,displayName:uid==='tal'?'Tal':'Sophie',providerData:[]});events.preview?.(null);events.households([{id:'home',title:'Test household'}]);events.space({id:'home',title:'Test household'});events.members({tal:'Tal',sophie:'Sophie'});await store.ready();events.ready();};
+      window.__testSelectUser=select;setTimeout(()=>void select('tal'),0);
+      return {...store,logout:async()=>events.account(null)};
+    }
+  `}));
+}
+module.exports={options,assign,add,scope,editorMode,mockBackend};

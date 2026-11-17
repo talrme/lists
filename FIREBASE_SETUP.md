@@ -28,7 +28,7 @@ No API key, service-account key, billing upgrade, Cloud Function or Google Sheet
 
 Do this after the rules have published:
 
-1. Open https://talrme.github.io/lists/staging/01/?mode=live .
+1. Open https://talrme.github.io/lists/staging/01/ .
 2. Sign in with **talrme@gmail.com** if needed.
 3. Open **Settings**. Before setup, a Settings button is available on the access screen; after setup it is in the footer.
 4. Scroll to the bottom of the settings modal. Expand **Admin**, then **Households**.
@@ -43,7 +43,7 @@ If home already exists, creation refuses to overwrite it. Use **Manage** to revi
 
 ## Then: Sophie joins
 
-1. Sophie opens https://talrme.github.io/lists/staging/01/?mode=live&household=home .
+1. Sophie opens https://talrme.github.io/lists/staging/01/?household=home .
 2. She signs in with **sophiegreen2@gmail.com**.
 3. Her name registers automatically with the identity that is already invited. No UID copying, Firebase Console editing or second setup form is required.
 4. After she joins, she appears as an assignment option on Tal's phone. She has Settings but no Admin section.
@@ -74,7 +74,7 @@ As Tal, use **Settings → Admin → Households → New household**:
 
 Tal does NOT need to be a member of their household. As explicitly requested by the owner, Tal can read everyone's personal and shared tasks using **Settings → Admin → View as user → Show registered users → View as**. A visible read-only banner and Exit preview button distinguish this from Tal's own account. Other household members cannot see each other's personal tasks. The UI explains this admin exception.
 
-Use **Manage** to rename a household or change invitations. Removing an email revokes access without deleting its tasks. Reinviting the same account restores access. An unregistered invitee appears as assignable after their first visit. Household deletion, true sign-in impersonation, editing on behalf and authenticated test-user administration are intentionally not implemented yet. Read-only View as user is available. The existing device sandbox remains available for pretend Tal/Sophie testing.
+Use **Manage** to rename a household or change invitations. Removing an email revokes access without deleting its tasks. Reinviting the same account restores access. An unregistered invitee appears as assignable after their first visit. Household deletion, true sign-in impersonation, editing on behalf and authenticated test-user administration are intentionally not implemented yet. Read-only View as user is available. There is no public device sandbox. All ten staging layouts use Google sign-in and the same real household records. A possible admin-only Playground household is only a proposal and must not be created until the owner approves.
 
 Registered users appear after opening the updated app; older household member profiles are also included. Firebase Authentication accounts that never opened the updated app or registered with a household cannot be enumerated from this static frontend. Preview uses your local appearance preferences, not settings stored only on the other person's device. It reads an existing daily suggestion but never creates one on their behalf. Switching households in preview does not change your saved household.
 

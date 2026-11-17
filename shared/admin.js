@@ -1,11 +1,11 @@
 import {belongsTo,HOME_EMAILS,isAdministrator} from './households.js';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function adminSection(account,sandbox){
-  if(sandbox||!isAdministrator(account))return '';
+export function adminSection(account){
+  if(!isAdministrator(account))return '';
   return `<details class="settings-group" id="settings-admin"><summary>Admin</summary><details class="admin-users"><summary>View as user</summary><p class="settings-note">Read-only access to a user's personal and shared tasks. No sign-in changes or edits on their behalf.</p><button class="secondary" id="load-users">Show registered users</button><p id="admin-users-message" class="settings-note" role="status"></p><div id="admin-user-list"></div></details><details class="admin-households"><summary>Households</summary><p class="settings-note">Manage names and Google-account invitations. Tal can also view personal tasks through View as user.</p><div class="admin-toolbar"><button class="secondary" id="create-home">Create our household</button><button class="secondary" id="create-household">New household</button><button class="icon-button quiet" id="refresh-households" aria-label="Refresh households" title="Refresh households"><i data-lucide="refresh-cw" aria-hidden="true"></i></button></div><p id="admin-message" class="settings-note" role="status"></p><div id="admin-household-list"></div><form id="household-form" hidden><h3 id="household-form-title">Create household</h3><label class="field">Household name<input name="title" required maxlength="80" autocomplete="off"></label><label class="field">Household link name<input name="id" required pattern="[a-z0-9][a-z0-9-]{0,47}" maxlength="48" autocomplete="off" autocapitalize="none" spellcheck="false"></label><label class="field">Members' Google email addresses<textarea name="emails" required rows="3" autocapitalize="none" autocomplete="off" spellcheck="false"></textarea></label><p class="settings-note">One address per line. Only invited, verified Google accounts can enter. Members become assignable after their first visit. Removing an email revokes access; it does not delete tasks.</p><p class="inline-error" role="alert"></p><div class="modal-footer"><button class="primary" type="submit">Create household</button><button class="secondary" id="cancel-household" type="button">Cancel</button></div></form></details></details>`;
 }
-export function bindAdmin({account,sandbox,store,onOpen,onPreview,showError,liveUrl}){
-  const root=document.querySelector('#settings-admin');if(!root||sandbox||!isAdministrator(account))return;
+export function bindAdmin({account,store,onOpen,onPreview,showError,liveUrl}){
+  const root=document.querySelector('#settings-admin');if(!root||!isAdministrator(account))return;
   const list=root.querySelector('#admin-household-list'),message=root.querySelector('#admin-message'),form=root.querySelector('#household-form');
   let loaded=false,loading=false,households=[],editing=null;
   const usersButton=root.querySelector('#load-users'),usersMessage=root.querySelector('#admin-users-message'),usersList=root.querySelector('#admin-user-list');let profiles=[];
@@ -45,7 +45,7 @@ export function bindAdmin({account,sandbox,store,onOpen,onPreview,showError,live
     const button=event.target.closest('button');if(!button)return;
     if(button.dataset.manage){const h=households.find(h=>h.id===button.dataset.manage);editor({...h,existing:true,memberEmails:h.memberEmails||(h.id==='home'?HOME_EMAILS:[])});}
     if(button.dataset.openHousehold)onOpen(button.dataset.openHousehold);
-    if(button.dataset.linkHousehold){const link=new URL('staging/'+String(document.body.dataset.design).padStart(2,'0')+'/',liveUrl);link.searchParams.set('mode','live');link.searchParams.set('household',button.dataset.linkHousehold);try{await navigator.clipboard.writeText(link.href);message.textContent='Household link copied. Invitees must sign in with a listed Google email.';}catch{message.textContent=link.href;}}
+    if(button.dataset.linkHousehold){const link=new URL('staging/'+String(document.body.dataset.design).padStart(2,'0')+'/',liveUrl);link.searchParams.set('household',button.dataset.linkHousehold);try{await navigator.clipboard.writeText(link.href);message.textContent='Household link copied. Invitees must sign in with a listed Google email.';}catch{message.textContent=link.href;}}
   });
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(form.querySelector('[type=submit]').disabled)return;

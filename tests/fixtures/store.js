@@ -1,4 +1,5 @@
-import {candidateTasks,choose,dayKey,seededTasks} from './core.js';
+// Synthetic test fixture only. No production module imports this store.
+import {candidateTasks,choose,dayKey,seededTasks} from '../../shared/core.js';
 const KEY='lists-sandbox-v1';
 export function sandboxStore(onChange,onStatus) {
   let state={tasks:seededTasks(dayKey()),picks:{}};

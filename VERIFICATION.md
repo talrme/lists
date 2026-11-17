@@ -6,7 +6,7 @@
 - Browser workflows: **all 10 designs**, add/edit/complete/reopen/defer/follow-up/assign/filter/delete confirmation, other categories, settings persistence, local QR and locked unconfigured live pages.
 - Responsive/palette checks: **160 combinations** (10 designs × 4 widths × 4 palettes), including 320px phone, 390px phone, landscape phone and desktop. No horizontal page overflow or task-text overflow.
 - Extended modal/settings checks: **40 combinations**, all 10 designs × 4 palettes at 320px. X/Escape/backdrop dismissal, modal width, draft cancellation, private-person switching, quick-action visibility preferences and keeping completed non-to-do items completed when edited. Inline and modal forms, sanitized Markdown, sharing controls, exact dates and dirty-draft protection were exercised.
-- Same-origin two-tab sandbox propagation and reload persistence; daily suggestion identity preserved across design switches and refresh. An inline description draft kept the SAME DOM node and active focus while another tab added a task.
+- Same-origin two-tab test-fixture propagation and reload persistence; daily suggestion identity preserved across design switches and refresh. An inline description draft kept the SAME DOM node and active focus while another tab added a task.
 - Screenshots inspected for the design chooser, representative phone/desktop designs and light/dark editors/settings. Screenshots are local test artifacts under `/private/tmp/lists-*`, not production assets or user data.
 
 Commands: `node --test tests/core.test.js`, `node tests/browser.cjs`, `node tests/review.cjs`. Browser drivers use Playwright and local Chrome, with optional `LISTS_TEST_URL` / `CHROME_PATH`. No backend writes occur in these tests.
@@ -26,4 +26,6 @@ The owner supplied Firebase project lists-95c4f configuration, confirmed publish
 
 After publishing the new rules and creating home from the browser, run the private/shared/third-account/incognito/offline checks in FIREBASE_SETUP.md with the real accounts. Browser emulation does not reproduce a real mobile keyboard, popup restrictions, Safari storage policies or Home Screen authentication context.
 
-The local-only sandbox intentionally stores both sample people and all sample tasks on the device. Its person switch/filters are not security. Authenticated mode has no demo fallback and never imports these samples.
+All ten bare staging URLs now require Google sign-in. The real-SDK signed-out checks also cover legacy mode=sandbox/live/demo links and old sandbox-person preferences: none bypass sign-in or load/import sample tasks. Legacy sample records remain untouched. The chooser has ten live-only links, and production pages never request tests/fixtures/store.js or the removed shared/store.js.
+
+Synthetic UI tests now intercept the Firebase adapter and load tests/fixtures/store.js only inside Playwright; no shipped mode toggle or test-user hook exists. Their two-tab fixture propagation is not a claim of Google authentication or real backend security. The separate emulator integration exercises the actual SDK and rules.
