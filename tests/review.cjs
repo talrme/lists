@@ -1,35 +1,39 @@
-const {chromium}=require('playwright'),assert=require('node:assert/strict');
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),ui=require('./ui.cjs');
 const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}),errors=[];let checks=0;
  try{
-  for(let i=1;i<=10;i++){
-   const page=await browser.newPage({viewport:{width:320,height:740},hasTouch:true,reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
-   await page.goto(new URL(`staging/${String(i).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+  for(let design=1;design<=10;design++){
+   const context=await browser.newContext({viewport:{width:320,height:740},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+   await page.goto(new URL(`staging/${String(design).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await ui.options(page);await page.locator('#composer [data-sharing=shared]').click();assert.equal(await page.locator('#new-person').inputValue(),'tal');assert.equal(await page.locator('#composer [data-assignee=tal]').getAttribute('aria-pressed'),'true');
+   await page.locator('#composer [data-assignee=shared]').click();assert.equal(await page.locator('#new-person').inputValue(),'shared');await page.locator('#composer [data-sharing=private]').click();
+   await page.locator('#composer [name=useDate]').check();assert(await page.locator('#new-date').isVisible());await page.locator('#composer [data-timing=week]').click();assert(!await page.locator('#new-date').isVisible());
+   await page.locator('#composer [data-timing=asap]').click();await page.locator('#new-description').fill('Buy fruit');await page.locator('#composer [data-format=bold]').click();assert((await page.locator('#new-description').inputValue()).includes('**'));
+   await page.locator('#new-description').fill('');await page.locator('#composer [data-format=check]').click();assert((await page.locator('#new-description').inputValue()).startsWith('- [ ] '));await page.locator('#new-description').fill('');
+   await page.locator('#composer .options-toggle').click();
    for(const palette of ['original','garden','cherry','night']){
-    await page.locator('[data-action=settings]').click();await page.locator(`button[data-palette=${palette}]`).click();
-    assert(await page.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));
-    await page.locator('#dialog').screenshot({path:`/private/tmp/lists-settings-${i}-${palette}.png`});
-    await page.mouse.click(2,2);await page.locator('#dialog').waitFor({state:'hidden'});
-    await page.locator('.task-row [data-edit]').first().click();
-    await page.locator('#edit-form [name=title]').fill('A long task with enough detail to wrap onto multiple lines on a small phone');
-    assert(await page.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));
-    await page.locator('#dialog').screenshot({path:`/private/tmp/lists-editor-${i}-${palette}.png`});
-    await page.keyboard.press('Escape');await page.locator('#dialog').waitFor({state:'hidden'});checks++;
+    await page.locator('[data-action=settings]').click();await page.locator(`button[data-palette=${palette}]`).click();assert(await page.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));await page.mouse.click(2,2);await page.locator('#dialog').waitFor({state:'hidden'});
+    await page.locator('.task-row [data-edit]').first().click();await page.locator('#edit-form [name=title]').fill('A task with enough words to wrap on a small phone without clipping');
+    await page.locator('#edit-form [name=description]').fill('**Bold**\n- [ ] One\n- Two\n<script>window.bad=true</script>\n<img src=x onerror="window.bad=true">\n[Bad](javascript:alert(1))');
+    await page.locator('#edit-form .description-preview-toggle').click();assert.equal(await page.locator('#edit-form .description-preview script,#edit-form .description-preview img').count(),0);assert.equal(await page.locator('#edit-form .description-preview a[href^="javascript:"]').count(),0);assert.equal(await page.evaluate(()=>window.bad),undefined);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('#edit-form [type=submit]').click({trial:true});
+    await page.locator('#edit-form').screenshot({path:`/private/tmp/lists-inline-${design}-${palette}.png`});
+    await page.locator('#edit-form .popout-editor').click();assert(await page.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));await page.locator('#dialog').screenshot({path:`/private/tmp/lists-editor-${design}-${palette}.png`});await page.keyboard.press('Escape');await page.locator('#dialog').waitFor({state:'hidden'});checks++;
    }
-   await page.locator('[data-action=settings]').click();await page.locator('summary').filter({hasText:'Quick actions'}).click();await page.locator('[data-preference=quickWaiting]').uncheck();await page.locator('[data-preference=quickWeek]').uncheck();await page.getByRole('button',{name:'Done',exact:true}).click();
-   assert.equal(await page.locator('[data-quick=week]').count(),0);assert.equal(await page.locator('[data-quick=waiting]').count(),0);
+   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator('[data-preference=quickWeek]').uncheck();await page.getByRole('button',{name:'Done',exact:true}).click();assert.equal(await page.locator('[data-quick]').count(),0);
+   await page.locator('.task-row [data-edit]').first().click();await page.locator('#edit-form [name=title]').fill('Do not lose this draft');await page.locator('[data-view=later]').click();await page.locator('#confirmation').waitFor();await page.locator('#confirmation [value=cancel]').click();assert.equal(await page.locator('#edit-form [name=title]').inputValue(),'Do not lose this draft');await page.locator('#edit-form .cancel-editor').click();
    await page.locator('[data-action=settings]').click();await page.locator('summary').filter({hasText:'Account & privacy'}).click();await page.locator('#sandbox-person').selectOption('sophie');await page.getByRole('button',{name:'Done',exact:true}).click();await page.getByText('Order a new bike helmet',{exact:true}).waitFor();assert.equal(await page.getByText('Book the dentist',{exact:true}).count(),0);
-   await page.locator('[data-category=grocery]').click();const row=page.locator('.task-row').first(),title=await row.locator('.task-title').innerText();await row.locator('[data-complete]').click();await page.locator('[data-action=completed]').click();await page.getByText(title,{exact:true}).waitFor();await page.locator('.task-row').filter({hasText:title}).locator('[data-complete]').click();await page.locator('[data-action=completed]').click();await page.getByText(title,{exact:true}).waitFor();
-   await page.close();
+   await page.locator('[data-category=grocery]').click();const row=page.locator('.task-row').first(),title=await row.locator('.task-name').innerText();await row.locator('[data-complete]').click();await page.locator('[data-action=completed]').click();await page.getByText(title,{exact:true}).waitFor();await row.locator('[data-edit]').click();await page.getByRole('button',{name:'Save',exact:true}).click();await page.getByText(title,{exact:true}).waitFor();assert(await row.locator('[data-complete]').getAttribute('aria-label').then(value=>value.startsWith('Reopen')),'Editing a completed item must not reopen it');
+   await context.close();
   }
   const context=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'reduce'}),first=await context.newPage(),second=await context.newPage();
-  await first.goto(new URL('staging/01/',BASE).href);await first.locator('#workspace').waitFor();
-  const selected=await first.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks);
-  await second.goto(new URL('staging/08/',BASE).href);await second.locator('#workspace').waitFor();assert.deepEqual(await second.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks),selected,'Daily suggestion survives changing designs');
-  await first.locator('#new-title').fill('Cross-tab check');await first.getByRole('button',{name:'Add task',exact:true}).click();await second.getByText('Cross-tab check',{exact:true}).waitFor();
-  await second.reload();await second.getByText('Cross-tab check',{exact:true}).waitFor();assert.deepEqual(await second.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks),selected,'Daily suggestion survives reload');await context.close();
-  const gallery=await browser.newPage({viewport:{width:390,height:844}});await gallery.goto(BASE);assert.equal(await gallery.locator('article').count(),10);assert(await gallery.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await gallery.screenshot({path:'/private/tmp/lists-gallery-mobile.png',fullPage:true});
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',modalPaletteChecks:checks,coverage:'All designs at 320px; editor/settings; backdrop/Escape dismissal; local settings; private-person switching; completed non-todo items; stable daily picks across reload/designs; real same-origin storage-event propagation between tabs; gallery',limitations:'Local sandbox only; not authenticated cross-device Firestore testing'}));
+  await first.goto(new URL('staging/01/',BASE).href);await first.locator('#workspace').waitFor();const selected=await first.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks);
+  await second.goto(new URL('staging/08/',BASE).href);await second.locator('#workspace').waitFor();assert.deepEqual(await second.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks),selected);
+  await first.locator('.task-row [data-edit]').first().click();await first.locator('#edit-form [name=description]').fill('My unsaved typing');await first.locator('#edit-form [name=description]').focus();await first.evaluate(()=>window.__draftNode=document.querySelector('#edit-form [name=description]'));
+  await ui.add(second,'Cross-tab update');await first.getByText('Cross-tab update',{exact:true}).waitFor();assert.equal(await first.locator('#edit-form [name=description]').inputValue(),'My unsaved typing');assert(await first.evaluate(()=>document.activeElement===window.__draftNode&&document.querySelector('#edit-form [name=description]')===window.__draftNode));
+  await first.locator('#edit-form .cancel-editor').click();await second.reload();await second.getByText('Cross-tab update',{exact:true}).waitFor();assert.deepEqual(await second.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks),selected);await context.close();
+  const gallery=await browser.newPage({viewport:{width:390,height:844}});await gallery.goto(BASE);assert.equal(await gallery.locator('article').count(),10);assert(await gallery.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',modalPaletteChecks:checks,coverage:'All ten expanded editors at 320px/four palettes; inline/modal sizing, safe Markdown, formatting tools, self-default/shared/unassigned selection, exact-date override, cancel/discard, settings, completed state preservation, personal isolation, stable daily choices, live cross-tab updates preserve draft node and keyboard focus',limitations:'Chrome emulation and synthetic sandbox data; physical-phone keyboard testing remains manual'}));
  }finally{await browser.close();}
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().catch(error=>{console.error(error);process.exitCode=1;});

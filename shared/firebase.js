@@ -1,5 +1,6 @@
 import {candidateTasks,choose} from './core.js';
 import {belongsTo,householdDraft,isAdministrator,memberLabel} from './households.js';
+import {photoUrl} from './task-fields.js?v=compact1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
   const [appSdk,authSdk,dbSdk]=await Promise.all([
@@ -37,16 +38,20 @@ export async function connectFirebase(config,events) {
       try{
         // Registration only records the identity already authorized by household rules.
         const profile=dbSdk.doc(db,'listSpaces',id,'members',account.uid);
-        if(!preview)await dbSdk.runTransaction(db,async transaction=>{
-          const old=await transaction.get(profile);
-          if(!old.exists())transaction.set(profile,{email:account.email,name:memberLabel(account),joinedAt:dbSdk.serverTimestamp()});
-        });
+        if(!preview){
+          const register=withPhoto=>dbSdk.runTransaction(db,async transaction=>{
+            const old=await transaction.get(profile),name=memberLabel(account).slice(0,80),photoURL=photoUrl(account.photoURL);
+            if(!old.exists())transaction.set(profile,{email:account.email,name,...(withPhoto?{photoURL}:{}),joinedAt:dbSdk.serverTimestamp()});
+            else if(withPhoto&&(old.data().name!==name||old.data().photoURL!==photoURL))transaction.update(profile,{name,photoURL});
+          });
+          try{await register(true);}catch(error){if(error.code!=='permission-denied')throw error;await register(false);events.status('Profile photos need the updated Firebase rules.');}
+        }
         if(run!==spaceVersion||authRun!==authVersion)return;
         children.push(dbSdk.onSnapshot(dbSdk.collection(db,'listSpaces',id,'members'),snapshot=>{
           if(run!==spaceVersion)return;
-          const names=household.schemaVersion===2?{}:{...(household.names||{})};
-          snapshot.docs.forEach(doc=>{if(household.memberEmails?.includes(doc.data().email)||household.schemaVersion!==2)names[doc.id]=doc.data().name;});
-          events.members(names);
+          const names=household.schemaVersion===2?{}:{...(household.names||{})},profiles={};
+          snapshot.docs.forEach(doc=>{if(household.memberEmails?.includes(doc.data().email)||household.schemaVersion!==2){names[doc.id]=doc.data().name;profiles[doc.id]=doc.data();}});
+          events.members(names,profiles);
         },error=>{if(run===spaceVersion)events.error(error);}));
         const rows=[[],[]],received=[false,false],collection=dbSdk.collection(db,'listSpaces',id,'environments',config.environment,'tasks');
         const queries=[dbSdk.query(collection,dbSdk.where('visibility','==','private'),dbSdk.where('ownerUid','==',account.uid)),dbSdk.query(collection,dbSdk.where('visibility','==','shared'))];
@@ -62,7 +67,8 @@ export async function connectFirebase(config,events) {
   authSdk.onAuthStateChanged(auth,account=>{
     stop();preview=null;user=account;events.account(account);events.preview?.(null);if(!account)return;
     const run=authVersion;
-    dbSdk.setDoc(dbSdk.doc(db,'listUsers',account.uid),{email:account.email,name:memberLabel(account).slice(0,80),updatedAt:dbSdk.serverTimestamp()}).catch(error=>{if(run===authVersion)events.error(error);});
+    const identity={email:account.email,name:memberLabel(account).slice(0,80),updatedAt:dbSdk.serverTimestamp()};
+    dbSdk.setDoc(dbSdk.doc(db,'listUsers',account.uid),{...identity,photoURL:photoUrl(account.photoURL)}).catch(async error=>{if(run!==authVersion)return;if(error.code==='permission-denied'){try{await dbSdk.setDoc(dbSdk.doc(db,'listUsers',account.uid),identity);}catch(failure){if(run===authVersion)events.error(failure);}}else events.error(error);});
     const query=isAdministrator(account)?root:dbSdk.query(root,dbSdk.where('memberEmails','array-contains',account.email));
     stopDiscovery=dbSdk.onSnapshot(query,snapshot=>{
       if(run!==authVersion)return;spaces=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));availableSpaces();if(needsReconnect&&spaces.some(space=>space.id===activeId&&belongsTo(space,subject())))selectSpace(activeId,{remember:false});

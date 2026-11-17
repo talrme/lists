@@ -6,7 +6,9 @@
 
 ## Current progress
 
-Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. Browser household management is now implemented, but needs the NEW rules below published before it can write. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.
+Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. The owner confirmed publishing the admin/household/user-preview rules. A subsequent compact UI update adds optional task descriptions and Google avatar URLs; publish the latest rules file once more to allow those fields. Do not recreate the project or delete any data. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.
+
+Existing tasks without descriptions or photos remain supported. If older rules reject a profile-photo write, the app falls back to registering just the name/email so basic access is not blocked. Saving a nonempty description needs the latest rules and shows an error without clearing the draft if denied. Photos appear after each person visits the updated signed-in app; initials cover missing/failed images.
 
 The owner wants ONE detailed manual step, then a pause for “done.” The outline is: publish new rules → create household inside Lists → Sophie opens it → test private/shared syncing.
 
@@ -28,7 +30,7 @@ Do this after the rules have published:
 
 1. Open https://talrme.github.io/lists/staging/01/?mode=live .
 2. Sign in with **talrme@gmail.com** if needed.
-3. Open **Settings**. Before setup, a Settings button is available on the access screen; the account button at the top also opens it.
+3. Open **Settings**. Before setup, a Settings button is available on the access screen; after setup it is in the footer.
 4. Scroll to the bottom of the settings modal. Expand **Admin**, then **Households**.
 5. Click **Create our household**.
 6. Review household name **Tal & Sophie**, link name **home**, and the two Google email addresses already filled in.
@@ -50,8 +52,8 @@ An uninvited Google account may authenticate with Google but cannot read househo
 
 ## Then: verify privacy and syncing
 
-1. Tal adds an ASAP task with **Personal · not shared**. It must not appear for Sophie.
-2. Tal adds a task assigned to Sophie. Both see it in Shared; Sophie also sees it in Mine.
+1. Tal adds an ASAP task with the default **Private** visibility (inside the chevron's more options if needed). It must not appear for Sophie.
+2. Tal adds a task assigned to Sophie. Both see it via the footer View → Shared; Sophie also sees it in My list.
 3. Sophie completes the shared task. It should update on Tal's phone without refresh.
 4. Add an unassigned shared task and verify either person can complete it.
 5. Refresh/reopen both browsers. Tasks remain and Google normally keeps you signed in.

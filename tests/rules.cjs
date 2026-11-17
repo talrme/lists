@@ -27,6 +27,8 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await read('listSpaces/home',null,false,'Anonymous denied');
   await write('listUsers/test-tal',{email:'talrme@gmail.com',name:'Tal'},tal,true,'Register own directory profile');
   await write('listUsers/test-sophie',{email:'sophiegreen2@gmail.com',name:'Sophie'},sophie,true,'Sophie registers directory profile');
+  await write('listUsers/test-sophie',{email:'sophiegreen2@gmail.com',name:'Sophie',photoURL:'https://lh3.googleusercontent.com/synthetic-photo'},sophie,true,'Own Google photo stored in directory');
+  await write('listUsers/test-sophie',{email:'sophiegreen2@gmail.com',name:'Sophie',photoURL:'https://tracking.example.com/photo'},sophie,false,'Non-Google photo URL rejected');
   await write('listUsers/test-tal',{email:'sophiegreen2@gmail.com',name:'Forged'},sophie,false,'Cannot overwrite another directory profile');
   await write('listUsers/test-sophie',{email:'talrme@gmail.com',name:'Forged'},sophie,false,'Directory email must match Google identity');
   await read('listUsers/test-sophie',tal,true,'Admin reads user directory');
@@ -40,6 +42,8 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await read('listSpaces/home',sophie,true,'Invited Sophie reads household');await read('listSpaces/home',alice,false,'Uninvited Alice denied');
   await write('listSpaces/home/members/test-tal',{email:'talrme@gmail.com',name:'Tal'},tal,true,'Tal registers only authorized identity',['joinedAt']);
   await write('listSpaces/home/members/test-sophie',{email:'sophiegreen2@gmail.com',name:'Sophie'},sophie,true,'Sophie registers own identity',['joinedAt']);
+  await write('listSpaces/home/members/test-sophie',{photoURL:'https://lh3.googleusercontent.com/synthetic-photo'},sophie,true,'Member updates own Google photo',[],true);
+  await write('listSpaces/home/members/test-tal',{photoURL:'https://lh3.googleusercontent.com/synthetic-photo'},sophie,false,'Cannot change another member photo',[],true);
   await write('listSpaces/home/members/forged',{email:'talrme@gmail.com',name:'Tal'},sophie,false,'Cannot forge another member profile',['joinedAt']);
   await write('listSpaces/home/members/test-sophie',{admin:true},sophie,false,'Cannot self-promote using member fields',[],true);
   await write('listSpaces/home',{title:'Hijacked'},sophie,false,'Nonadmin cannot modify invitations',[],true);
@@ -47,6 +51,11 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await read(home+'new-task',tal,true,'Missing task readable for create transaction');
   await write(home+'private-tal',task('test-tal'),tal,true,'Create Tal private task');
   await write(home+'private-sophie',task('test-sophie'),sophie,true,'Create Sophie private task');
+  await write(home+'description',{...task('test-sophie'),description:'**Bold**\n- [ ] Checklist'},sophie,true,'Formatted description stored as plain Markdown');
+  await read(home+'description',bob,false,'Description remains protected from outsiders');
+  await write(home+'description',{description:'',rev:2},sophie,true,'Clear description',['updatedAt'],true);
+  await write(home+'too-long',{...task('test-tal'),description:'x'.repeat(10001)},tal,false,'Description length limit enforced');
+  await write(home+'wrong-type',{...task('test-tal'),description:{html:'no'}},tal,false,'Description must be a string');
   await read(home+'private-sophie',tal,true,'Admin can preview Sophie personal task');
   await write(home+'private-sophie',{title:'Admin edit',rev:2},tal,false,'Admin has no write bypass for other personal tasks',['updatedAt'],true);
   await expected(await request(base+'/'+home+'private-sophie',tal,{method:'DELETE'}),false,'Admin cannot delete other personal tasks');

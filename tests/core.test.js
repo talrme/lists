@@ -51,3 +51,12 @@ test('Sample seed is explicit, creates no fake completed history, and includes b
  const tasks=seededTasks('2026-11-16');assert(tasks.every(t=>t.id.startsWith('sample-')&&!t.completed));
  assert(tasks.some(t=>t.ownerUid==='sophie'));assert(tasks.some(t=>t.visibility==='shared'&&!t.assigneeUid));
 });
+test('Descriptions accept bounded plain Markdown and allow clearing',()=>{
+ const base={title:'Read notes',ownerUid:'tal',day:'2026-11-16'};
+ assert.equal(taskDraft({...base,description:'**Bold**\n- [ ] Item'}).description,'**Bold**\n- [ ] Item');
+ assert.equal(taskDraft({...base,description:''}).description,'');
+ assert.equal(taskDraft({...base,description:'x'.repeat(10000)}).description.length,10000);
+ assert.throws(()=>taskDraft({...base,description:'x'.repeat(10001)}));
+ assert.throws(()=>taskDraft({...base,description:{html:'no'}}));
+ assert(!('description' in taskDraft(base)),'Older tasks can omit descriptions');
+});

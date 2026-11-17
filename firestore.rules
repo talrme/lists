@@ -34,10 +34,15 @@ service cloud.firestore {
     function dateOrNull(value) {
       return value == null || (value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'));
     }
+    function validPhoto(data) {
+      return data.get('photoURL', '') is string && data.get('photoURL', '').size() <= 2048
+        && (data.get('photoURL', '') == '' || data.photoURL.matches('^https://([a-zA-Z0-9-]+[.])*googleusercontent[.]com/.*$'));
+    }
     function validTask(task) {
       return task.keys().hasAll(['title','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
-        && task.keys().hasOnly(['title','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.keys().hasOnly(['title','description','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
         && task.title is string && task.title.size() > 0 && task.title.size() <= 200
+        && task.get('description', '') is string && task.get('description', '').size() <= 10000
         && task.category in ['todo','grocery','movies','other'] && task.ownerUid is string
         && (task.assigneeUid == null || task.assigneeUid is string)
         && task.visibility in ['private','shared']
@@ -50,7 +55,7 @@ service cloud.firestore {
       allow read: if administrator() || (googleAccount() && request.auth.uid == uid);
       allow create, update: if googleAccount() && request.auth.uid == uid
         && request.resource.data.keys().hasAll(['email','name','updatedAt'])
-        && request.resource.data.keys().hasOnly(['email','name','updatedAt'])
+        && request.resource.data.keys().hasOnly(['email','name','photoURL','updatedAt']) && validPhoto(request.resource.data)
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
         && request.resource.data.updatedAt == request.time;
@@ -73,12 +78,12 @@ service cloud.firestore {
       match /members/{uid} {
         allow read: if administrator() || member(space);
         allow create: if member(space) && uid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['email','name','joinedAt'])
+          && request.resource.data.keys().hasOnly(['email','name','photoURL','joinedAt']) && validPhoto(request.resource.data)
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
           && request.resource.data.joinedAt == request.time;
         allow update: if member(space) && uid == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','photoURL']) && validPhoto(request.resource.data)
           && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
         allow delete: if false;
       }

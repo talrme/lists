@@ -33,12 +33,13 @@ export function schedule(mode, day, exact = '', random = Math.random) {
   if (mode === 'date' && validDay(exact)) return exact;
   throw new Error('Choose a date.');
 }
-export function taskDraft({title, category='todo', ownerUid, assigneeUid=null, shared=false, mode='asap', exact='', day, random}) {
+export function taskDraft({title, description, category='todo', ownerUid, assigneeUid=null, shared=false, mode='asap', exact='', day, random}) {
   title = String(title||'').trim();
   if (!title) throw new Error('Add a task name.');
   if (title.length>200) throw new Error('Keep the name under 200 characters.');
   if (!ownerUid) throw new Error('Sign in first.');
-  return {title, category, ownerUid, assigneeUid, visibility:shared||assigneeUid?'shared':'private', dueDate:schedule(mode,day,exact,random), waiting:false, followUp:null, completed:false};
+  if(description!==undefined&&(typeof description!=='string'||description.length>10000))throw new Error('Keep the description under 10,000 characters.');
+  return {title, ...(description!==undefined?{description}:{}), category, ownerUid, assigneeUid, visibility:shared||assigneeUid?'shared':'private', dueDate:schedule(mode,day,exact,random), waiting:false, followUp:null, completed:false};
 }
 export function candidateTasks(tasks, uid) {
   return tasks.filter(t => t.category==='todo' && !t.completed && !t.waiting && !t.dueDate && ((t.visibility==='private'&&t.ownerUid===uid)||(t.visibility==='shared'&&(!t.assigneeUid||t.assigneeUid===uid)))).sort((a,b)=>a.id.localeCompare(b.id));
