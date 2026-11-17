@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+Daily-pick persistence requires no additional setup: the existing per-user/date Firestore record and transaction already preserve the choice across devices/reloads. Regression tests now cover concurrent browser draws, completion, refresh and Pacific midnight. These checks used synthetic users in the local emulator/test fixture only; no real household records were changed.
+
 The unified ASAP / ~ Week / Later row, Waiting/Completed under View, and From Later label are frontend-only changes. No additional Firebase configuration or rules publication is needed for these controls. Daily-pick receipt logic remains unchanged: one pick per person/day, not continuous replacement after completion.
 
 New tasks now save a `sortOrder` to appear first, using the same rules as drag ordering. No new rules change is introduced, but the latest repository rules must be published if not already done. A denied save keeps the draft and shows an error; it never silently creates an unsorted task.

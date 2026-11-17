@@ -4,6 +4,8 @@ One top row now handles both browsing and new-task scheduling: **ASAP / ~ Week /
 
 New tasks appear first in their destination list, with position synced across devices and existing manual order preserved. This uses the same optional `sortOrder` field as dragging; the latest repository rules are required.
 
+The daily Later choice is saved in Firestore per household, person and Pacific date, not just in browser memory. An atomic transaction reuses that same record on every device/refresh, even if two browsers open together. At the next Pacific day, yesterday's projection stops applying and a new dated choice is drawn. The original task stays in Later with no due date added; unfinished tasks can be picked again on another day. Completing, deleting, deferring or otherwise moving a pick out of Later removes it from the current suggestion without drawing a replacement. Empty pools save an empty choice for that day. Old daily records are retained, not deleted.
+
 **Live website:** [talrme.github.io/lists](https://talrme.github.io/lists/)
 
 **Repository:** [talrme/lists](https://github.com/talrme/lists)

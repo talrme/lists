@@ -56,6 +56,23 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const documents=`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents`;
   const readCollection=async relative=>{const response=await fetch(documents+'/'+relative,{headers:{Authorization:'Bearer owner'}});assert(response.ok);return ((await response.json()).documents||[]).sort((a,b)=>a.name.localeCompare(b.name));};
   const readPlayground=async()=>{const response=await fetch(documents+'/listSpaces/playground',{headers:{Authorization:'Bearer owner'}});assert(response.ok);return response.json();};
+  await ui.add(tal,'Daily persistence candidate A',{when:'later'});await ui.add(tal,'Daily persistence candidate B',{when:'later'});await ui.scheduleView(tal,'today');
+  const {page:talAgain,context:talAgainContext}=await openPerson('Tal');await talAgain.locator('#workspace').waitFor();
+  const draw=(page,day)=>page.evaluate(day=>window.__testStore.pick(day,'test-tal'),day);
+  const [firstPick,concurrentPick]=await Promise.all([draw(tal,'2099-11-16'),draw(talAgain,'2099-11-16')]);
+  assert(firstPick);assert.equal(concurrentPick,firstPick,'Two browsers must reuse one transactionally saved daily choice');
+  const receiptsBefore=await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks');
+  assert.equal(receiptsBefore.find(doc=>doc.name.endsWith('/test-tal')).fields.taskId.stringValue,firstPick);
+  await talAgain.reload();await talAgain.locator('#workspace').waitFor();assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Reload must not redraw');
+  await tal.evaluate(async id=>{
+   const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');
+   const ref=sdk.doc(sdk.getFirestore(app.getApp('lists')),'listSpaces','home','environments','staging','tasks',id),snap=await sdk.getDoc(ref);
+   await window.__testStore.write(id,{completed:true},snap.data().rev);
+  },firstPick);
+  assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Completion counts for today and must not cause a replacement');
+  const nextPick=await draw(tal,'2099-11-17');assert(nextPick);assert.notEqual(nextPick,firstPick,'New date chooses from the remaining eligible tasks');
+  assert.deepEqual(await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks'),receiptsBefore,'Next day does not overwrite yesterday or change task due dates');
+  await talAgainContext.close();
   const homeBefore=await readCollection('listSpaces/home/environments/staging/tasks');
   await testing(tal);await tal.locator('#playground-form [type=submit]').click();await tal.locator('#playground-actions').waitFor();
   await tal.locator('#seed-playground').click();await tal.getByText('Added 9 example tasks to Playground only.',{exact:true}).waitFor();
