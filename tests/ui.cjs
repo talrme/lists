@@ -19,6 +19,7 @@ async function scope(page,value,person='all'){
 async function editorMode(page,mode){
   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
 }
+async function move(page,row){await row.locator('[data-edit]').click();await page.locator('#edit-form .move-editor').click();}
 async function mockBackend(page,base){
   const fixture=new URL('tests/fixtures/store.js',base).href;
   await page.route('https://firestore.googleapis.com/**',route=>route.abort());
@@ -32,4 +33,4 @@ async function mockBackend(page,base){
     }
   `}));
 }
-module.exports={options,assign,add,scope,editorMode,mockBackend};
+module.exports={options,assign,add,scope,editorMode,move,mockBackend};

@@ -19,7 +19,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
     assert(await page.evaluate(()=>window.__motion.some(effect=>effect.className.includes('task-row')&&effect.frames[0].transform.startsWith('translate('))),'Remaining tasks animate into their new positions');
     await page.waitForFunction(()=>!document.querySelector('.completion-exit'));
     assert.equal(await row.count(),0);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-    await page.locator('.toast-undo').click();await row.waitFor();await page.waitForTimeout(450);checks++;
+    await page.locator('.toast-undo').last().click();await row.waitFor();await page.waitForTimeout(450);checks++;
    }
    await page.evaluate(()=>{window.__motion=[];window.__failWrite=true;});await page.locator('.task-row').filter({hasText:'Book the dentist'}).locator('[data-complete]').click();
    await page.getByText('Test save failed',{exact:true}).waitFor();assert(!(await page.evaluate(()=>window.__motion.some(effect=>effect.className.includes('completion-exit')))));

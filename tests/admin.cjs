@@ -43,9 +43,9 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await shared(tal).locator('[data-edit]').click();assert.equal(await tal.locator('#edit-form [name=description]').inputValue(),'**Updated by Sophie**');await tal.locator('#edit-form [name=description]').fill('Draft survives real Firestore sync');await tal.locator('#edit-form [name=description]').focus();
   await add(sophie,'Shared sync during editing','shared');await tal.getByText('Shared sync during editing',{exact:true}).waitFor();assert.equal(await tal.locator('#edit-form [name=description]').inputValue(),'Draft survives real Firestore sync');assert(await tal.locator('#edit-form [name=description]').evaluate(input=>document.activeElement===input));await tal.locator('#edit-form .cancel-editor').click();
   const ordering=page=>page.locator('.task-row').filter({hasText:'Shared sync during editing'});
-  await ordering(sophie).locator('.drag-handle').click();await sophie.locator('[data-move-direction="-1"]').click();
+  await ui.move(sophie,ordering(sophie));await sophie.locator('[data-move-direction="-1"]').click();
   await tal.waitForFunction(()=>{const titles=[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent);return titles.indexOf('Shared sync during editing')<titles.indexOf('Shared across devices');});
-  await shared(sophie).locator('[data-complete]').click();await shared(tal).waitFor({state:'detached'});await sophie.locator('.toast-undo').click();await shared(tal).waitFor();
+  await shared(sophie).locator('[data-complete]').click();await shared(tal).waitFor({state:'detached'});await sophie.locator('.toast-undo').last().click();await shared(tal).waitFor();
   const bulk=await sophie.evaluate(async()=>{
     const rows=[...document.querySelectorAll('.task-row')],state=await Promise.all(rows.slice(0,2).map(async row=>{const id=row.dataset.task;const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk');const app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');const db=sdk.getFirestore(app.getApp('lists'));const snap=await sdk.getDoc(sdk.doc(db,'listSpaces','home','environments','staging','tasks',id));return {id,rev:snap.data().rev,patch:{sortOrder:rows.indexOf(row)*1024}};}));
     await window.__testStore.writeMany(state);
