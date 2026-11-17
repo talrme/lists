@@ -5,6 +5,7 @@ async function drag(page,row,target){const start=await row.locator('.task-conten
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});let layouts=0;
  try{
+  const {businessDays,dayKey}=await import('../shared/core.js'),nextWeek=businessDays(dayKey(),true);
   for(let design=1;design<=10;design++){
    const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));
    await ui.mockBackend(page,BASE);
@@ -13,7 +14,7 @@ async function drag(page,row,target){const start=await row.locator('.task-conten
    const title='Planning '+design;await ui.add(page,title);let row=page.locator('.task-row').filter({hasText:title});
    await row.locator('[data-complete]').click();await page.locator('.toast-undo').last().click();await row.waitFor();assert((await row.locator('[data-complete]').getAttribute('aria-label')).startsWith('Complete'));
    await swipe(page,row,40);await row.waitFor();assert(!await page.locator('#edit-form').count());
-   await swipe(page,row,115);await row.waitFor({state:'detached'});assert((await page.locator('#toast').innerText()).includes('Task deferred'));await page.locator('.toast-undo').last().click();await row.waitFor();
+   await swipe(page,row,115);await row.waitFor({state:'detached'});assert((await page.locator('#toast').innerText()).includes('Task deferred'));assert(nextWeek.includes(await page.evaluate(title=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).tasks.find(task=>task.title===title).dueDate,title)),'Swipe Defer must schedule within next Monday-Friday');await page.locator('.toast-undo').last().click();await row.waitFor();
    await page.locator('[data-action=settings]').click();assert(await page.locator('#swipe-defer').isChecked());assert.equal(await page.locator('#days-shown').inputValue(),'1');await page.locator('#days-shown').fill('3');await page.getByRole('button',{name:'Done',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.day-heading:not([hidden])').length===3);
    const first=page.locator('.day-tasks').first(),before=await first.locator('.task-row').evaluateAll(nodes=>nodes.map(n=>n.dataset.task)),firstId=before[0];
    const secondBox=await first.locator('.task-row').nth(1).boundingBox();await drag(page,first.locator('.task-row').first(),{x:secondBox.x+secondBox.width/2,y:secondBox.y+secondBox.height-2});

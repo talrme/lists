@@ -29,7 +29,7 @@ export function schedule(mode, day, exact = '', random = Math.random) {
   if (!validDay(day)) throw new Error('Choose a valid day.');
   if (mode === 'later') return null;
   if (mode === 'asap') return day;
-  if (mode === 'defer') return choose(businessDays(addDays(day,1)),random);
+  if (mode === 'defer') return choose(businessDays(day,true),random);
   if (mode === 'week' || mode === 'nextWeek') return choose(businessDays(day,mode === 'nextWeek'),random);
   if (mode === 'date' && validDay(exact)) return exact;
   throw new Error('Choose a date.');

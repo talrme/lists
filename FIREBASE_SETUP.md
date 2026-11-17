@@ -6,6 +6,8 @@
 
 ## Current progress
 
+Defer now picks a weekday in the following Monday–Friday week. This is a frontend scheduling change, needs no Firebase configuration, and does not reschedule previously saved tasks. Soon remains unchanged.
+
 The smooth completion exit/slide-up animation is frontend-only; it requires no additional Firebase setup or rules change beyond the sharing rules already noted below.
 
 Exclusive task expansion and the add form's Save/Cancel controls are also frontend-only; no extra setup or rules publication is needed for those controls.

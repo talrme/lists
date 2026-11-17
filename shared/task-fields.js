@@ -1,4 +1,4 @@
-import {addDays,shortDate} from './core.js?v=sharing2';
+import {addDays,shortDate} from './core.js?v=nextweek1';
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;

@@ -2,6 +2,8 @@
 
 ## Passed locally
 
+Following-week Defer update: all 14 core tests passed, including every starting weekday/weekend, all five random destination slots, Monday-to-next-Monday behavior and a December/January boundary. Ten planning/browser workflows and 120 responsive/palette checks passed; swipe Defer explicitly verified its saved date is within the following Monday–Friday window, and Undo restores the prior task. Icon/swipe share deferTask and the same schedule('defer') helper. Soon is unchanged, existing saved dates are not rewritten, and no backend/rules changes or production writes were needed.
+
 Gesture/feedback update: planning workflows passed all ten designs / 120 layouts using real pointer holds for sorting and right-swipes for deferral; cross-date moves, failure rollback, the Move menu, swipe-off preference and Undo passed. Trusted Chrome CDP mobile-touch tests passed an uncapped >220px right swipe, hold/release without accidental editing, normal tap-to-edit, long-hold drag to Tomorrow, and ordinary vertical scrolling. These are emulated mobile checks, not a physical-phone claim.
 
 With animation enabled, canceled swipes release their finished animation effect and a subsequent swipe still follows the finger. The full completion suite also passed 20 phone/desktop layouts with the new stack, including failed/pending saves, Undo and rapid completions. Fourteen core tests passed unchanged.

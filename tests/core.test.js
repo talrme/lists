@@ -30,11 +30,12 @@ test('Legacy explicit nextWeek mode still means following Monday-Friday',()=>{
  assert.equal(businessDays('2026-11-22',true)[0],'2026-11-23');
  assert.equal(schedule('nextWeek','2026-11-16','',()=>.999),'2026-11-27');
 });
-test('Defer uses the next five weekdays strictly after today, unlike Soon',()=>{
- assert.equal(schedule('defer','2026-11-16','',()=>0),'2026-11-17');
- assert.equal(schedule('defer','2026-11-16','',()=>.999),'2026-11-23');
- assert.equal(schedule('defer','2026-11-20','',()=>0),'2026-11-23');
- assert.equal(schedule('defer','2026-11-21','',()=>.999),'2026-11-27');
+test('Defer picks Monday-Friday of the following week, unlike Soon',()=>{
+ const days=['2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27'];
+ for(let offset=0;offset<7;offset++)for(let index=0;index<5;index++)assert.equal(schedule('defer',addDays('2026-11-16',offset),'',()=>index/5),days[index]);
+ assert.equal(schedule('defer','2026-11-23','',()=>0),'2026-11-30');
+ assert.equal(schedule('defer','2026-12-31','',()=>0),'2027-01-04');
+ assert.equal(schedule('defer','2026-12-31','',()=>.999),'2027-01-08');
  assert.equal(schedule('week','2026-11-16','',()=>0),'2026-11-16');
 });
 test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
