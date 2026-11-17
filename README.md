@@ -1,5 +1,7 @@
 # Lists
 
+Task options now use **Task list** with Private / Shared underneath, followed by **Task owner**. Owner choices stay visible but muted for private tasks. Tap a person (or Unassigned) to switch to Shared and select them in one step. Switching Private to Shared directly defaults to the signed-in person; pressing Shared again preserves an existing selection. Choices are saved only with the task, not merely by tapping a control.
+
 One top row now handles both browsing and new-task scheduling: **ASAP / ~ Week / Later**, with the options arrow on its left. ASAP shows today's/overdue tasks plus your daily **From Later** suggestion. ~ Week schedules within the next five weekdays and shows upcoming dated tasks, including farther-out dates. **Waiting** and **Completed** are under footer **View**. These controls do not reschedule existing tasks. The daily suggestion remains one pick per person/day when eligible Later tasks exist; completing it counts for that day rather than drawing another.
 
 New tasks appear first in their destination list, with position synced across devices and existing manual order preserved. This uses the same optional `sortOrder` field as dragging; the latest repository rules are required.

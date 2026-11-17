@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+Task list / Task owner controls are a frontend-only change. Muted private owner choices can be clicked to choose Shared and an assignee together. Existing access rules and creator/assignment fields remain unchanged; no new Firebase setup is needed.
+
 Daily-pick persistence requires no additional setup: the existing per-user/date Firestore record and transaction already preserve the choice across devices/reloads. Regression tests now cover concurrent browser draws, completion, refresh and Pacific midnight. These checks used synthetic users in the local emulator/test fixture only; no real household records were changed.
 
 The unified ASAP / ~ Week / Later row, Waiting/Completed under View, and From Later label are frontend-only changes. No additional Firebase configuration or rules publication is needed for these controls. Daily-pick receipt logic remains unchanged: one pick per person/day, not continuous replacement after completion.

@@ -75,3 +75,11 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .additional-lists legend{font-size:12px;margin-bottom:10px;color:var(--muted)}
 .additional-lists>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .additional-lists [aria-pressed=true]{background:var(--accent);color:var(--accent-text)}
+.sharing-line{flex-direction:column;align-items:flex-start;gap:7px}
+.sharing-line .sharing-track{width:min(240px,100%)}
+.ownership-field{margin-top:14px}
+.ownership-field>span{font-size:12px;font-weight:650}
+.ownership-field .assignee-choices{padding-top:7px;gap:12px}
+.ownership-field[data-private=true] .assignee-choice{color:var(--muted)}
+.ownership-field[data-private=true] .avatar{filter:grayscale(1);opacity:.48}
+.ownership-field[data-private=true] .assignee-choice:is(:hover,:focus-visible) .avatar{opacity:.85}
