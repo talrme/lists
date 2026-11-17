@@ -16,6 +16,8 @@ Each design's **Google sign-in** link (`?mode=live`) connects to Firebase projec
 
 ## Firebase setup
 
+**Setup progress:** both user IDs have been supplied. Browser-assisted household creation is the next planned improvement, followed by one rules update and private/shared sync checks. It is not implemented yet; the manual household instructions remain an alternative. Future browser admin tools and isolated test profiles are tracked in AI_README.md. Admin access will not automatically include the other person's private tasks.
+
 Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed, click-by-click instructions. No Google Sheet or Apps Script is involved.
 
 Create a separate Firebase project, register a web app, enable Google sign-in, authorize `talrme.github.io`, create Firestore in production mode, publish this repository's rules, and send Codex the public `firebaseConfig` object. Then sign in once as each person, collect the two UIDs and create `listSpaces/home` with `memberUids` and `names`. The rules additionally allow only the two specified verified Google accounts. Nothing gets pasted into a phone.

@@ -6,7 +6,7 @@
 
 The ten sandboxes already work without Firebase. They are **sample data on one device**, not a private shared backend. Real sign-in pages use `?mode=live`; those stay locked until configuration is supplied. Do not enter sensitive information in the sandbox.
 
-**Current progress:** configuration supplied for `lists-95c4f`; owner confirmed Google sign-in, authorized Pages domain, Firestore creation and published rules. Configuration is now in `config.js`. Continue at **Step 6: Get your two user IDs** below; household membership remains to be added.
+**Current progress:** configuration supplied for `lists-95c4f`; owner confirmed Google sign-in, authorized Pages domain, Firestore creation and published rules. Configuration is in `config.js`, and both user IDs have now been supplied. Household creation remains unconfirmed. We are planning a browser-assisted Create our household button; wait for that implementation and its updated rules rather than repeating UID collection. The manual Step 7 below remains an alternative, not a prerequisite for the planned button. The user prefers an outline followed by one detailed manual step at a time.
 
 ## 1. Create a separate Firebase project
 
