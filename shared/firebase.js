@@ -1,6 +1,7 @@
-import {candidateTasks,choose} from './core.js';
+import {candidateTasks,choose,dayKey} from './core.js';
 import {belongsTo,householdDraft,isAdministrator,memberLabel} from './households.js';
 import {photoUrl} from './task-fields.js?v=compact1';
+import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
   const [appSdk,authSdk,dbSdk]=await Promise.all([
@@ -10,10 +11,10 @@ export async function connectFirebase(config,events) {
   ]);
   const app=appSdk.initializeApp(config.firebase,'lists'),auth=authSdk.getAuth(app),db=dbSdk.getFirestore(app);
   await authSdk.setPersistence(auth,authSdk.browserLocalPersistence);
-  let user=null,preview=null,activeId=config.space,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
+  let user=null,preview=null,activeId=config.space,activeEnvironment=config.environment,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
   const subject=()=>preview||user;
   const root=dbSdk.collection(db,'listSpaces');
-  const path=()=>['listSpaces',activeId,'environments',config.environment];
+  const path=()=>['listSpaces',activeId,'environments',activeEnvironment];
   const key=()=>`lists-household-v1-${user?.uid}`;
   function clearChildren(){spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];events.tasks([]);}
   function stop(){authVersion++;stopDiscovery();stopDiscovery=()=>{};stopSpace();stopSpace=()=>{};clearChildren();spaces=[];events.households?.([]);}
@@ -23,7 +24,7 @@ export async function connectFirebase(config,events) {
   function requireOnline(){if(!navigator.onLine)throw new Error('You are offline. Keep this open and try again when connected.');}
   function selectSpace(id,{remember=true}={}){
     if(!/^[a-z0-9][a-z0-9-]{0,47}$/.test(id))throw new Error('Invalid household link.');
-    needsReconnect=false;events.loading?.();stopSpace();clearChildren();activeId=id;const authRun=authVersion;
+    needsReconnect=false;events.loading?.();stopSpace();clearChildren();activeId=id;activeEnvironment=config.environment;const authRun=authVersion;
     if(remember&&!preview){try{localStorage.setItem(key(),id);}catch{}}
     events.space?.({id,title:id});let fingerprint='';
     stopSpace=dbSdk.onSnapshot(dbSdk.doc(db,'listSpaces',id),async snapshot=>{
@@ -32,8 +33,8 @@ export async function connectFirebase(config,events) {
       const household={id,...snapshot.data()};events.space?.(household);
       if(!belongsTo(household,subject())){needsReconnect=true;fingerprint='';clearChildren();events.unavailable?.(preview?'This user is not a member of this household.':'Your Google account is not a member of this household.');return;}
       if(!spaces.some(s=>s.id===id)){spaces.push(household);availableSpaces();}
-      const signature=JSON.stringify([household.schemaVersion,household.memberEmails,household.memberUids]);
-      if(signature===fingerprint)return;fingerprint=signature;clearChildren();const run=spaceVersion;
+      const environment=playgroundEnvironment(household,config.environment),signature=JSON.stringify([household.schemaVersion,household.memberEmails,household.memberUids,household.kind,household.playgroundRun]);
+      if(signature===fingerprint)return;if(fingerprint&&activeEnvironment!==environment)events.loading?.();activeEnvironment=environment;fingerprint=signature;clearChildren();const run=spaceVersion;
       const account=subject();
       try{
         // Registration only records the identity already authorized by household rules.
@@ -53,7 +54,7 @@ export async function connectFirebase(config,events) {
           snapshot.docs.forEach(doc=>{if(household.memberEmails?.includes(doc.data().email)||household.schemaVersion!==2){names[doc.id]=doc.data().name;profiles[doc.id]=doc.data();}});
           events.members(names,profiles);
         },error=>{if(run===spaceVersion)events.error(error);}));
-        const rows=[[],[]],received=[false,false],collection=dbSdk.collection(db,'listSpaces',id,'environments',config.environment,'tasks');
+        const rows=[[],[]],received=[false,false],collection=dbSdk.collection(db,'listSpaces',id,'environments',environment,'tasks');
         const queries=[dbSdk.query(collection,dbSdk.where('visibility','==','private'),dbSdk.where('ownerUid','==',account.uid)),dbSdk.query(collection,dbSdk.where('visibility','==','shared'))];
         queries.forEach((query,index)=>children.push(dbSdk.onSnapshot(query,{includeMetadataChanges:true},snapshot=>{
           if(run!==spaceVersion||authRun!==authVersion)return;
@@ -102,9 +103,47 @@ export async function connectFirebase(config,events) {
       preview=null;events.preview?.(null);availableSpaces();let saved='';try{saved=localStorage.getItem(key())||'';}catch{}
       selectSpace(spaces.some(space=>space.id===saved&&belongsTo(space,user))?saved:spaces.find(space=>belongsTo(space,user))?.id||config.space,{remember:false});
     },
+    async getPlayground(){
+      requireAdmin();const snapshot=await dbSdk.getDoc(dbSdk.doc(db,'listSpaces',PLAYGROUND_ID));
+      if(!snapshot.exists())return null;
+      const value={id:snapshot.id,...snapshot.data()};if(!isPlayground(value))throw new Error('A regular household already uses the playground link. Nothing was changed.');return value;
+    },
+    async configurePlayground(emails,expectedRev=null){
+      requireAdmin();requireWritable();requireOnline();const draft=playgroundDraft(emails),account=user,newRun=crypto.randomUUID();
+      await dbSdk.runTransaction(db,async transaction=>{
+        const ref=dbSdk.doc(db,'listSpaces',PLAYGROUND_ID),old=await transaction.get(ref);
+        if(expectedRev===null){
+          if(old.exists())throw new Error('That link already exists. Refresh Testing; nothing was overwritten.');
+          transaction.set(ref,{title:draft.title,memberEmails:draft.memberEmails,schemaVersion:2,memberUids:[],names:{},createdBy:account.uid,createdAt:dbSdk.serverTimestamp(),updatedAt:dbSdk.serverTimestamp(),rev:1,kind:'playground',playgroundRun:newRun});
+        }else{
+          if(!old.exists()||!isPlayground({id:old.id,...old.data()})||old.data().rev!==expectedRev)throw new Error('Playground changed. Refresh Testing before saving.');
+          transaction.update(ref,{memberEmails:draft.memberEmails,rev:expectedRev+1,updatedAt:dbSdk.serverTimestamp()});
+        }
+      });
+    },
+    async seedPlayground(){
+      requireAdmin();requireWritable();requireOnline();const uid=user.uid,examples=playgroundSamples(uid,dayKey(Date.now(),config.timeZone));
+      return dbSdk.runTransaction(db,async transaction=>{
+        const parent=await transaction.get(dbSdk.doc(db,'listSpaces',PLAYGROUND_ID));
+        if(!parent.exists()||!isPlayground({id:parent.id,...parent.data()}))throw new Error('Create Playground first. No real tasks were changed.');
+        const environment=playgroundEnvironment({id:parent.id,...parent.data()},null),refs=examples.map(task=>dbSdk.doc(db,'listSpaces',PLAYGROUND_ID,'environments',environment,'tasks',task.id));
+        const existing=await Promise.all(refs.map(ref=>transaction.get(ref)));let added=0;
+        examples.forEach((task,i)=>{if(existing[i].exists())return;const {id,...data}=task;transaction.set(refs[i],{...data,rev:1,createdAt:Date.now()+i,updatedAt:dbSdk.serverTimestamp()});added++;});return added;
+      });
+    },
+    async resetPlayground(expectedRev){
+      requireAdmin();requireWritable();requireOnline();const nextRun=crypto.randomUUID();
+      await dbSdk.runTransaction(db,async transaction=>{
+        const ref=dbSdk.doc(db,'listSpaces',PLAYGROUND_ID),old=await transaction.get(ref);
+        if(!old.exists()||!isPlayground({id:old.id,...old.data()})||old.data().rev!==expectedRev)throw new Error('Playground changed. Refresh Testing before resetting.');
+        // Reset only changes the isolated test namespace; no task or real-household document is deleted.
+        transaction.update(ref,{playgroundRun:nextRun,rev:expectedRev+1,updatedAt:dbSdk.serverTimestamp()});
+      });
+    },
     async listHouseholds(){requireAdmin();const snapshot=await dbSdk.getDocs(root);return snapshot.docs.map(doc=>({id:doc.id,...doc.data()})).sort((a,b)=>(a.title||a.id).localeCompare(b.title||b.id));},
     async saveHousehold(input,expectedRev=null){
       requireAdmin();requireWritable();requireOnline();const draft=householdDraft(input),account=user;
+      if(draft.id===PLAYGROUND_ID&&expectedRev===null)throw new Error('Use Admin → Testing to manage Playground.');
       await dbSdk.runTransaction(db,async transaction=>{
         const ref=dbSdk.doc(db,'listSpaces',draft.id),old=await transaction.get(ref);
         if(expectedRev===null){
@@ -112,6 +151,7 @@ export async function connectFirebase(config,events) {
           transaction.set(ref,{schemaVersion:2,title:draft.title,memberEmails:draft.memberEmails,memberUids:[],names:{},createdBy:account.uid,createdAt:dbSdk.serverTimestamp(),updatedAt:dbSdk.serverTimestamp(),rev:1});
         }else{
           if(!old.exists()||(old.data().rev||0)!==expectedRev)throw new Error('This household changed. Reopen Manage and try again.');
+          if(isPlayground({id:old.id,...old.data()}))throw new Error('Use Admin → Testing to manage Playground.');
           const migration=old.data().schemaVersion!==2;
           transaction.update(ref,{schemaVersion:2,title:draft.title,memberEmails:draft.memberEmails,rev:expectedRev+1,updatedAt:dbSdk.serverTimestamp(),...(migration?{createdBy:account.uid,createdAt:dbSdk.serverTimestamp()}: {})});
         }

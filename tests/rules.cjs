@@ -59,6 +59,12 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await write(home+'ordered',{...task('test-tal'),sortOrder:42.5},tal,true,'Optional numeric task order accepted');
   await write(home+'bad-order',{...task('test-tal'),sortOrder:'top'},tal,false,'Text task order rejected');
   await write(home+'huge-order',{...task('test-tal'),sortOrder:1e16},tal,false,'Unbounded task order rejected');
+  const playground={...household(['talrme@gmail.com','sophiegreen2@gmail.com'],'Playground'),kind:'playground',playgroundRun:'11111111-1111-4111-8111-111111111111'};
+  await write('listSpaces/playground',playground,sophie,false,'Nonadmin cannot create Playground',['createdAt','updatedAt']);
+  await write('listSpaces/not-playground',playground,tal,false,'Test marker restricted to reserved Playground path',['createdAt','updatedAt']);
+  await write('listSpaces/playground',{...playground,playgroundRun:'../../home'},tal,false,'Invalid Playground namespace rejected',['createdAt','updatedAt']);
+  await write('listSpaces/playground',playground,tal,true,'Admin can create isolated Playground',['createdAt','updatedAt']);
+  await write('listSpaces/playground',{playgroundRun:'22222222-2222-4222-8222-222222222222',rev:2},sophie,false,'Nonadmin cannot reset Playground',['updatedAt'],true);
   await read(home+'private-sophie',tal,true,'Admin can preview Sophie personal task');
   await write(home+'private-sophie',{title:'Admin edit',rev:2},tal,false,'Admin has no write bypass for other personal tasks',['updatedAt'],true);
   await expected(await request(base+'/'+home+'private-sophie',tal,{method:'DELETE'}),false,'Admin cannot delete other personal tasks');
