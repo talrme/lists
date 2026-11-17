@@ -7,7 +7,7 @@ Last updated November 16, 2026. Read this, README.md and FIREBASE_SETUP.md befor
 - Canonical repo: `/Users/talg/Desktop/Websites For Fun/lists`; remote `https://github.com/talrme/lists.git`; main branch; Pages root `https://talrme.github.io/lists/`.
 - User requires websites under Websites For Fun. This app is primarily for Tal and Sophie on phones. Ten distinct staging designs were requested; do not choose/promote one until asked.
 - The user likes Huck's immediate local settings, organized collapsible settings, clear sync states, subtle compact controls, reduced motion, and X/Escape/backdrop modal dismissal. Do not copy Huck's public database rules or config.
-- No Firebase object supplied yet. `firebase:null` is intentional. Sandbox previews work; live pages fail closed. Never claim Firebase sign-in or deployed security has been tested until the user configures it and the test is actually run.
+- Firebase web config supplied and stored in config.js: project lists-95c4f, app f5d693806d3319d3098b12. Owner confirmed enabling Google sign-in, authorizing talrme.github.io, creating Firestore and publishing repository rules. Next step is signing in to obtain both UIDs and manually adding listSpaces/home membership. Sandbox data stays separate. Never claim authenticated sign-in, task sync or deployed rule enforcement was tested until those actual checks run. Unconfigured deployments still fail closed if config is removed.
 
 ## User decisions and scheduling invariants
 

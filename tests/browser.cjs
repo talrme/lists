@@ -33,6 +33,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://localhost:5195/lists/';
      if([390,1280].includes(width)&&palette==='original')await page.screenshot({path:`/private/tmp/lists-design-${number}-${width}.png`,fullPage:true});
     }
    }
+   await page.route('**/config.js*',route=>route.fulfill({contentType:'text/javascript',body:'export const config={firebase:null,space:"home",environment:"staging",timeZone:"America/Los_Angeles",liveUrl:"https://talrme.github.io/lists/"};'}));
    await page.goto(new URL(`staging/${number}/?mode=live`,BASE).href);await page.getByText('Google sign-in is not connected yet.',{exact:true}).waitFor();assert(!await page.locator('#workspace').isVisible());
    workflows++;await context.close();console.log('Checked design '+number);
   }

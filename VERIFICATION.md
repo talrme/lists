@@ -13,7 +13,9 @@ Commands: `node --test tests/core.test.js`, `node tests/browser.cjs`, `node test
 
 ## Not yet verified
 
-Firebase config and project have not been supplied. No claim of live Google sign-in, persistent auth on actual phones, live cross-device Firestore sync, deployed indexes, or actual server-side rule enforcement is made. Security rules were reviewed against the scoped queries, transaction reads (including nonexistent task IDs on create), mutation shapes and privacy requirements, but no Firestore emulator run occurred: a Java runtime/emulator is not installed here.
+Configuration connection check: `node tests/signin.cjs` passed all ten designs with the real official CDN SDK, a signed-out Google button, hidden workspace and no synthetic seed. This tests initialization only; no OAuth login was attempted and no task writes occurred. The unconfigured-state browser regression explicitly intercepts config with null, preserving fail-closed coverage after real configuration is added.
+
+The owner supplied Firebase project lists-95c4f configuration and confirmed publishing rules. Household UIDs/membership are still pending. No claim of authenticated Google sign-in, persistent auth on actual phones, live cross-device Firestore task sync, deployed indexes, or actual server-side rule enforcement is made. Security rules were reviewed against the scoped queries, transaction reads (including nonexistent task IDs on create), mutation shapes and privacy requirements, but no Firestore emulator run occurred: a Java runtime/emulator is not installed here.
 
 After setup, run the private/shared/third-account/incognito/offline checks in FIREBASE_SETUP.md and add authenticated automated/rules-emulator coverage. Browser emulation does not reproduce a real mobile keyboard, popup restrictions, Safari storage policies or Home Screen authentication context.
 

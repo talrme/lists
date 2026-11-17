@@ -12,7 +12,7 @@ Open the live website to pick from Clear Day, Ticket Office, High Tide, The Edit
 
 **The default previews are explicitly sample data, stored only in this browser. They are not authenticated, private storage or cross-phone sync.** Sandbox Tal/Sophie switching is for testing, not a security boundary. No sample data is automatically sent to Firebase. All sandbox designs share `lists-sandbox-v1`; changes carry between designs on the same origin/device. No sensitive tasks belong in this sandbox.
 
-Each design's **Google sign-in** link (`?mode=live`) uses Firebase when configured. Right now `config.js` deliberately has `firebase: null`: those pages stay locked instead of silently falling back to public data. Grocery, Movies and Other lists have working basic add/edit/complete/remove functionality; To-do has the full scheduling workflow.
+Each design's **Google sign-in** link (`?mode=live`) connects to Firebase project `lists-95c4f`. The owner has supplied the web configuration and confirmed enabling Google, authorizing the Pages domain, creating Firestore and publishing rules. Household membership still needs the two account UIDs; until then sign-in can identify you but cannot load tasks. There is no public-data fallback. Grocery, Movies and Other lists have working basic add/edit/complete/remove functionality; To-do has the full scheduling workflow.
 
 ## Firebase setup
 
@@ -20,7 +20,7 @@ Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed, click-by-click instr
 
 Create a separate Firebase project, register a web app, enable Google sign-in, authorize `talrme.github.io`, create Firestore in production mode, publish this repository's rules, and send Codex the public `firebaseConfig` object. Then sign in once as each person, collect the two UIDs and create `listSpaces/home` with `memberUids` and `names`. The rules additionally allow only the two specified verified Google accounts. Nothing gets pasted into a phone.
 
-Local auth persistence keeps sessions across normal closes. Actual mobile sign-in and deployed privacy rules still need checking after your Firebase setup; no live project credentials have been supplied yet.
+Local auth persistence keeps sessions across normal closes. The public Firebase web configuration is saved permanently in the repository; no per-phone configuration is needed. Actual mobile sign-in, household membership and deployed privacy rules still need checking with authenticated accounts.
 
 ## Task behavior
 

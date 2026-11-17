@@ -1,4 +1,4 @@
-import {config} from '../config.js';
+import {config} from '../config.js?v=lists-95c4f';
 import {dayKey,addDays,taskDraft,schedule,inView,isToday,shortDate} from './core.js';
 import {sandboxStore} from './store.js';
 

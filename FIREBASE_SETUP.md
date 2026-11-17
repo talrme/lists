@@ -6,6 +6,8 @@
 
 The ten sandboxes already work without Firebase. They are **sample data on one device**, not a private shared backend. Real sign-in pages use `?mode=live`; those stay locked until configuration is supplied. Do not enter sensitive information in the sandbox.
 
+**Current progress:** configuration supplied for `lists-95c4f`; owner confirmed Google sign-in, authorized Pages domain, Firestore creation and published rules. Configuration is now in `config.js`. Continue at **Step 6: Get your two user IDs** below; household membership remains to be added.
+
 ## 1. Create a separate Firebase project
 
 1. On a computer, open https://console.firebase.google.com/ and sign into your Google account.
