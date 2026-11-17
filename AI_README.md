@@ -27,6 +27,10 @@ The directory upserts on sign-in and includes prior household member profiles wh
 
 ## User decisions and scheduling invariants
 
+### Animation system
+
+Shared `motion.js` owns eight independently configurable visual effects: confetti, travel, arrival, reorder, navigation, dialogs, taps, ambient. Settings → Animation settings offers Off/Light/Medium/All out and Customize effects switches; manual changes select Custom. Medium is default; preserve old motion off/gentle/playful as off/light/medium. Choices live in existing device preferences, never Firestore. `appearance()` syncs data-fx attributes and cancels running effects. Respect prefers-reduced-motion dynamically, stop/clean effects when hidden, limit particles (28 Medium, 64 All out), cap stagger to 16 entries. No animation timers/network calls run for synchronization. Web Animations cleanup removes transient checkmarks/particles; a noninteractive manual popover lets preview confetti appear above native dialogs. No task titles enter effect layers. Completion/add/defer effects run only after successful local acknowledgments; snapshots alone never celebrate. FLIP rearrangement skips all open task editors to preserve focus/drafts. Ambient wiggles affect icons, not entire interactive tiles. Test `tests/motion.test.js` and `tests/motion.cjs` for migration, presets, local persistence, failure/success ordering, cleanup, reduced motion, and 120 phone/desktop/palette combinations. Do not change backend behavior to support visual effects.
+
 ### Testing proposal: not implemented
 
 The user explicitly requested removing public sandboxes and wants to review a testing design BEFORE any future implementation. Proposed only: Settings → Admin → Testing opens a separate Playground household, using the same real Google accounts, separate synthetic tasks, a clear Testing banner, and a reset scoped strictly to Playground. No household, seeding, reset UI, test-profile tooling or data migration for this proposal has been built or run. Wait for approval before adding it. Automated test fixtures/emulators are development infrastructure, not this proposed product feature.

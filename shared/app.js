@@ -3,6 +3,7 @@ import {dayKey,taskDraft,schedule,inView,shortDate} from './core.js?v=compact1';
 import {isAdministrator} from './households.js';
 import {adminSection,bindAdmin} from './admin.js?v=liveonly1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=compact1';
+import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=1';
 
 const $=selector=>document.querySelector(selector),icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
 const icons=()=>window.lucide?.createIcons({attrs:{'stroke-width':1.8}});
@@ -11,12 +12,14 @@ const preferenceKey='lists-preferences-v1',names={todo:'To-do',grocery:'Grocerie
 const glyphs={todo:'list-checks',grocery:'shopping-basket',movies:'clapperboard',other:'layers'};
 let prefs={palette:'original',motion:'playful',quickWeek:true,lists:{}};
 try{prefs={...prefs,...JSON.parse(localStorage.getItem(preferenceKey)||'{}')};}catch{}
+Object.assign(prefs,restoreAnimations(prefs));
+const motion=createMotion(()=>prefs);
 let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],store=null,category='todo',view='today',scope='mine',person='all';
 let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
 function listPrefs(){return {scope:category==='todo'?'mine':'all',person:'all',editor:'inline',...(prefs.lists?.[category]||{})};}
 function persist(){try{localStorage.setItem(preferenceKey,JSON.stringify(prefs));}catch{notify('Settings could not be saved on this device.');}}
-function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=prefs.motion;}
+function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=Object.values(prefs.animations).some(Boolean)?'custom':'off';motion.sync();}
 function saveListPrefs(patch){prefs.lists||={};prefs.lists[category]={...listPrefs(),...patch};persist();}
 function restoreView(){({scope,person}=listPrefs());}
 restoreView();appearance();
@@ -49,6 +52,7 @@ function rowMarkup(task){
 }
 function render(){
   if(!user)return;
+  const positions=motion.snapshot();
   const todo=category==='todo';$('.view-tabs').hidden=!todo;$('.simple-completed').hidden=todo;$('.simple-completed').textContent=view==='done'?'Open items':'Completed';
   $('#new-title').placeholder=todo?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';
   $('#new-title').setAttribute('aria-label',todo?'New task':'New item');$('#composer .schedule-line').classList.toggle('no-timing',!todo);
@@ -74,7 +78,7 @@ function render(){
   $('#empty-state').hidden=list.length>0||!!inlineEditor;
   document.querySelectorAll('[data-view]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.view===view));
   document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));
-  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();
+  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions);
 }
 async function dailyPick(){
   const token=`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`;if(!ready||!user||picking===token||pickedDay===token)return;
@@ -82,12 +86,12 @@ async function dailyPick(){
   try{const id=await store.pick(day,uid);if(picking===token&&token===`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`){picks=id?[id]:[];pickedDay=token;render();}}catch(error){if(picking===token)status(errorText(error));}finally{if(picking===token)picking=false;}
 }
 function onTasks(value){tasks=value;render();if(ready)void dailyPick();}
-function open(title,body){$('#dialog-title').textContent=title;$('#dialog-body').replaceChildren();if(typeof body==='string')$('#dialog-body').innerHTML=body;else $('#dialog-body').append(body);$('#dialog').classList.remove('settings-modal');icons();if(!$('#dialog').open)$('#dialog').showModal();$('#dialog').scrollTop=0;}
+function open(title,body){$('#dialog-title').textContent=title;$('#dialog-body').replaceChildren();if(typeof body==='string')$('#dialog-body').innerHTML=body;else $('#dialog-body').append(body);$('#dialog').classList.remove('settings-modal');icons();if(!$('#dialog').open){$('#dialog').showModal();motion.dialog($('#dialog'));}$('#dialog').scrollTop=0;}
 function close(){$('#dialog').close();$('#dialog-body').replaceChildren();}
 $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open)$('#dialog-body').replaceChildren();});
 for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close();}});
 function confirmAction(title,text,label='Remove'){
-  const dialog=$('#confirmation');$('#confirmation-title').textContent=title;$('#confirmation-text').textContent=text;$('#confirm-action').textContent=label;dialog.returnValue='cancel';dialog.showModal();
+  const dialog=$('#confirmation');$('#confirmation-title').textContent=title;$('#confirmation-text').textContent=text;$('#confirm-action').textContent=label;dialog.returnValue='cancel';dialog.showModal();motion.dialog(dialog);
   return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));
 }
 function formFingerprint(form){return JSON.stringify([...new FormData(form)]);}
@@ -116,9 +120,10 @@ $('#composer').addEventListener('submit',async event=>{
   try{
     const {raw,draft}=draftFrom(form),fingerprint=JSON.stringify(raw);
     if(pendingCreation?.fingerprint!==fingerprint)pendingCreation={fingerprint,id:crypto.randomUUID(),draft};
-    const epoch=spaceEpoch,before=formFingerprint(form);button.disabled=true;await store.write(pendingCreation.id,pendingCreation.draft);if(epoch!==spaceEpoch)return;
+    const epoch=spaceEpoch,before=formFingerprint(form),createdId=pendingCreation.id;button.disabled=true;await store.write(createdId,pendingCreation.draft);if(epoch!==spaceEpoch)return;
     pendingCreation=null;if(formFingerprint(form)===before){form.elements.title.value='';composerFields.reset();}
     notify(raw.waiting?'Added to Waiting':draft.dueDate&&draft.dueDate>today?'Added to Upcoming':!draft.dueDate?'Added to Later':'Added');
+    motion.arrival(createdId,$(`[data-view=${raw.waiting?'waiting':draft.dueDate&&draft.dueDate>today?'upcoming':!draft.dueDate?'later':'today'}]`));
   }catch(error){$('#compose-error').textContent=errorText(error);}finally{button.disabled=!!preview;}
 });
 async function taskEditor(task,{modal=false,existing=null}={}){
@@ -142,7 +147,7 @@ async function taskEditor(task,{modal=false,existing=null}={}){
     form.querySelector('#remove-task').addEventListener('click',async()=>{if(!await confirmAction('Remove this task?',task.title))return;try{await store.remove(task.id,task.rev);if(inlineEditor?.form===form){inlineEditor=null;form.remove();render();}else close();notify('Removed');}catch(error){form.querySelector('.inline-error').textContent=errorText(error);}});
   }
   const inModal=modal||listPrefs().editor==='modal';form.querySelector('.popout-editor').hidden=inModal;
-  if(inModal)open('Edit task',form);else{inlineEditor={id:task.id,rev:task.rev,form,controller:form._controller,initial:form._initial};render();form.scrollIntoView({block:'nearest',behavior:prefs.motion==='off'?'instant':'smooth'});}icons();
+  if(inModal)open('Edit task',form);else{inlineEditor={id:task.id,rev:task.rev,form,controller:form._controller,initial:form._initial};render();motion.enter([form]);form.scrollIntoView({block:'nearest',behavior:motion.enabled('navigation')?'smooth':'instant'});}icons();
 }
 function viewMarkup(){
   return `<fieldset class="view-options"><legend>Show</legend><div class="choice-track view-choice-track" role="group" aria-label="List view"><span class="choice-indicator" aria-hidden="true"></span>${[['mine','My list'],['shared','Shared'],['all','All']].map(([id,label])=>`<button data-scope="${id}" aria-pressed="${scope===id}">${label}</button>`).join('')}</div></fieldset><div class="view-people" ${scope==='shared'?'':'hidden'}><label class="field">Assigned to<select id="person-filter"><option value="all">Everyone</option><option value="unassigned">Anyone · unassigned</option>${Object.entries(members).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('')}</select></label></div>`;
@@ -157,9 +162,19 @@ function updateInstallManifest(){
   const manifest={name:'Lists',short_name:'Lists',id:new URL(url.pathname+'?household='+encodeURIComponent(currentSpace.id),url).href,start_url:url.href,scope:new URL('./',url).href,display:'standalone',background_color:'#f1f6f2',theme_color:'#285e47',icons:[192,512].map(size=>({src:new URL('assets/icon-'+size+'.png',root).href,sizes:size+'x'+size,type:'image/png'}))};
   if(installManifest)URL.revokeObjectURL(installManifest);installManifest=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));document.querySelector('link[rel=manifest]').href=installManifest;
 }
+function animationSettings(){
+  const levels=['off','light','medium','wild'],names=['Off','Light','Medium','All out'],index=levels.indexOf(prefs.animationLevel);
+  return `<details class="settings-group" id="animation-settings"><summary>Animation settings</summary><div class="animation-heading"><label for="animation-level">Animation level</label><strong id="animation-level-name">${index<0?'Custom':names[index]}</strong></div><input id="animation-level" type="range" min="0" max="3" step="1" value="${Math.max(0,index)}" aria-valuetext="${index<0?'Custom':names[index]}"><div class="animation-labels" aria-hidden="true">${names.map(name=>`<span>${name}</span>`).join('')}</div><details class="custom-effects"><summary>Customize effects</summary>${Object.entries(effectLabels).map(([key,label])=>`<label class="toggle-row">${label}<input type="checkbox" role="switch" data-effect="${key}" ${prefs.animations[key]?'checked':''}></label>`).join('')}</details><button class="secondary" id="preview-animations">${icon('party-popper')} Try it out</button><p class="settings-note" id="reduced-motion-note" ${matchMedia('(prefers-reduced-motion: reduce)').matches?'':'hidden'}>Your device's reduced-motion setting takes priority.</p></details>`;
+}
+function bindAnimations(){
+  const slider=$('#animation-level'),name=$('#animation-level-name');
+  slider.oninput=()=>{const key=['off','light','medium','wild'][Number(slider.value)];prefs.animationLevel=key;prefs.animations={...animationPresets[key]};name.textContent=['Off','Light','Medium','All out'][Number(slider.value)];slider.setAttribute('aria-valuetext',name.textContent);document.querySelectorAll('[data-effect]').forEach(input=>input.checked=prefs.animations[input.dataset.effect]);persist();appearance();};
+  document.querySelectorAll('[data-effect]').forEach(input=>input.onchange=()=>{prefs.animations[input.dataset.effect]=input.checked;prefs.animationLevel='custom';name.textContent='Custom';slider.setAttribute('aria-valuetext','Custom');persist();appearance();});
+  $('#preview-animations').onclick=()=>{const button=$('#preview-animations');motion.pop('arrival',button);motion.dialog($('#dialog'));motion.burst(button.getBoundingClientRect());};
+}
 function settings(){
-  open('Settings',`<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset><label class="field">Animations<select id="motion"><option value="off">Off</option><option value="gentle">Gentle</option><option value="playful">Playful</option></select></label></details><details class="settings-group" id="list-settings"><summary>${esc(names[category])} settings</summary>${viewMarkup()}<fieldset class="editor-mode"><legend>Open task details</legend><div class="choice-track two-choices" style="--choice:${listPrefs().editor==='modal'?1:0}" role="group" aria-label="Task editor"><span class="choice-indicator" aria-hidden="true"></span><button data-editor-mode="inline" aria-pressed="${listPrefs().editor==='inline'}">Inline</button><button data-editor-mode="modal" aria-pressed="${listPrefs().editor==='modal'}">Modal</button></div></fieldset>${category==='todo'?`<label class="toggle-row">Quick move to next week<input type="checkbox" role="switch" data-preference="quickWeek" ${prefs.quickWeek?'checked':''}></label>`:''}</details><details class="settings-group"><summary>Account &amp; privacy</summary><p class="account-email">${esc(signedInAccount?.email||user?.email)}</p>${householdPicker()}<p class="settings-note">Personal tasks are hidden from other household members. Tal, the administrator, can view all users' personal and shared tasks. Assigning or sharing makes a task visible to household members.</p><button class="secondary" id="sign-out">Sign out</button></details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">ASAP stays in Today. Soon chooses one of the next five weekdays, including today on weekdays. Next week means next Monday–Friday. Calendar: America/Los_Angeles; weekends are excluded, not public holidays.</p><p class="settings-note">One daily nudge comes from your personal later tasks, shared tasks assigned to you, and unassigned shared tasks. It stays stable across devices and does not become overdue.</p></details>${preview?'':adminSection(signedInAccount||user)}<div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');bindViews();
-  $('#motion').value=prefs.motion;$('#motion').onchange=event=>{prefs.motion=event.target.value;persist();appearance();};
+  open('Settings',`<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset></details>${animationSettings()}<details class="settings-group" id="list-settings"><summary>${esc(names[category])} settings</summary>${viewMarkup()}<fieldset class="editor-mode"><legend>Open task details</legend><div class="choice-track two-choices" style="--choice:${listPrefs().editor==='modal'?1:0}" role="group" aria-label="Task editor"><span class="choice-indicator" aria-hidden="true"></span><button data-editor-mode="inline" aria-pressed="${listPrefs().editor==='inline'}">Inline</button><button data-editor-mode="modal" aria-pressed="${listPrefs().editor==='modal'}">Modal</button></div></fieldset>${category==='todo'?`<label class="toggle-row">Quick move to next week<input type="checkbox" role="switch" data-preference="quickWeek" ${prefs.quickWeek?'checked':''}></label>`:''}</details><details class="settings-group"><summary>Account &amp; privacy</summary><p class="account-email">${esc(signedInAccount?.email||user?.email)}</p>${householdPicker()}<p class="settings-note">Personal tasks are hidden from other household members. Tal, the administrator, can view all users' personal and shared tasks. Assigning or sharing makes a task visible to household members.</p><button class="secondary" id="sign-out">Sign out</button></details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">ASAP stays in Today. Soon chooses one of the next five weekdays, including today on weekdays. Next week means next Monday–Friday. Calendar: America/Los_Angeles; weekends are excluded, not public holidays.</p><p class="settings-note">One daily nudge comes from your personal later tasks, shared tasks assigned to you, and unassigned shared tasks. It stays stable across devices and does not become overdue.</p></details>${preview?'':adminSection(signedInAccount||user)}<div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');bindViews();
+  bindAnimations();
   document.querySelectorAll('button[data-palette]').forEach(button=>button.onclick=()=>{prefs.palette=button.dataset.palette;persist();appearance();document.querySelectorAll('button[data-palette]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
   $('[data-preference=quickWeek]')?.addEventListener('change',event=>{prefs.quickWeek=event.target.checked;persist();render();});
   document.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=async()=>{if(!await leaveInline())return;saveListPrefs({editor:button.dataset.editorMode});$('.editor-mode .choice-track').style.setProperty('--choice',button.dataset.editorMode==='modal'?1:0);document.querySelectorAll('[data-editor-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
@@ -175,12 +190,12 @@ document.addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   if(button.hasAttribute('data-close'))close();
   if(button.id==='exit-preview'){store.exitPreview();const url=new URL(location.href);url.searchParams.set('household',currentSpace.id);history.replaceState(null,'',url);}
-  if(button.dataset.view){if(!await leaveInline())return;view=button.dataset.view;render();}
+  if(button.dataset.view){if(!await leaveInline())return;view=button.dataset.view;render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.scope){if(!await leaveInline())return;scope=button.dataset.scope;person='all';saveListPrefs({scope,person});bindViews();render();}
-  if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';restoreView();composerFields.reset();$('#new-title').value='';render();}
+  if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';restoreView();composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task){if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);}}
-  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete);if(task&&await mutate(task,{completed:!task.completed}))notify(task.completed?'Reopened':'Done. Nicely done.');}
-  if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id);if(task&&await mutate(task,{dueDate:schedule('nextWeek',today),waiting:false,followUp:null}))notify('Moved to next week');}
+  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Reopened':'Done. Nicely done.');if(!task.completed){motion.burst(rect);motion.travel(rect,category==='todo'?$('[data-view=done]'):$('.simple-completed'));}}}
+  if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id),rect=button.getBoundingClientRect();if(task&&await mutate(task,{dueDate:schedule('nextWeek',today),waiting:false,followUp:null})){notify('Moved to next week');motion.travel(rect,$('[data-view=upcoming]'));}}
   if(button.dataset.action==='completed'){if(!await leaveInline())return;view=view==='done'?'later':'done';render();}
   if(button.dataset.action==='views')views();
   if(button.dataset.action==='settings')settings();
