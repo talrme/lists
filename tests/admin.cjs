@@ -29,7 +29,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.locator('#create-home').click();assert.equal(await tal.locator('#household-form [name=id]').inputValue(),'home');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await tal.locator('#workspace').waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
   await ui.add(tal,'Assigned before first visit',{person:'email:sophiegreen2@gmail.com'});assert.equal(await tal.getByText('Assigned before first visit',{exact:true}).count(),0);
   await ui.scope(tal,'shared','email:sophiegreen2@gmail.com');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
-  await ui.add(tal,'Pending later suggestion',{person:'email:sophiegreen2@gmail.com',when:'later'});
+  await ui.add(tal,'Pending later suggestion',{person:'email:sophiegreen2@gmail.com',when:'later'});await ui.scheduleView(tal,'today');
   const {page:sophie}=await openPerson('Sophie');await sophie.locator('#workspace').waitFor();await sophie.getByText('Assigned before first visit',{exact:true}).waitFor();await sophie.getByText('Pending later suggestion',{exact:true}).waitFor();
   await settings(sophie);assert.equal(await sophie.locator('#settings-admin').count(),0);await sophie.getByRole('button',{name:'Done',exact:true}).click();
   await tal.locator('#composer [data-assignee=test-sophie]').waitFor({state:'attached'});
@@ -52,7 +52,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
     await window.__testStore.writeMany(state);
     let conflict=false;try{await window.__testStore.writeMany(state);}catch{conflict=true;}return conflict;
   });assert(bulk,'Stale multi-row ordering is rejected atomically');
-  await shared(sophie).locator('[data-complete]').click();await tal.locator('[data-view=done]').click();await tal.getByText('Shared across devices',{exact:true}).waitFor();await ui.scope(tal,'mine');
+  await shared(sophie).locator('[data-complete]').click();await ui.scheduleView(tal,'done');await tal.getByText('Shared across devices',{exact:true}).waitFor();await ui.scope(tal,'mine');
   const documents=`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents`;
   const readCollection=async relative=>{const response=await fetch(documents+'/'+relative,{headers:{Authorization:'Bearer owner'}});assert(response.ok);return ((await response.json()).documents||[]).sort((a,b)=>a.name.localeCompare(b.name));};
   const readPlayground=async()=>{const response=await fetch(documents+'/listSpaces/playground',{headers:{Authorization:'Bearer owner'}});assert(response.ok);return response.json();};

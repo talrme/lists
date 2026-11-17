@@ -27,7 +27,7 @@ export function fieldsMarkup({task={},today,composer=false,allowPrivate=true}){
   const prefix=composer?'new':'edit',mode=task.dueDate?(task.dueDate<=today?'asap':'date'):'later',when=composer?'asap':mode;
   task={...task,assigneeUid:task.assigneeUid||(task.assigneeEmail?'email:'+task.assigneeEmail:null)};
   return `${composer?'':`<label class="sr-only" for="edit-title">Task</label><input class="edit-title" id="edit-title" name="title" aria-label="Task" maxlength="200" required value="${esc(task.title)}">`}
-    <div class="schedule-line"><div class="choice-track timing-track" role="group" aria-label="When"><span class="choice-indicator" aria-hidden="true"></span>${[['asap','ASAP'],['week','Soon'],['later','Later']].map(([id,label])=>`<button type="button" data-timing="${id}" aria-pressed="${when===id}">${label}</button>`).join('')}</div><input type="hidden" name="when" id="${prefix}-when" value="${when}">${composer?`<button class="icon-button options-toggle" type="button" aria-label="More task options" aria-expanded="false" aria-controls="new-options">${icon('chevron-down')}</button>`:''}</div>
+    <div class="schedule-line">${composer?`<button class="icon-button options-toggle" type="button" aria-label="More task options" aria-expanded="false" aria-controls="new-options">${icon('chevron-down')}</button>`:''}<div class="choice-track timing-track" role="group" aria-label="${composer?'Task schedule':'When'}"><span class="choice-indicator" aria-hidden="true"></span>${[['asap','ASAP','today'],['week','~ Week','upcoming'],['later','Later','later']].map(([id,label,view])=>`<button type="button" data-timing="${id}" ${composer?`data-view="${view}"`:''} aria-pressed="${when===id}" ${id==='week'?'title="Next five weekdays; upcoming dated tasks"':''}>${label}</button>`).join('')}</div><input type="hidden" name="when" id="${prefix}-when" value="${when}"></div>
     <div class="task-options" id="${prefix}-options" ${composer?'hidden':''}>
       <div class="description-field"><label for="${prefix}-description">Description</label><textarea name="description" id="${prefix}-description" rows="3" maxlength="10000" aria-label="Description">${esc(task.description)}</textarea></div>
       <div class="sharing-line"><span>Visibility</span><div class="choice-track sharing-track" role="group" aria-label="Visibility"><span class="choice-indicator" aria-hidden="true"></span><button type="button" data-sharing="private" ${allowPrivate?'':'disabled'} aria-pressed="${task.visibility!=='shared'}">Private</button><button type="button" data-sharing="shared" aria-pressed="${task.visibility==='shared'}">Shared</button></div></div><input type="hidden" name="person" id="${prefix}-person" value="${esc(task.visibility==='shared'?task.assigneeUid||'shared':'private')}"><div class="assignee-choices" role="group" aria-label="Assign task" ${task.visibility==='shared'?'':'hidden'}></div>
@@ -37,8 +37,9 @@ export function fieldsMarkup({task={},today,composer=false,allowPrivate=true}){
       ${composer?'<div class="modal-footer composer-actions"><button class="primary" type="submit">Save</button><button class="secondary cancel-new-task" type="button">Cancel</button></div>':''}
     </div>`;
 }
-export function bindFields(form,{uid,members,profiles,today,onOptionsToggle}){
+export function bindFields(form,{uid,members,profiles,today,onOptionsToggle,onTimingSelect,onScheduleChange}){
   const $=selector=>form.querySelector(selector),timing=$('.timing-track'),sharing=$('.sharing-track'),options=$('.task-options'),person=form.elements.person;
+  let activeView=null;
   function people(){
     if(person.value.startsWith('email:')){const id=Object.keys(profiles).find(id=>!id.startsWith('email:')&&profiles[id].email===person.value.slice(6));if(id)person.value=id;}
     const labels=uid&&!members[uid]?{...members,[uid]:'Me'}:members;
@@ -51,12 +52,13 @@ export function bindFields(form,{uid,members,profiles,today,onOptionsToggle}){
     const shared=person.value!=='private';sharing.style.setProperty('--choice',shared?1:0);sharing.querySelectorAll('[data-sharing]').forEach(button=>button.setAttribute('aria-pressed',String((button.dataset.sharing==='shared')===shared)));
     $('.assignee-choices').hidden=!shared;$('.exact-date-row').hidden=form.elements.waiting.checked;
     $('.waiting-options').hidden=!form.elements.waiting.checked;
+    if(activeView!==null)showView(activeView);
     people();
   }
   function updatePeople(nextMembers,nextProfiles,nextUid=uid){members=nextMembers;profiles=nextProfiles;uid=nextUid;people();}
   form.addEventListener('click',event=>{
     const button=event.target.closest('button');if(!button||!form.contains(button))return;
-    if(button.dataset.timing){form.elements.when.value=button.dataset.timing;form.elements.date.value='';form.elements.waiting.checked=false;sync();}
+    if(button.dataset.timing){if(onTimingSelect)void onTimingSelect(button.dataset.timing);else setTiming(button.dataset.timing);}
     if(button.dataset.sharing){person.value=button.dataset.sharing==='private'?'private':person.value==='private'?(uid||'shared'):person.value;sync();}
     if(button.dataset.assignee){person.value=button.dataset.assignee;sync();}
     if(button.dataset.followup){form.elements.followUp.value=addDays(today,Number(button.dataset.followup));followupSelection(button.dataset.followup);}
@@ -68,14 +70,16 @@ export function bindFields(form,{uid,members,profiles,today,onOptionsToggle}){
   }
   form.querySelectorAll('input[type=date]').forEach(input=>input.addEventListener('click',()=>{try{input.showPicker?.();}catch{/* Leave the native input usable when showPicker is unavailable. */}}));
   form.addEventListener('change',event=>{
-    if(event.target===form.elements.date){form.elements.when.value=event.target.value?'date':'later';sync();}
+    if(event.target===form.elements.date){form.elements.when.value=event.target.value?'date':'later';sync();onScheduleChange?.();}
     if(event.target===form.elements.followUp)followupSelection(null);
-    if(event.target===form.elements.waiting){if(event.target.checked&&!form.elements.followUp.value){form.elements.followUp.value=addDays(today,7);followupSelection(7);}sync();}
+    if(event.target===form.elements.waiting){if(event.target.checked&&!form.elements.followUp.value){form.elements.followUp.value=addDays(today,7);followupSelection(7);}sync();onScheduleChange?.();}
     if(event.target===person)sync();
   });
   form.addEventListener('error',event=>{if(event.target.tagName==='IMG'){event.target.hidden=true;if(event.target.nextElementSibling)event.target.nextElementSibling.hidden=false;}},true);
   function setExpanded(expanded){options.hidden=!expanded;const toggle=$('.options-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',expanded?'Cancel new task':'More task options');toggle.title=expanded?'Cancel new task':'More task options';}}
-  followupSelection(null);sync();return {updatePeople,setExpanded,setDay(day){today=day;},reset(){form.elements.when.value='asap';form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';person.value='private';setExpanded(false);followupSelection(null);sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
+  function setTiming(mode){form.elements.when.value=mode;form.elements.date.value='';form.elements.waiting.checked=false;sync();}
+  function showView(view){activeView=view;const active=['today','upcoming','later'].indexOf(view);timing.style.setProperty('--choice',Math.max(0,active));timing.toggleAttribute('data-exact',active<0);timing.querySelectorAll('[data-view]').forEach(button=>{button.toggleAttribute('aria-current',button.dataset.view===view);button.setAttribute('aria-pressed',String(button.dataset.view===view));});}
+  followupSelection(null);sync();return {updatePeople,setExpanded,setTiming,showView,setDay(day){today=day;},reset(when='asap'){form.elements.when.value=when;form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';person.value='private';setExpanded(false);followupSelection(null);sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
 }
 export function fieldValues(form){
   const person=form.elements.person.value,email=person.startsWith('email:')?person.slice(6):null;

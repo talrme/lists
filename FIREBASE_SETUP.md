@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+The unified ASAP / ~ Week / Later row, Waiting/Completed under View, and From Later label are frontend-only changes. No additional Firebase configuration or rules publication is needed for these controls. Daily-pick receipt logic remains unchanged: one pick per person/day, not continuous replacement after completion.
+
 New tasks now save a `sortOrder` to appear first, using the same rules as drag ordering. No new rules change is introduced, but the latest repository rules must be published if not already done. A denied save keeps the draft and shows an error; it never silently creates an unsorted task.
 
 **Website:** https://talrme.github.io/lists/

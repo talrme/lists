@@ -32,7 +32,7 @@ async function settings(page){await page.locator('[data-action=settings]').click
    await page.waitForFunction(()=>window.__bursts===1&&window.__flights===1);assert.equal(await page.locator('.motion-confetti b').count(),64);
    if(design===1)await page.screenshot({path:'/private/tmp/lists-animations-confetti.png',timeout:5000});
    await page.waitForFunction(()=>!document.querySelector('.motion-confetti,.motion-traveler'));console.log('Completion cleanup '+design);
-   await page.locator('[data-view=done]').click();await row.locator('[data-complete]').click();await page.locator('[data-view=today]').click();await row.locator('[data-quick=week]').click();await page.waitForFunction(()=>window.__flights===2);
+   await ui.scheduleView(page,'done');await row.locator('[data-complete]').click();await page.locator('[data-view=today]').click();await row.locator('[data-quick=week]').click();await page.waitForFunction(()=>window.__flights===2);
    await settings(page);await page.locator('.custom-effects>summary').click();await page.locator('[data-effect=confetti]').uncheck();assert.equal(await page.locator('#animation-level-name').innerText(),'Custom');
    await page.reload();await page.locator('#workspace').waitFor();await settings(page);assert.equal(await page.locator('#animation-level-name').innerText(),'Custom');assert(!await page.locator('[data-effect=confetti]').isChecked());
    await level(page,3);await page.getByRole('button',{name:'Done',exact:true}).click();await page.emulateMedia({reducedMotion:'reduce'});

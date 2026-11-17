@@ -1,5 +1,7 @@
 # Lists
 
+One top row now handles both browsing and new-task scheduling: **ASAP / ~ Week / Later**, with the options arrow on its left. ASAP shows today's/overdue tasks plus your daily **From Later** suggestion. ~ Week schedules within the next five weekdays and shows upcoming dated tasks, including farther-out dates. **Waiting** and **Completed** are under footer **View**. These controls do not reschedule existing tasks. The daily suggestion remains one pick per person/day when eligible Later tasks exist; completing it counts for that day rather than drawing another.
+
 New tasks appear first in their destination list, with position synced across devices and existing manual order preserved. This uses the same optional `sortOrder` field as dragging; the latest repository rules are required.
 
 **Live website:** [talrme.github.io/lists](https://talrme.github.io/lists/)
@@ -71,7 +73,7 @@ The first prototype listens to all of your private tasks and all household share
 
 ## Phone settings
 
-Each design starts directly with the add field and ASAP / Soon / Later timing segments. No logo/date/category heading or top Mine/Shared controls. A chevron reveals description, privacy/assignment, exact date and waiting/follow-up options. Household/connection notices are at the bottom, not above the task list.
+Each design starts directly with the add field and ASAP / ~ Week / Later timing segments. No logo/date/category heading or top Mine/Shared controls. A chevron reveals description, privacy/assignment, exact date and waiting/follow-up options. Household/connection notices are at the bottom, not above the task list.
 
 Descriptions use a plain text area (10,000 characters). Existing text and Markdown are preserved; read-only admin descriptions retain sanitized rendering. A subtle ellipsis marks tasks with details. No raw user HTML is trusted or description images loaded.
 

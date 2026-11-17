@@ -16,6 +16,10 @@ async function scope(page,value,person='all'){
   if(value==='shared')await page.locator(`[data-person="${person}"]`).click();
   await page.getByRole('button',{name:'Done',exact:true}).click();
 }
+async function scheduleView(page,view){
+  if(['waiting','done'].includes(view))await page.locator('[data-action=views]').click();
+  await page.locator(`[data-view=${view}]`).click();
+}
 async function editorMode(page,mode){
   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
 }
@@ -33,4 +37,4 @@ async function mockBackend(page,base){
     }
   `}));
 }
-module.exports={options,assign,add,scope,editorMode,move,mockBackend};
+module.exports={options,assign,add,scope,scheduleView,editorMode,move,mockBackend};
