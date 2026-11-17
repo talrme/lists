@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,unassigned,assignedTo} from '../shared/core.js';
+import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,creationOrder,unassigned,assignedTo} from '../shared/core.js';
 import {householdPeople} from '../shared/households.js';
 
 test('Invited people remain assignable before their first visit without duplicate profiles',()=>{
@@ -60,6 +60,15 @@ test('Synced ordering supports beginning, middle, end, legacy ties and precision
  assert.equal(insertionOrder([a,c,{...b,createdAt:10}],'c'),null);
  assert.equal(insertionOrder([{...a,sortOrder:1},c,{...b,sortOrder:1+Number.EPSILON}],'c'),null);
  assert.deepEqual([{...a,sortOrder:100},b].sort(taskOrder).map(t=>t.id),['b','a']);
+});
+test('New tasks precede legacy and manually ordered tasks without changing existing order',()=>{
+ const existing=[task({id:'legacy',createdAt:10}),task({id:'moved',createdAt:20,sortOrder:-5000}),task({id:'other',category:'grocery',sortOrder:-9000}),task({id:'done',completed:true,sortOrder:-10000})];
+ const first=task({id:'first',createdAt:100,sortOrder:creationOrder(existing,'todo',100)});
+ assert.equal(first.sortOrder,-6024);
+ const second=task({id:'second',createdAt:100,sortOrder:creationOrder([...existing,first],'todo',100)});
+ assert.deepEqual([existing[0],existing[1],first,second].sort(taskOrder).map(t=>t.id),['second','first','moved','legacy']);
+ assert.equal(creationOrder([],'todo',100),-1124);
+ assert.throws(()=>creationOrder([task({sortOrder:-1e15})],'todo',100));
 });
 test('Ordinary due tasks roll over; later nudges do not acquire a due date',()=>{
  assert(isToday(task({dueDate:'2026-11-15'}),'2026-11-16'));

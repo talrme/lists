@@ -1,5 +1,7 @@
 # Lists
 
+New tasks appear first in their destination list, with position synced across devices and existing manual order preserved. This uses the same optional `sortOrder` field as dragging; the latest repository rules are required.
+
 **Live website:** [talrme.github.io/lists](https://talrme.github.io/lists/)
 
 **Repository:** [talrme/lists](https://github.com/talrme/lists)

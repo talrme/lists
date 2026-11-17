@@ -1,5 +1,5 @@
 import {config} from '../config.js?v=lists-95c4f';
-import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,assignedTo,unassigned} from './core.js?v=nextweek1';
+import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,creationOrder,assignedTo,unassigned} from './core.js?v=newfirst1';
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=playground1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=editor3';
@@ -195,7 +195,7 @@ $('#composer').addEventListener('submit',async event=>{
   form.dataset.saving='true';form.querySelectorAll('[type=submit],.cancel-new-task,.options-toggle').forEach(control=>control.disabled=true);
   try{
     const {raw,draft}=draftFrom(form),fingerprint=JSON.stringify(raw);
-    if(pendingCreation?.fingerprint!==fingerprint)pendingCreation={fingerprint,id:crypto.randomUUID(),draft};
+    if(pendingCreation?.fingerprint!==fingerprint)pendingCreation={fingerprint,id:crypto.randomUUID(),draft:{...draft,sortOrder:creationOrder(tasks,draft.category)}};
     const epoch=spaceEpoch,before=formFingerprint(form),createdId=pendingCreation.id;await store.write(createdId,pendingCreation.draft);if(epoch!==spaceEpoch)return;
     pendingCreation=null;if(formFingerprint(form)===before){form.elements.title.value='';composerFields.reset();}
     notify(raw.waiting?'Added to Waiting':draft.dueDate&&draft.dueDate>today?'Added to Upcoming':!draft.dueDate?'Added to Later':'Added');

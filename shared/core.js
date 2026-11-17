@@ -70,6 +70,12 @@ export function taskDay(task,today,picks=[]){
   return task.waiting?task.followUp:task.dueDate;
 }
 export function taskOrder(a,b){return (a.sortOrder??a.createdAt)-(b.sortOrder??b.createdAt)||a.createdAt-b.createdAt||a.id.localeCompare(b.id);}
+export function creationOrder(tasks,category,now=Date.now()){
+  const first=tasks.filter(task=>task.category===category&&!task.completed).reduce((rank,task)=>Math.min(rank,task.sortOrder??task.createdAt),-now);
+  const rank=first-1024;
+  if(!Number.isFinite(rank)||Math.abs(rank)>1e15||rank>=first)throw new Error('Unable to place this task first. Refresh and try again.');
+  return rank;
+}
 export function insertionOrder(ordered,id){
   const index=ordered.findIndex(task=>task.id===id),previous=ordered[index-1],next=ordered[index+1];
   const low=previous?(previous.sortOrder??previous.createdAt):null,high=next?(next.sortOrder??next.createdAt):null;

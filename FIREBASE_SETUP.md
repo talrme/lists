@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+New tasks now save a `sortOrder` to appear first, using the same rules as drag ordering. No new rules change is introduced, but the latest repository rules must be published if not already done. A denied save keeps the draft and shows an error; it never silently creates an unsorted task.
+
 **Website:** https://talrme.github.io/lists/
 
 **Project:** lists-95c4f

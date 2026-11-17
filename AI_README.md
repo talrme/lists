@@ -1,5 +1,7 @@
 # Lists: AI Handoff
 
+New task placement: composer assigns `creationOrder(tasks, draft.category)` once per pending creation, before writing. Negative timestamp/minimum category rank minus 1024 puts new tasks first without reversing legacy/manual order. Reuse the same rank/ID on retries; edits never reset position. Uses existing optional sortOrder rules. Test category isolation, legacy/manual negative ranks, reload and cross-device ordering; do not migrate existing tasks.
+
 Last updated November 16, 2026. Read this, README.md and FIREBASE_SETUP.md before changes. Keep all three current.
 
 ## Current task-detail controls (supersedes earlier toolbar/member-join notes)
