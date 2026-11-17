@@ -6,9 +6,9 @@
 
 ## Current progress
 
-Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. The owner confirmed publishing the admin/household/user-preview rules. A subsequent compact UI update adds optional task descriptions and Google avatar URLs; publish the latest rules file once more to allow those fields. Do not recreate the project or delete any data. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.
+Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. The owner confirmed publishing the admin/household/user-preview rules. Subsequent updates add optional task descriptions, Google avatar URLs and synced task ordering (sortOrder); publish the latest rules file once more to allow those fields. Do not recreate the project or delete any data. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.
 
-Existing tasks without descriptions or photos remain supported. If older rules reject a profile-photo write, the app falls back to registering just the name/email so basic access is not blocked. Saving a nonempty description needs the latest rules and shows an error without clearing the draft if denied. Photos appear after each person visits the updated signed-in app; initials cover missing/failed images.
+Existing tasks without descriptions, photos or ordering fields remain supported. Completion Undo, swipe deferral and the multi-day view need no new fields. Drag/Move saves require the new optional sortOrder rule; denied moves roll back visibly and leave existing tasks untouched. If older rules reject a profile-photo write, the app falls back to registering just the name/email so basic access is not blocked. Saving a nonempty description needs the latest rules and shows an error without clearing the draft if denied. Photos appear after each person visits the updated signed-in app; initials cover missing/failed images.
 
 The owner wants ONE detailed manual step, then a pause for “done.” The outline is: publish new rules → create household inside Lists → Sophie opens it → test private/shared syncing.
 

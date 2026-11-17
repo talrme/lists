@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks} from '../shared/core.js';
+import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder} from '../shared/core.js';
 test('Household uses Pacific dates, including DST boundaries',()=>{
  assert.equal(dayKey(Date.parse('2026-11-17T07:30:00Z')),'2026-11-16');
  assert.equal(dayKey(Date.parse('2026-03-08T10:30:00Z')),'2026-03-08');
@@ -12,11 +12,18 @@ test('Next five weekdays includes weekday today, skips weekends, no fake holiday
  assert.equal(businessDays('2026-11-21')[0],'2026-11-23');
  assert.equal(businessDays('2026-11-22')[0],'2026-11-23');
 });
-test('Quick defer means following Monday-Friday, even on Mondays and Sundays',()=>{
+test('Legacy explicit nextWeek mode still means following Monday-Friday',()=>{
  assert.equal(businessDays('2026-11-16',true)[0],'2026-11-23');
  assert.equal(businessDays('2026-11-20',true)[0],'2026-11-23');
  assert.equal(businessDays('2026-11-22',true)[0],'2026-11-23');
  assert.equal(schedule('nextWeek','2026-11-16','',()=>.999),'2026-11-27');
+});
+test('Defer uses the next five weekdays strictly after today, unlike Soon',()=>{
+ assert.equal(schedule('defer','2026-11-16','',()=>0),'2026-11-17');
+ assert.equal(schedule('defer','2026-11-16','',()=>.999),'2026-11-23');
+ assert.equal(schedule('defer','2026-11-20','',()=>0),'2026-11-23');
+ assert.equal(schedule('defer','2026-11-21','',()=>.999),'2026-11-27');
+ assert.equal(schedule('week','2026-11-16','',()=>0),'2026-11-16');
 });
 test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
  assert.equal(schedule('week','2026-11-16','',()=>0),'2026-11-16');
@@ -25,6 +32,22 @@ test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
  assert.throws(()=>schedule('date','2026-11-16','not-a-date'));
 });
 const task=overrides=>({id:'test',category:'todo',ownerUid:'tal',assigneeUid:null,visibility:'private',completed:false,waiting:false,followUp:null,dueDate:null,...overrides});
+test('Multi-day view buckets overdue, follow-ups and the daily nudge without duplicating them',()=>{
+ assert.equal(taskDay(task({dueDate:'2026-11-15'}),'2026-11-16'),'2026-11-16');
+ assert.equal(taskDay(task({dueDate:'2026-11-17'}),'2026-11-16'),'2026-11-17');
+ assert.equal(taskDay(task({waiting:true,followUp:'2026-11-18'}),'2026-11-16'),'2026-11-18');
+ assert.equal(taskDay(task({}),'2026-11-16',['test']),'2026-11-16');
+ assert.equal(taskDay(task({}),'2026-11-17',[]),null);
+ assert.equal(taskDay(task({completed:true,dueDate:'2026-11-17'}),'2026-11-16'),null);
+});
+test('Synced ordering supports beginning, middle, end, legacy ties and precision exhaustion',()=>{
+ const a={id:'a',createdAt:10},b={id:'b',createdAt:20},c={id:'c',createdAt:30};
+ assert.equal(insertionOrder([c,a,b],'c'),-1014);assert.equal(insertionOrder([a,c,b],'c'),15);assert.equal(insertionOrder([a,b,c],'c'),1044);
+ assert.equal(insertionOrder([c],'c'),0);
+ assert.equal(insertionOrder([a,c,{...b,createdAt:10}],'c'),null);
+ assert.equal(insertionOrder([{...a,sortOrder:1},c,{...b,sortOrder:1+Number.EPSILON}],'c'),null);
+ assert.deepEqual([{...a,sortOrder:100},b].sort(taskOrder).map(t=>t.id),['b','a']);
+});
 test('Ordinary due tasks roll over; later nudges do not acquire a due date',()=>{
  assert(isToday(task({dueDate:'2026-11-15'}),'2026-11-16'));
  assert(!isToday(task({dueDate:'2026-11-17'}),'2026-11-16'));

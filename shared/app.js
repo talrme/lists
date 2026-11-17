@@ -1,22 +1,25 @@
 import {config} from '../config.js?v=lists-95c4f';
-import {dayKey,taskDraft,schedule,inView,shortDate} from './core.js?v=compact1';
+import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder} from './core.js?v=planning1';
 import {isAdministrator} from './households.js';
 import {adminSection,bindAdmin} from './admin.js?v=liveonly1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=compact1';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=1';
+import {taskGestures} from './gestures.js?v=1';
 
 const $=selector=>document.querySelector(selector),icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
 const icons=()=>window.lucide?.createIcons({attrs:{'stroke-width':1.8}});
 const design=Number(document.body.dataset.design||1);
 const preferenceKey='lists-preferences-v1',names={todo:'To-do',grocery:'Groceries',movies:'Movies',other:'Other lists'};
 const glyphs={todo:'list-checks',grocery:'shopping-basket',movies:'clapperboard',other:'layers'};
-let prefs={palette:'original',motion:'playful',quickWeek:true,lists:{}};
+let prefs={palette:'original',motion:'playful',quickWeek:true,swipeDefer:true,daysShown:1,lists:{}};
 try{prefs={...prefs,...JSON.parse(localStorage.getItem(preferenceKey)||'{}')};}catch{}
 Object.assign(prefs,restoreAnimations(prefs));
+prefs.daysShown=Math.max(1,Math.min(14,Number.parseInt(prefs.daysShown)||1));
 const motion=createMotion(()=>prefs);
 let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],store=null,category='todo',view='today',scope='mine',person='all';
 let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
+let gestures=null,undoAction=null;
 function listPrefs(){return {scope:category==='todo'?'mine':'all',person:'all',editor:'inline',...(prefs.lists?.[category]||{})};}
 function persist(){try{localStorage.setItem(preferenceKey,JSON.stringify(prefs));}catch{notify('Settings could not be saved on this device.');}}
 function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=Object.values(prefs.animations).some(Boolean)?'custom':'off';motion.sync();}
@@ -27,10 +30,18 @@ restoreView();appearance();
 $('#app').innerHTML=`<div class="app-frame compact-workspace"><aside id="preview-banner" class="preview-banner" hidden><div><strong id="preview-name"></strong><span>Read-only · Personal and shared tasks</span></div><button class="secondary" id="exit-preview">Exit preview</button></aside><section id="gate" hidden></section><main id="workspace" hidden><form id="composer" class="composer"><div class="compose-line"><input id="new-title" name="title" aria-label="New task" placeholder="Add a to-do…" maxlength="200" autocomplete="off" required><button type="submit" class="primary icon-button" aria-label="Add task" title="Add task">${icon('plus')}</button></div>${fieldsMarkup({today,composer:true})}<p class="inline-error" id="compose-error" role="alert"></p></form><nav class="view-tabs" aria-label="Task schedule"><button data-view="today" aria-current="page">Today</button><button data-view="upcoming">Upcoming</button><button data-view="later">Later</button><button data-view="waiting">Waiting</button><button data-view="done" aria-label="Completed tasks" title="Completed tasks">${icon('check-check')}</button></nav><div class="list-heading"><h1 id="view-title" class="sr-only">Today</h1><button class="simple-completed quiet" data-action="completed" hidden>Completed</button></div><div id="task-list" class="task-list"></div><p id="empty-state" class="empty-state" hidden>Nothing here yet.</p><footer class="utilities"><button data-action="views">${icon('sliders-horizontal')}<span>View</span></button><button data-action="settings">${icon('settings-2')}<span>Settings</span></button><button data-action="share">${icon('share-2')}<span>Save / Share</span></button><a href="../../">${icon('layout-grid')}<span>Designs</span></a></footer></main><div id="mode-status" class="mode-status"></div><p class="connection" id="connection" role="status"></p><nav class="bottom-nav" aria-label="Lists">${Object.entries(names).map(([id,name])=>`<button data-category="${id}" ${id==='todo'?'aria-current="page"':''}>${icon(glyphs[id])}<span>${name}</span></button>`).join('')}</nav></div><dialog id="dialog"><div class="modal-header"><h2 id="dialog-title"></h2><button data-close class="icon-button quiet close-button" aria-label="Close">${icon('x')}</button></div><div id="dialog-body"></div></dialog><dialog id="confirmation"><form method="dialog"><h2 id="confirmation-title"></h2><p id="confirmation-text"></p><div class="modal-footer"><button value="cancel" class="secondary">Cancel</button><button id="confirm-action" value="confirm" class="danger">Remove</button></div></form></dialog><div id="toast" role="status" aria-live="polite"></div>`;
 composerFields=bindFields($('#composer'),{uid:null,members,profiles,today});icons();
 document.addEventListener('error',event=>{const image=event.target;if(image.tagName==='IMG'&&image.closest('.avatar')){image.hidden=true;image.nextElementSibling?.removeAttribute('hidden');}},true);
-function notify(message){$('#toast').textContent=message;$('#toast').classList.add('visible');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('#toast').classList.remove('visible'),3500);}
+function notify(message,undo=null){
+  const host=$('#toast');host.replaceChildren();const text=document.createElement('span');text.textContent=message;host.append(text);undoAction=undo?{...undo,epoch:spaceEpoch}:null;
+  if(undo){const button=document.createElement('button');button.className='toast-undo';button.textContent='Undo';button.onclick=async()=>{
+    const action=undoAction;if(!action||action.epoch!==spaceEpoch||preview)return;button.disabled=true;clearTimeout(notify.timer);
+    try{await store.write(action.id,action.patch,action.rev);if(action.epoch===spaceEpoch)notify('Undone');}catch(error){if(action.epoch===spaceEpoch)notify(errorText(error));}
+  };host.append(button);}
+  const pause=()=>clearTimeout(notify.timer),resume=()=>{pause();notify.timer=setTimeout(()=>{host.classList.remove('visible');host.inert=true;undoAction=null;},undo?9000:3500);};
+  host.inert=false;host.classList.add('visible');host.onpointerenter=pause;host.onpointerleave=resume;host.onfocusin=pause;host.onfocusout=()=>{if(!host.contains(document.activeElement))resume();};resume();
+}
 function errorText(error){
   const code=error?.code||'';
-  if(code.includes('permission-denied'))return 'Access denied. Descriptions and profile photos need the latest Firebase rules; check your household access too.';
+  if(code.includes('permission-denied'))return 'Access denied. Publish the latest Firebase rules for descriptions, photos and task ordering; check household access too.';
   if(code.includes('popup-blocked'))return 'Allow the Google sign-in window, then try again.';
   if(code.includes('unauthorized-domain'))return 'Add this domain under Firebase Authentication → Settings → Authorized domains.';
   return error?.message||'Something went wrong. Please try again.';
@@ -41,27 +52,30 @@ function mine(task){return task.visibility==='private'&&task.ownerUid===user?.ui
 function currentTasks(){
   return tasks.filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
     .filter(task=>scope==='mine'?mine(task):scope==='shared'?task.visibility==='shared'&&(person==='all'||(person==='unassigned'?!task.assigneeUid:task.assigneeUid===person)):true)
-    .filter(task=>category==='todo'?inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
-    .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999')||a.createdAt-b.createdAt||a.id.localeCompare(b.id));
+    .filter(task=>category==='todo'?view==='today'?!!taskDay(task,today,picks)&&taskDay(task,today,picks)<=addDays(today,prefs.daysShown-1):inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
+    .sort(taskOrder);
 }
 function rowMarkup(task){
   const suggestion=category==='todo'&&view==='today'&&!task.dueDate&&!task.waiting&&picks.includes(task.id);
   const date=task.waiting?`Follow up ${shortDate(task.followUp)}`:task.dueDate&&task.dueDate!==today?`${task.dueDate<today?'Since':'Due'} ${shortDate(task.dueDate)}`:'';
   const metadata=[suggestion?'A little nudge':null,date].filter(Boolean),hasDetails=!!task.description?.trim();
-  return `<div class="task-summary"><button class="task-check ${task.completed?'checked':''}" data-complete="${esc(task.id)}" aria-label="${task.completed?'Reopen':'Complete'} ${esc(task.title)}" ${busy.has(task.id)||preview?'disabled':''}>${icon(task.completed?'check':'circle')}</button><button class="task-content" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${hasDetails?'<span class="details-hint" aria-label="Has description" title="Has description"> ···</span>':''}</span>${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&prefs.quickWeek?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="Move ${esc(task.title)} to next week" title="Next week" ${preview?'disabled':''}>${icon('calendar-arrow-up')}</button>`:''}</div>`;
+  return `<div class="task-summary"><button class="task-check ${task.completed?'checked':''}" data-complete="${esc(task.id)}" aria-label="${task.completed?'Reopen':'Complete'} ${esc(task.title)}" ${busy.has(task.id)||preview?'disabled':''}>${icon(task.completed?'check':'circle')}</button><button class="task-content" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${hasDetails?'<span class="details-hint" aria-label="Has description" title="Has description"> ···</span>':''}</span>${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&prefs.quickWeek?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="Defer ${esc(task.title)}" title="Defer" ${preview?'disabled':''}>${icon('calendar-arrow-up')}</button>`:''}${!preview?`<button class="icon-button drag-handle" data-move="${esc(task.id)}" aria-label="Move ${esc(task.title)}" title="Move task" ${busy.has(task.id)?'disabled':''}>${icon('grip-vertical')}</button>`:''}</div>`;
 }
 function render(){
-  if(!user)return;
+  if(!user||gestures?.isActive())return;
   const positions=motion.snapshot();
   const todo=category==='todo';$('.view-tabs').hidden=!todo;$('.simple-completed').hidden=todo;$('.simple-completed').textContent=view==='done'?'Open items':'Completed';
   $('#new-title').placeholder=todo?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';
   $('#new-title').setAttribute('aria-label',todo?'New task':'New item');$('#composer .schedule-line').classList.toggle('no-timing',!todo);
   $('#composer .timing-track').hidden=!todo;$('#composer .exact-date-row').classList.toggle('category-hidden',!todo);$('#composer .waiting-toggle').classList.toggle('category-hidden',!todo);
   const captions={today:'Today',upcoming:'Coming up',later:'Sometime later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];
-  const list=currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.children].map(row=>[row.dataset.task,row]));
+  const list=currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row]));
   // Preserve an open form node: a live snapshot must not dismiss a phone keyboard or erase a draft.
-  for(const row of [...host.children])if(!ids.has(row.dataset.task)&&row.dataset.task!==inlineEditor?.id)row.remove();
-  let cursor=host.firstElementChild;
+  for(const row of rows.values())if(!ids.has(row.dataset.task)&&row.dataset.task!==inlineEditor?.id)row.remove();
+  const grouped=todo&&view==='today',days=grouped?Array.from({length:prefs.daysShown},(_,i)=>addDays(today,i)):[''];
+  const groups=new Map([...host.children].map(group=>[group.dataset.day,group]));
+  for(const day of days){let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';host.append(group);groups.set(day,group);}group.querySelector('.day-tasks').dataset.day=day;const heading=group.querySelector('.day-heading');heading.hidden=!grouped||prefs.daysShown===1;heading.textContent=(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');}
+  const cursors=new Map(days.map(day=>[day,groups.get(day).querySelector('.day-tasks').firstElementChild]));
   for(const task of list){
     let row=rows.get(task.id);
     if(!row){row=document.createElement('article');row.dataset.task=task.id;}
@@ -70,15 +84,18 @@ function render(){
     const summary=rowMarkup(task),old=row.querySelector('.task-summary');
     if(inlineEditor?.id!==task.id)row.querySelector('.task-edit-form')?.remove();
     if(!old)row.innerHTML=summary;else if(row.dataset.summary!==summary)old.outerHTML=summary;row.dataset.summary=summary;
-    if(row!==cursor)host.insertBefore(row,cursor);cursor=row.nextElementSibling;
+    const day=grouped?taskDay(task,today,picks):'',parent=groups.get(day).querySelector('.day-tasks'),cursor=cursors.get(day);
+    if(row!==cursor)parent.insertBefore(row,cursor?.parentNode===parent?cursor:null);cursors.set(day,row.nextElementSibling);
     if(inlineEditor?.id===task.id&&!row.contains(inlineEditor.form))row.append(inlineEditor.form);
     if(inlineEditor?.id===task.id&&inlineEditor.rev!==task.rev)inlineEditor.form.querySelector('.editor-notice').textContent='Changed on another device. Your draft is safe; reopen before saving.';
   }
+  for(const [day,group] of groups)if(!days.includes(day)){const orphan=group.querySelector('.is-editing');if(orphan)groups.get(days[0]).querySelector('.day-tasks').append(orphan);group.remove();}
+  for(const day of days){const group=groups.get(day);group.classList.toggle('empty-day',!group.querySelector('.task-row'));group.classList.toggle('has-day-heading',grouped&&prefs.daysShown>1);}
   if(inlineEditor&&!tasks.some(task=>task.id===inlineEditor.id))inlineEditor.form.querySelector('.editor-notice').textContent='This task was removed on another device. Your unsaved draft is shown below.';
   $('#empty-state').hidden=list.length>0||!!inlineEditor;
   document.querySelectorAll('[data-view]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.view===view));
   document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));
-  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions);
+  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions);gestures?.sync();
 }
 async function dailyPick(){
   const token=`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`;if(!ready||!user||picking===token||pickedDay===token)return;
@@ -114,6 +131,36 @@ function draftFrom(form,task=null){
   if(raw.waiting){if(!raw.followUp||!/^\d{4}-\d{2}-\d{2}$/.test(raw.followUp))throw new Error('Choose a follow-up date.');draft.waiting=true;draft.followUp=raw.followUp;}
   if(task)draft.completed=task.completed;
   return {raw,draft};
+}
+async function deferTask(task){
+  const patch={dueDate:schedule('defer',today),waiting:false,followUp:null};
+  if(await mutate(task,patch)){
+    notify('Deferred to '+shortDate(patch.dueDate),{id:task.id,rev:task.rev+1,patch:{dueDate:task.dueDate,waiting:task.waiting,followUp:task.followUp}});
+    motion.pop('travel',$('[data-view=upcoming]'));
+    return true;
+  }
+  return false;
+}
+async function moveTask(task,ids,day){
+  if(preview||busy.has(task.id))return;
+  const ordered=ids.map(id=>id===task.id?task:tasks.find(t=>t.id===id)).filter(Boolean),rank=insertionOrder(ordered,task.id),patch={};
+  if(day&&day!==taskDay(task,today,picks)){if(task.waiting)patch.followUp=day;else patch.dueDate=day;}
+  const changes=rank===null?ordered.map((item,index)=>({id:item.id,rev:item.rev,patch:{sortOrder:index*1024,...(item.id===task.id?patch:{})}})):[{id:task.id,rev:task.rev,patch:{...patch,sortOrder:rank}}];
+  const epoch=spaceEpoch;changes.forEach(change=>busy.add(change.id));
+  try{
+    if(changes.length===1)await store.write(changes[0].id,changes[0].patch,changes[0].rev);else await store.writeMany(changes);
+    if(epoch===spaceEpoch)notify(day?'Moved to '+shortDate(day):'Order updated',{id:task.id,rev:task.rev+1,patch:{sortOrder:task.sortOrder??task.createdAt,dueDate:task.dueDate,followUp:task.followUp}});
+    return true;
+  }catch(error){if(epoch===spaceEpoch)notify(errorText(error));return false;}
+  finally{changes.forEach(change=>busy.delete(change.id));render();}
+}
+function moveOptions(task){
+  const row=[...document.querySelectorAll('.task-row')].find(row=>row.dataset.task===task.id),parent=row?.parentElement;if(!parent)return;
+  open('Move task',`<p class="task-preview">${esc(task.title)}</p><div class="move-directions"><button class="secondary" data-move-direction="-1">${icon('arrow-up')} Move up</button><button class="secondary" data-move-direction="1">${icon('arrow-down')} Move down</button></div>${task.category==='todo'&&!task.completed?`<label class="field">Move to date<input id="move-date" type="date" value="${taskDay(task,today,picks)||today}"></label><button class="primary" id="move-date-save">Move to date</button>`:''}<div class="modal-footer"><button class="secondary" data-close>Close</button></div>`);
+  document.querySelectorAll('[data-move-direction]').forEach(button=>button.onclick=async()=>{
+    const ids=[...parent.querySelectorAll('.task-row')].map(row=>row.dataset.task),index=ids.indexOf(task.id),next=index+Number(button.dataset.moveDirection);if(next<0||next>=ids.length){notify('Already at the '+(next<0?'top':'bottom'));return;}[ids[index],ids[next]]=[ids[next],ids[index]];close();await moveTask(task,ids,parent.dataset.day||null);
+  });
+  $('#move-date-save')?.addEventListener('click',async()=>{const day=$('#move-date').value;if(!day)return;const ids=tasks.filter(item=>item.id!==task.id&&item.category===task.category&&!item.completed&&taskDay(item,today,picks)===(day<today?today:day)).sort(taskOrder).map(item=>item.id);ids.push(task.id);close();await moveTask(task,ids,day);});
 }
 $('#composer').addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type=submit]');if(preview||button.disabled)return;$('#compose-error').textContent='';
@@ -155,7 +202,7 @@ function viewMarkup(){
 function bindViews(){const root=$('.view-choice-track');if(!root)return;root.style.setProperty('--choice',['mine','shared','all'].indexOf(scope));root.querySelectorAll('[data-scope]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scope===scope)));$('.view-people').hidden=scope!=='shared';$('#person-filter').value=person;$('#person-filter').onchange=async event=>{if(!await leaveInline())return;person=event.target.value;saveListPrefs({person});render();};}
 function views(){open('View · '+names[category],viewMarkup()+'<div class="modal-footer"><button class="primary" data-close>Done</button></div>');bindViews();}
 function householdPicker(){return `<label class="field">Household<select id="household-select"><option value="" disabled ${households.some(h=>h.id===currentSpace.id)?'':'selected'}>Choose household</option>${households.map(h=>`<option value="${esc(h.id)}" ${h.id===currentSpace.id?'selected':''}>${esc(h.title||h.id)}</option>`).join('')}</select></label>`;}
-function resetWorkspace(){inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';restoreView();pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();}
+function resetWorkspace(){undoAction=null;clearTimeout(notify.timer);$('#toast').classList.remove('visible');$('#toast').inert=true;inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';restoreView();pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();}
 function switchHousehold(id){if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);}
 function updateInstallManifest(){
   const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.set('household',currentSpace.id);const root=new URL('../../',url);
@@ -173,8 +220,10 @@ function bindAnimations(){
   $('#preview-animations').onclick=()=>{const button=$('#preview-animations');motion.pop('arrival',button);motion.dialog($('#dialog'));motion.burst(button.getBoundingClientRect());};
 }
 function settings(){
-  open('Settings',`<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset></details>${animationSettings()}<details class="settings-group" id="list-settings"><summary>${esc(names[category])} settings</summary>${viewMarkup()}<fieldset class="editor-mode"><legend>Open task details</legend><div class="choice-track two-choices" style="--choice:${listPrefs().editor==='modal'?1:0}" role="group" aria-label="Task editor"><span class="choice-indicator" aria-hidden="true"></span><button data-editor-mode="inline" aria-pressed="${listPrefs().editor==='inline'}">Inline</button><button data-editor-mode="modal" aria-pressed="${listPrefs().editor==='modal'}">Modal</button></div></fieldset>${category==='todo'?`<label class="toggle-row">Quick move to next week<input type="checkbox" role="switch" data-preference="quickWeek" ${prefs.quickWeek?'checked':''}></label>`:''}</details><details class="settings-group"><summary>Account &amp; privacy</summary><p class="account-email">${esc(signedInAccount?.email||user?.email)}</p>${householdPicker()}<p class="settings-note">Personal tasks are hidden from other household members. Tal, the administrator, can view all users' personal and shared tasks. Assigning or sharing makes a task visible to household members.</p><button class="secondary" id="sign-out">Sign out</button></details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">ASAP stays in Today. Soon chooses one of the next five weekdays, including today on weekdays. Next week means next Monday–Friday. Calendar: America/Los_Angeles; weekends are excluded, not public holidays.</p><p class="settings-note">One daily nudge comes from your personal later tasks, shared tasks assigned to you, and unassigned shared tasks. It stays stable across devices and does not become overdue.</p></details>${preview?'':adminSection(signedInAccount||user)}<div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');bindViews();
+  open('Settings',`${category==='todo'?`<details class="settings-group" open><summary>Today view</summary><label class="days-setting">Days to show<input id="days-shown" type="number" inputmode="numeric" min="1" max="14" value="${prefs.daysShown}"></label><label class="toggle-row">Swipe left to defer<input id="swipe-defer" type="checkbox" role="switch" ${prefs.swipeDefer?'checked':''}></label></details>`:''}<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset></details>${animationSettings()}<details class="settings-group" id="list-settings"><summary>${esc(names[category])} settings</summary>${viewMarkup()}<fieldset class="editor-mode"><legend>Open task details</legend><div class="choice-track two-choices" style="--choice:${listPrefs().editor==='modal'?1:0}" role="group" aria-label="Task editor"><span class="choice-indicator" aria-hidden="true"></span><button data-editor-mode="inline" aria-pressed="${listPrefs().editor==='inline'}">Inline</button><button data-editor-mode="modal" aria-pressed="${listPrefs().editor==='modal'}">Modal</button></div></fieldset>${category==='todo'?`<label class="toggle-row">Show defer button<input type="checkbox" role="switch" data-preference="quickWeek" ${prefs.quickWeek?'checked':''}></label>`:''}</details><details class="settings-group"><summary>Account &amp; privacy</summary><p class="account-email">${esc(signedInAccount?.email||user?.email)}</p>${householdPicker()}<p class="settings-note">Personal tasks are hidden from other household members. Tal, the administrator, can view all users' personal and shared tasks. Assigning or sharing makes a task visible to household members.</p><button class="secondary" id="sign-out">Sign out</button></details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">ASAP stays in Today. Soon chooses one of the next five weekdays, including today on weekdays. Defer chooses one of the next five weekdays after today. Calendar: America/Los_Angeles; weekends are excluded, not public holidays.</p><p class="settings-note">One daily nudge comes from your personal later tasks, shared tasks assigned to you, and unassigned shared tasks. It stays stable across devices and does not become overdue.</p></details>${preview?'':adminSection(signedInAccount||user)}<div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');bindViews();
   bindAnimations();
+  $('#days-shown')?.addEventListener('change',async event=>{if(!await leaveInline()){event.target.value=prefs.daysShown;return;}prefs.daysShown=Math.max(1,Math.min(14,Number.parseInt(event.target.value)||1));event.target.value=prefs.daysShown;persist();render();});
+  $('#swipe-defer')?.addEventListener('change',event=>{prefs.swipeDefer=event.target.checked;persist();});
   document.querySelectorAll('button[data-palette]').forEach(button=>button.onclick=()=>{prefs.palette=button.dataset.palette;persist();appearance();document.querySelectorAll('button[data-palette]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
   $('[data-preference=quickWeek]')?.addEventListener('change',event=>{prefs.quickWeek=event.target.checked;persist();render();});
   document.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=async()=>{if(!await leaveInline())return;saveListPrefs({editor:button.dataset.editorMode});$('.editor-mode .choice-track').style.setProperty('--choice',button.dataset.editorMode==='modal'?1:0);document.querySelectorAll('[data-editor-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
@@ -194,8 +243,9 @@ document.addEventListener('click',async event=>{
   if(button.dataset.scope){if(!await leaveInline())return;scope=button.dataset.scope;person='all';saveListPrefs({scope,person});bindViews();render();}
   if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';restoreView();composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task){if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);}}
-  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Reopened':'Done. Nicely done.');if(!task.completed){motion.burst(rect);motion.travel(rect,category==='todo'?$('[data-view=done]'):$('.simple-completed'));}}}
-  if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id),rect=button.getBoundingClientRect();if(task&&await mutate(task,{dueDate:schedule('nextWeek',today),waiting:false,followUp:null})){notify('Moved to next week');motion.travel(rect,$('[data-view=upcoming]'));}}
+  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Reopened':'Done. Nicely done.',task.completed?null:{id:task.id,rev:task.rev+1,patch:{completed:false}});if(!task.completed){motion.burst(rect);motion.travel(rect,category==='todo'?$('[data-view=done]'):$('.simple-completed'));}}}
+  if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id),rect=button.getBoundingClientRect();if(task&&await deferTask(task))motion.travel(rect,$('[data-view=upcoming]'));}
+  if(button.dataset.move){const task=tasks.find(t=>t.id===button.dataset.move);if(task)moveOptions(task);}
   if(button.dataset.action==='completed'){if(!await leaveInline())return;view=view==='done'?'later':'done';render();}
   if(button.dataset.action==='views')views();
   if(button.dataset.action==='settings')settings();
@@ -209,7 +259,7 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="../../FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=compact1');
+    const {connectFirebase}=await import('./firebase.js?v=planning1');
     store=await connectFirebase(config,{
       tasks:onTasks,status,
       preview(profile){preview=profile;user=profile||signedInAccount;document.documentElement.toggleAttribute('data-preview',!!profile);$('#preview-banner').hidden=!profile;$('#preview-name').textContent=profile?'Viewing as '+profile.name:'';close();},
@@ -225,6 +275,7 @@ async function start(){
   }catch(error){gate('Could not connect to Google sign-in. Check your connection and try again.',`<button class="primary" onclick="location.reload()">Try again</button>`);status(errorText(error));}
 }
 function checkDay(){const current=dayKey(Date.now(),config.timeZone);if(today!==current){today=current;composerFields.setDay(current);inlineEditor?.controller.setDay?.(current);pickedDay='';picks=[];render();void dailyPick();}}
+gestures=taskGestures({canSwipe:()=>ready&&prefs.swipeDefer&&category==='todo'&&!preview,canMove:()=>ready&&!preview,findTask:id=>tasks.find(task=>task.id===id),onDefer:deferTask,onMove:moveTask,onIdle:render,motion,context:()=>spaceEpoch});
 let midnightTimer;
 function watchDay(){clearTimeout(midnightTimer);checkDay();if(!document.hidden)midnightTimer=setTimeout(watchDay,60000);}
 document.addEventListener('visibilitychange',watchDay);window.addEventListener('online',()=>{if(ready)void dailyPick();});watchDay();void start();

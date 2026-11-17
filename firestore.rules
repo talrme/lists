@@ -40,7 +40,8 @@ service cloud.firestore {
     }
     function validTask(task) {
       return task.keys().hasAll(['title','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
-        && task.keys().hasOnly(['title','description','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.keys().hasOnly(['title','description','sortOrder','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.get('sortOrder', 0) is number && task.get('sortOrder', 0) >= -1000000000000000 && task.get('sortOrder', 0) <= 1000000000000000
         && task.title is string && task.title.size() > 0 && task.title.size() <= 200
         && task.get('description', '') is string && task.get('description', '').size() <= 10000
         && task.category in ['todo','grocery','movies','other'] && task.ownerUid is string

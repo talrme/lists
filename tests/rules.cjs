@@ -4,7 +4,7 @@ const java=process.env.LISTS_TEST_JAVA||'/private/tmp/lists-rules-runtime/jdk-21
 const jar=process.env.LISTS_TEST_FIRESTORE_JAR||'/private/tmp/lists-rules-runtime/firestore.jar';
 function token(uid,email,extra={}){const now=Math.floor(Date.now()/1000),encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');return `${encode({alg:'none',typ:'JWT'})}.${encode({iss:`https://securetoken.google.com/${PROJECT}`,aud:PROJECT,sub:uid,user_id:uid,iat:now,exp:now+3600,auth_time:now,email,email_verified:true,firebase:{sign_in_provider:'google.com',identities:{'google.com':[uid],email:[email]}},...extra})}.`;}
 const tal=token('test-tal','talrme@gmail.com'),sophie=token('test-sophie','sophiegreen2@gmail.com'),alice=token('test-alice','alice@example.com'),bob=token('test-bob','bob@example.com');
-function value(v){if(v===null)return {nullValue:null};if(Array.isArray(v))return {arrayValue:{values:v.map(value)}};if(typeof v==='object')return {mapValue:{fields:fields(v)}};if(typeof v==='boolean')return {booleanValue:v};if(typeof v==='number')return {integerValue:String(v)};return {stringValue:v};}
+function value(v){if(v===null)return {nullValue:null};if(Array.isArray(v))return {arrayValue:{values:v.map(value)}};if(typeof v==='object')return {mapValue:{fields:fields(v)}};if(typeof v==='boolean')return {booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};return {stringValue:v};}
 function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])=>[k,value(v)]));}
 (async()=>{
  assert(fs.existsSync(java)&&fs.existsSync(jar),'Set LISTS_TEST_JAVA and LISTS_TEST_FIRESTORE_JAR to a temporary Java 21 runtime and Google Firestore emulator JAR.');
@@ -56,6 +56,9 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await write(home+'description',{description:'',rev:2},sophie,true,'Clear description',['updatedAt'],true);
   await write(home+'too-long',{...task('test-tal'),description:'x'.repeat(10001)},tal,false,'Description length limit enforced');
   await write(home+'wrong-type',{...task('test-tal'),description:{html:'no'}},tal,false,'Description must be a string');
+  await write(home+'ordered',{...task('test-tal'),sortOrder:42.5},tal,true,'Optional numeric task order accepted');
+  await write(home+'bad-order',{...task('test-tal'),sortOrder:'top'},tal,false,'Text task order rejected');
+  await write(home+'huge-order',{...task('test-tal'),sortOrder:1e16},tal,false,'Unbounded task order rejected');
   await read(home+'private-sophie',tal,true,'Admin can preview Sophie personal task');
   await write(home+'private-sophie',{title:'Admin edit',rev:2},tal,false,'Admin has no write bypass for other personal tasks',['updatedAt'],true);
   await expected(await request(base+'/'+home+'private-sophie',tal,{method:'DELETE'}),false,'Admin cannot delete other personal tasks');

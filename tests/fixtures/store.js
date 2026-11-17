@@ -10,6 +10,10 @@ export function sandboxStore(onChange,onStatus) {
   window.addEventListener('storage',receive);
   return {
     ready:async()=>refresh(),
+    async writeMany(changes){
+      if(changes.some(change=>state.tasks.find(t=>t.id===change.id)?.rev!==change.rev))throw new Error('This list changed. Try again.');
+      state.tasks=state.tasks.map(task=>{const change=changes.find(c=>c.id===task.id);return change?{...task,...change.patch,rev:task.rev+1}:task;});save();
+    },
     async write(id,patch,expectedRev){
       const i=state.tasks.findIndex(t=>t.id===id),old=state.tasks[i];
       if(old&&!expectedRev&&Object.entries(patch).every(([key,value])=>old[key]===value))return;

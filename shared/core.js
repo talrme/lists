@@ -29,6 +29,7 @@ export function schedule(mode, day, exact = '', random = Math.random) {
   if (!validDay(day)) throw new Error('Choose a valid day.');
   if (mode === 'later') return null;
   if (mode === 'asap') return day;
+  if (mode === 'defer') return choose(businessDays(addDays(day,1)),random);
   if (mode === 'week' || mode === 'nextWeek') return choose(businessDays(day,mode === 'nextWeek'),random);
   if (mode === 'date' && validDay(exact)) return exact;
   throw new Error('Choose a date.');
@@ -60,6 +61,18 @@ export function inView(task, view, day, picks=[]) {
 export function shortDate(day) {
   if (!day) return '';
   return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'));
+}
+export function taskDay(task,today,picks=[]){
+  if(isToday(task,today,picks))return today;
+  if(task.completed)return null;
+  return task.waiting?task.followUp:task.dueDate;
+}
+export function taskOrder(a,b){return (a.sortOrder??a.createdAt)-(b.sortOrder??b.createdAt)||a.createdAt-b.createdAt||a.id.localeCompare(b.id);}
+export function insertionOrder(ordered,id){
+  const index=ordered.findIndex(task=>task.id===id),previous=ordered[index-1],next=ordered[index+1];
+  const low=previous?(previous.sortOrder??previous.createdAt):null,high=next?(next.sortOrder??next.createdAt):null;
+  const rank=low===null?(high===null?0:high-1024):high===null?low+1024:low+(high-low)/2;
+  return Number.isFinite(rank)&&Math.abs(rank)<=1e15&&(low===null||rank>low)&&(high===null||rank<high)?rank:null;
 }
 export function seededTasks(day) {
   const values = [

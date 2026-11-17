@@ -132,6 +132,15 @@ export async function connectFirebase(config,events) {
         }
       });
     },
+    async writeMany(changes){
+      requireWritable();requireOnline();if(!changes.length||changes.length>400)throw new Error('Move fewer tasks at once.');
+      const refs=changes.map(change=>dbSdk.doc(db,...path(),'tasks',change.id));
+      await dbSdk.runTransaction(db,async transaction=>{
+        const snapshots=await Promise.all(refs.map(ref=>transaction.get(ref)));
+        snapshots.forEach((snap,i)=>{if(!snap.exists()||snap.data().rev!==changes[i].rev)throw new Error('This list changed on another phone. Try moving the task again.');});
+        changes.forEach((change,i)=>transaction.update(refs[i],{...change.patch,rev:change.rev+1,updatedAt:dbSdk.serverTimestamp()}));
+      });
+    },
     async remove(id,rev){
       requireWritable();requireOnline();const ref=dbSdk.doc(db,...path(),'tasks',id);
       await dbSdk.runTransaction(db,async transaction=>{const snap=await transaction.get(ref);if(!snap.exists()||snap.data().rev!==rev)throw new Error('This task changed. Close and reopen it.');transaction.delete(ref);});
