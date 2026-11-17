@@ -56,9 +56,15 @@ export function inView(task, view, day, picks=[]) {
   if (view==='done') return task.completed;
   if (task.completed) return false;
   if (view==='today') return isToday(task,day,picks);
-  if (view==='upcoming') return !task.waiting && !!task.dueDate && task.dueDate>day;
+  const date=task.waiting?task.followUp:task.dueDate;
+  if (view==='upcoming') return !!date && date>day && date<=weekHorizon(day);
   if (view==='waiting') return task.waiting;
-  return !task.dueDate && !task.waiting;
+  return !date || date>weekHorizon(day);
+}
+export function weekHorizon(day) {
+  let date=day,count=0;
+  while(count<6){date=addDays(date,1);const weekday=new Date(date+'T12:00:00Z').getUTCDay();if(weekday>0&&weekday<6)count++;}
+  return date;
 }
 export function shortDate(day) {
   if (!day) return '';

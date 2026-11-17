@@ -1,4 +1,4 @@
-const CACHE='lists-shell-offline-1';
+const CACHE='lists-shell-offline-2';
 const BASE=new URL('./',self.location.href);
 const SDK='https://www.gstatic.com/firebasejs/13.3.0/';
 const FILES=['','index.html','config.js','shared/app.js','shared/firebase.js','shared/device-store.js','shared/core.js','shared/task-fields.js','shared/households.js','shared/admin.js','shared/testing.js','shared/playground.js','shared/notices.js','shared/gestures.js','shared/motion.js','shared/styles.css','shared/gallery.css','shared/vendor/sortable.min.js','shared/vendor/lucide.min.js','shared/vendor/qrcode.min.js','shared/vendor/marked-18.2.1.js','shared/vendor/purify-3.4.18.min.js','assets/icon-32.png','assets/apple-touch-icon.png','assets/icon-192.png','assets/icon-512.png',...Array.from({length:10},(_,i)=>`staging/${String(i+1).padStart(2,'0')}/`).flatMap(path=>[path+'index.html',path+'manifest.webmanifest'])];

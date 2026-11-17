@@ -5,10 +5,10 @@ async function assign(page,person){
   else{await page.locator('#composer [data-sharing=shared]').click();await page.locator(`#composer [data-assignee="${person}"]`).click();}
 }
 async function add(page,title,{when='asap',person='private',description}={}){
-  await page.locator('#new-title').fill(title);const timing=page.locator(`#composer [data-timing=${when}]`);if(await timing.isVisible())await timing.click();
+  const timing=page.locator(`#composer [data-timing=${when}]`);if(await timing.isVisible())await timing.click();await page.locator('#new-title').fill(title);
   if(person!=='private')await assign(page,person);
   if(description!==undefined){await options(page);await page.locator('#new-description').fill(description);}
-  await page.getByRole('button',{name:'Add task',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#composer [type=submit]').disabled);
+  if(await page.locator('#composer.modal-composer').count())await page.locator('#composer .composer-actions [type=submit]').click();else await page.getByRole('button',{name:'Add task',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#composer [type=submit]').disabled);
   const error=await page.locator('#compose-error').textContent();if(error)throw Error(error);
 }
 async function scope(page,value,person='all'){
@@ -17,8 +17,7 @@ async function scope(page,value,person='all'){
   await page.getByRole('button',{name:'Done',exact:true}).click();
 }
 async function scheduleView(page,view){
-  if(['waiting','done'].includes(view))await page.locator('[data-action=views]').click();
-  await page.locator(`[data-view=${view}]`).click();
+  await page.locator(`[data-view=${view}]`).first().click();
 }
 async function editorMode(page,mode){
   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();

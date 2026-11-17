@@ -78,11 +78,35 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .sharing-line{flex-direction:column;align-items:flex-start;gap:7px}
 .sharing-line .sharing-track{width:min(240px,100%)}
 .ownership-field{margin-top:14px}
-.ownership-field>span{font-size:12px;font-weight:650}
+.ownership-field>span{font-size:11px;font-weight:400;color:var(--muted)}
 .ownership-field .assignee-choices{padding-top:7px;gap:12px}
 .ownership-field[data-private=true] .assignee-choice{color:var(--muted)}
 .ownership-field[data-private=true] .avatar{filter:grayscale(1);opacity:.48}
 .ownership-field[data-private=true] .assignee-choice:is(:hover,:focus-visible) .avatar{opacity:.85}
+.list-shortcuts{display:flex;justify-content:flex-end;gap:12px;margin:-12px 0 10px}
+.list-shortcuts button{display:inline-flex;align-items:center;gap:4px;min-height:36px;padding:4px;font-size:11px;color:var(--muted)}
+.list-shortcuts svg,.waiting-badge svg{width:14px;height:14px}
+.list-shortcuts [aria-current]{color:var(--accent);font-weight:700}
+.task-title{display:flex;align-items:center;gap:6px}
+.waiting-badge{display:inline-flex;color:var(--muted);flex:none}
+.task-excerpt{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;font-size:11px;line-height:1.5;color:var(--muted);font-weight:400}
+.task-list,.day-group,.day-tasks,.task-row{min-width:0}
+.compact-workspace .task-summary .task-content{min-width:0;width:0;flex:1}
+.modal-task-editor>.modal-footer{position:sticky;top:0;z-index:3;background:var(--surface);padding:8px 0;margin:0 0 6px;border-bottom:1px solid var(--line)}
+.modal-task-editor>.modal-footer .primary{flex:1}
+.modal-task-editor .editor-heading>span{display:none}
+.modal-task-editor .editor-heading{display:none}
+.modal-composer{display:flex;flex-direction:column;margin:0;box-shadow:none}
+.modal-composer .compose-line{order:1}
+.modal-composer .schedule-line{order:2}
+.modal-composer .task-options{display:contents}
+.modal-composer .composer-actions{order:0;position:sticky;top:0;z-index:3;background:var(--surface);padding:8px 0;margin:0 0 6px;border-bottom:1px solid var(--line)}
+.modal-composer .composer-actions .primary{flex:1}
+.modal-composer .task-options>div,.modal-composer .task-options>label,.modal-composer .task-options>input{order:3}
+.modal-composer #compose-error{order:1}
+.modal-composer .compose-line>[type=submit]{display:none}
+#dialog:has(.modal-task-editor,.modal-composer) .modal-header{margin-bottom:4px}
+@media(max-width:600px){#dialog:has(.modal-task-editor,.modal-composer){max-height:calc(100dvh - 28px)}}
 .sync-progress{position:fixed;inset:0 0 auto;height:3px;z-index:30;overflow:hidden;pointer-events:none;background:var(--soft)}
 .sync-progress:after{content:"";display:block;width:35%;height:100%;background:var(--accent);animation:sync-sweep 1.2s ease-in-out infinite}
 html[data-syncing] .connection:before{content:"";display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:6px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sync-spin .8s linear infinite}

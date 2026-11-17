@@ -6,7 +6,7 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
   host.querySelectorAll('.day-tasks').forEach(node=>{
    if(!sortables.has(node))sortables.set(node,new window.Sortable(node,{
     group:'list-tasks',draggable:'.task-row',filter:'.is-editing,.completed,button:not(.task-content),input,textarea,select,a',preventOnFilter:false,
-    delay:350,delayOnTouchOnly:false,touchStartThreshold:6,
+    delay:220,delayOnTouchOnly:false,touchStartThreshold:6,
     animation:motion.enabled('reorder')?180:0,forceFallback:true,fallbackOnBody:true,fallbackTolerance:4,
     ghostClass:'task-drag-placeholder',chosenClass:'task-drag-chosen',fallbackClass:'task-drag-float',scrollSensitivity:70,scrollSpeed:12,
     onChoose(){chosen=true;swipe=null;active=true;sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
@@ -14,7 +14,9 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
     onStart(event){dragging=true;active=true;event.item._movingTask=findTask(event.item.dataset.task);event.item._movingEpoch=context();document.body.classList.add('task-dragging');},
     async onEnd(event){
      suppressUntil=performance.now()+350;const task=event.item._movingTask,epoch=event.item._movingEpoch;delete event.item._movingTask;delete event.item._movingEpoch;
-     try{if(task&&epoch===context()&&(event.from!==event.to||event.oldDraggableIndex!==event.newDraggableIndex))await onMove(task,[...event.to.querySelectorAll('.task-row')].map(row=>row.dataset.task),event.to.dataset.day||null);}finally{dragging=false;idle();}
+     // Sortable may leave in-flight neighbor transforms after pointer release.
+     host.querySelectorAll('.task-row').forEach(row=>{row.getAnimations().forEach(animation=>animation.cancel());row.style.transition='none';row.style.transform='none';});
+     try{if(task&&epoch===context()&&(event.from!==event.to||event.oldDraggableIndex!==event.newDraggableIndex))await onMove(task,[...event.to.querySelectorAll('.task-row')].map(row=>row.dataset.task),event.to.dataset.day||null);}finally{dragging=false;host.querySelectorAll('.task-row').forEach(row=>{row.style.removeProperty('transition');row.style.removeProperty('transform');});idle();}
     },
    }));
    sortables.get(node).option('disabled',!canMove());sortables.get(node).option('animation',motion.enabled('reorder')?180:0);

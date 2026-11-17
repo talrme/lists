@@ -1,5 +1,17 @@
 # Lists
 
+## Current Controls
+
+- Task details open in a modal by default, with sticky Save/Cancel actions at the top for phone keyboards. Existing devices switch to this new default once; Settings retains an optional inline editor.
+- The add-task arrow opens details. Closing with the arrow, X, Escape or backdrop preserves the draft in the current session; explicit Cancel clears it.
+- With a title in the main add row, tapping ASAP or ~ Week adds immediately. Later only chooses timing. In the details modal, timing never submits; use Save. + and Enter still add.
+- ASAP contains due/overdue tasks and the stable daily Later suggestion. ~ Week contains dates within the next six future business days. Later contains undated tasks and dates beyond that horizon. These are live date-based groupings, not permanent task categories.
+- Waiting is an overlapping flag, using the follow-up date for grouping. A small clock identifies it; Waiting and Completed filters are directly below the composer. Setting Waiting does not switch your view.
+- View controls audience, shared assignee filtering and days shown. Settings controls appearance, animations, editor/gesture behavior, account and offline recovery.
+- Rows show a short description preview, not due dates. Hold a task for 220ms to drag; a successful drop stays in place without a second rearrangement animation.
+
+Preview locally at http://127.0.0.1:5195/lists/ when the preview server is running.
+
 ## Offline Use
 
 After loading a household online once, you can reopen it without service, see the last saved state and add/edit/complete/defer/delete tasks. A small top progress line and footer status show Connecting, Syncing, pending changes or All synced. Pending edits survive closing/reloading and upload when the app is open with service again; background uploads while completely closed are not guaranteed.

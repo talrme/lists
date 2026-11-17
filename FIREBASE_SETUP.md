@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+The November 17 modal-first editor, preserved composer drafts, quick-add timing buttons, six-business-day display horizon and overlapping Waiting filter need no Firebase setup or new rules. Existing dates are not rewritten; views regroup them as time passes. A Waiting item's follow-up date determines its schedule. No migration is required.
+
 Offline loading/queued edits need no new Firebase project, service, schema or rule publication. Existing transaction/revision and privacy rules still apply when pending edits upload. After the site updates, open each phone's browser/installed app online once to cache its files and household. Offline access reuses an existing signed-in session; first sign-in and new daily suggestions need a connection. Clearing browser storage/eviction can remove pending local changes.
 
 Task list / Task owner controls are a frontend-only change. Muted private owner choices can be clicked to choose Shared and an assignee together. Existing access rules and creator/assignment fields remain unchanged; no new Firebase setup is needed.

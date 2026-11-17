@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,creationOrder,unassigned,assignedTo} from '../shared/core.js';
+import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,creationOrder,unassigned,assignedTo,weekHorizon} from '../shared/core.js';
 import {householdPeople} from '../shared/households.js';
 
 test('Invited people remain assignable before their first visit without duplicate profiles',()=>{
@@ -45,6 +45,21 @@ test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
  assert.throws(()=>schedule('date','2026-11-16','not-a-date'));
 });
 const task=overrides=>({id:'test',category:'todo',ownerUid:'tal',assigneeUid:null,visibility:'private',completed:false,waiting:false,followUp:null,dueDate:null,...overrides});
+test('Date buckets move at the six-future-business-day horizon; Waiting overlaps',()=>{
+ assert.equal(weekHorizon('2026-11-20'),'2026-11-30');
+ assert.equal(weekHorizon('2026-11-21'),'2026-11-30');
+ assert.equal(weekHorizon('2026-12-31'),'2027-01-08');
+ for(const waiting of [true,false])for(const date of [null,'2026-11-19','2026-11-20','2026-11-23','2026-11-30','2026-12-01']){
+  const item=task({waiting,dueDate:waiting?null:date,followUp:waiting?date:null});
+  assert.equal(inView(item,'today','2026-11-20'),!!date&&date<='2026-11-20');
+  assert.equal(inView(item,'upcoming','2026-11-20'),!!date&&date>'2026-11-20'&&date<='2026-11-30');
+  assert.equal(inView(item,'later','2026-11-20'),!date||date>'2026-11-30');
+  assert.equal(inView(item,'waiting','2026-11-20'),waiting);
+ }
+ assert(inView(task({dueDate:'2026-12-01'}),'later','2026-11-20'));
+ assert(inView(task({dueDate:'2026-12-01'}),'upcoming','2026-11-23'));
+ assert(inView(task({dueDate:'2026-12-01'}),'today','2026-12-01'));
+});
 test('Multi-day view buckets overdue, follow-ups and the daily nudge without duplicating them',()=>{
  assert.equal(taskDay(task({dueDate:'2026-11-15'}),'2026-11-16'),'2026-11-16');
  assert.equal(taskDay(task({dueDate:'2026-11-17'}),'2026-11-16'),'2026-11-17');

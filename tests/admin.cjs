@@ -93,7 +93,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await offlineResources(tal);await tal.context().setOffline(true);
   await merge(tal).locator('[data-complete]').click();await merge(tal).waitFor({state:'detached'});
   await tal.evaluate(id=>window.__testStore.write(id,{title:'Offline title wins'},2),mergeId);
-  await deleted(tal).locator('[data-edit]').click();await tal.locator('#edit-form [name=description]').fill('An unsent offline note');await tal.locator('#edit-form [type=submit]').click();
+  await deleted(tal).locator('[data-edit]').click();await tal.locator('#edit-form [name=description]').fill('An unsent offline note');await tal.locator('#edit-form [type=submit]').click();await tal.locator('#edit-form').waitFor({state:'detached'});
   await ui.add(tal,'Created without service');await tal.getByText('Created without service',{exact:true}).waitFor();
   assert((await tal.locator('#connection').textContent()).includes('pending'));
   const logoutBlocked=await tal.evaluate(async()=>{try{await window.__testStore.logout();return false;}catch{return true;}});assert(logoutBlocked,'Pending edits must not be silently lost on sign-out');
