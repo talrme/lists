@@ -2,7 +2,7 @@ import {config} from '../config.js?v=lists-95c4f';
 import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,assignedTo,unassigned} from './core.js?v=sharing2';
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=playground1';
-import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=sharing2';
+import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=editor3';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=2';
 import {taskGestures} from './gestures.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
@@ -20,7 +20,7 @@ const motion=createMotion(()=>prefs);
 let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],store=null,category='todo',view='today',scope='mine',person='all';
 let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
-let gestures=null,undoAction=null,lastRealSpace='';
+let gestures=null,undoAction=null,lastRealSpace='',editorTransition=false;
 function listPrefs(){return {scope:'mine',person:'all',editor:'inline',...(prefs.lists?.[category]||{})};}
 function persist(){try{localStorage.setItem(preferenceKey,JSON.stringify(prefs));}catch{notify('Settings could not be saved on this device.');}}
 function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=Object.values(prefs.animations).some(Boolean)?'custom':'off';motion.sync();}
@@ -29,7 +29,12 @@ function restoreView(){({scope,person}=listPrefs());}
 restoreView();appearance();
 
 $('#app').innerHTML=`<div class="app-frame compact-workspace"><aside id="playground-banner" class="playground-banner" hidden><span><strong>Playground</strong><small>Test data only</small></span><button class="text-button" data-action="leave-playground">Exit Playground</button></aside><aside id="preview-banner" class="preview-banner" hidden><div><strong id="preview-name"></strong><span>Read-only · Personal and shared tasks</span></div><button class="secondary" id="exit-preview">Exit preview</button></aside><section id="gate" hidden></section><main id="workspace" hidden><form id="composer" class="composer"><div class="compose-line"><input id="new-title" name="title" aria-label="New task" placeholder="Add a to-do…" maxlength="200" autocomplete="off" required><button type="submit" class="primary icon-button" aria-label="Add task" title="Add task">${icon('plus')}</button></div>${fieldsMarkup({today,composer:true})}<p class="inline-error" id="compose-error" role="alert"></p></form><nav class="view-tabs" aria-label="Task schedule"><button data-view="today" aria-current="page">Today</button><button data-view="upcoming">Upcoming</button><button data-view="later">Later</button><button data-view="waiting">Waiting</button><button data-view="done" aria-label="Completed tasks" title="Completed tasks">${icon('check-check')}</button></nav><div class="list-heading"><h1 id="view-title" class="sr-only">Today</h1><button class="simple-completed quiet" data-action="completed" hidden>Completed</button></div><div id="task-list" class="task-list"></div><p id="empty-state" class="empty-state" hidden>Nothing here yet.</p><footer class="utilities"><button data-action="views">${icon('sliders-horizontal')}<span>View</span></button><button data-action="settings">${icon('settings-2')}<span>Settings</span></button><button data-action="share">${icon('share-2')}<span>Save / Share</span></button><a href="../../">${icon('layout-grid')}<span>Designs</span></a></footer></main><div id="mode-status" class="mode-status"></div><p class="connection" id="connection" role="status"></p><nav class="bottom-nav" aria-label="Lists">${Object.entries(names).map(([id,name])=>`<button data-category="${id}" ${id==='todo'?'aria-current="page"':''}>${icon(glyphs[id])}<span>${name}</span></button>`).join('')}</nav></div><dialog id="dialog"><div class="modal-header"><h2 id="dialog-title"></h2><button data-close class="icon-button quiet close-button" aria-label="Close">${icon('x')}</button></div><div id="dialog-body"></div></dialog><dialog id="confirmation"><form method="dialog"><h2 id="confirmation-title"></h2><p id="confirmation-text"></p><div class="modal-footer"><button value="cancel" class="secondary">Cancel</button><button id="confirm-action" value="confirm" class="danger">Remove</button></div></form></dialog><div id="toast" role="status" aria-live="polite"></div>`;
-composerFields=bindFields($('#composer'),{uid:null,members,profiles,today});icons();
+composerFields=bindFields($('#composer'),{uid:null,members,profiles,today,onOptionsToggle:()=>changeEditor(async()=>{
+  if($('#composer').dataset.saving)return;
+  if(!$('#new-options').hidden){cancelNewTask();return;}
+  if(await leaveInline())composerFields.setExpanded(true);
+})});icons();
+$('#composer .cancel-new-task').addEventListener('click',cancelNewTask);
 document.addEventListener('error',event=>{const image=event.target;if(image.tagName==='IMG'&&image.closest('.avatar')){image.hidden=true;image.nextElementSibling?.removeAttribute('hidden');}},true);
 function notify(message,undo=null){
   const host=$('#toast');host.replaceChildren();const text=document.createElement('span');text.textContent=message;host.append(text);undoAction=undo?{...undo,epoch:spaceEpoch}:null;
@@ -122,8 +127,24 @@ function confirmAction(title,text,label='Remove'){
   return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));
 }
 function formFingerprint(form){return JSON.stringify([...new FormData(form)]);}
+async function changeEditor(action){
+  if(editorTransition)return;editorTransition=true;
+  try{await action();}finally{editorTransition=false;}
+}
+function cancelNewTask(){
+  if($('#composer').dataset.saving)return;
+  pendingCreation=null;$('#new-title').value='';$('#compose-error').textContent='';composerFields.reset();
+}
+async function leaveComposer(){
+  const form=$('#composer');if(form.dataset.saving)return false;
+  if($('#new-options').hidden)return true;
+  const dirty=form.elements.title.value||form.elements.description.value||form.elements.when.value!=='asap'||form.elements.person.value!=='private'||form.elements.waiting.checked||form.elements.date.value||form.elements.followUp.value;
+  if(dirty&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return false;
+  cancelNewTask();return true;
+}
 async function leaveInline(){
   if(!inlineEditor)return true;
+  if(inlineEditor.form.querySelector('[type=submit]').disabled)return false;
   if(formFingerprint(inlineEditor.form)!==inlineEditor.initial&&!await confirmAction('Discard unsaved changes?','Your task has not been changed.','Discard'))return false;
   inlineEditor.form.closest('.task-row')?.classList.remove('is-editing');inlineEditor.form.remove();inlineEditor=null;render();return true;
 }
@@ -174,19 +195,20 @@ function moveOptions(task){
   $('#move-date-save')?.addEventListener('click',async()=>{const day=$('#move-date').value;if(!day)return;const ids=tasks.filter(item=>item.id!==task.id&&item.category===task.category&&!item.completed&&taskDay(item,today,picks)===(day<today?today:day)).sort(taskOrder).map(item=>item.id);ids.push(task.id);close();await moveTask(task,ids,day);});
 }
 $('#composer').addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,button=form.querySelector('[type=submit]');if(preview||button.disabled)return;$('#compose-error').textContent='';
+  event.preventDefault();const form=event.currentTarget;if(preview||form.dataset.saving)return;$('#compose-error').textContent='';
+  form.dataset.saving='true';form.querySelectorAll('[type=submit],.cancel-new-task,.options-toggle').forEach(control=>control.disabled=true);
   try{
     const {raw,draft}=draftFrom(form),fingerprint=JSON.stringify(raw);
     if(pendingCreation?.fingerprint!==fingerprint)pendingCreation={fingerprint,id:crypto.randomUUID(),draft};
-    const epoch=spaceEpoch,before=formFingerprint(form),createdId=pendingCreation.id;button.disabled=true;await store.write(createdId,pendingCreation.draft);if(epoch!==spaceEpoch)return;
+    const epoch=spaceEpoch,before=formFingerprint(form),createdId=pendingCreation.id;await store.write(createdId,pendingCreation.draft);if(epoch!==spaceEpoch)return;
     pendingCreation=null;if(formFingerprint(form)===before){form.elements.title.value='';composerFields.reset();}
     notify(raw.waiting?'Added to Waiting':draft.dueDate&&draft.dueDate>today?'Added to Upcoming':!draft.dueDate?'Added to Later':'Added');
     motion.arrival(createdId,$(`[data-view=${raw.waiting?'waiting':draft.dueDate&&draft.dueDate>today?'upcoming':!draft.dueDate?'later':'today'}]`));
-  }catch(error){$('#compose-error').textContent=errorText(error);}finally{button.disabled=!!preview;}
+  }catch(error){$('#compose-error').textContent=errorText(error);}finally{delete form.dataset.saving;form.querySelectorAll('[type=submit],.cancel-new-task,.options-toggle').forEach(control=>control.disabled=!!preview);}
 });
 async function taskEditor(task,{modal=false,existing=null}={}){
   if(preview){open('Task details',`<p class="task-preview">${esc(task.title)}</p>${task.description?`<div class="rich-description">${descriptionHtml(task.description)}</div>`:'<p class="settings-note">No description.</p>'}<p class="settings-note">${task.waiting?'Follow up '+esc(shortDate(task.followUp)):task.dueDate?'Due '+esc(shortDate(task.dueDate)):'Sometime later'}</p><div class="modal-footer"><button class="secondary" data-close>Close</button></div>`);return;}
-  if(!existing&&!await leaveInline())return;
+  if(!existing&&(!await leaveComposer()||!await leaveInline()))return;
   const form=existing||document.createElement('form');form.id='edit-form';form.className='task-edit-form';
   if(!existing){
     form.innerHTML=`<div class="editor-heading"><span>Task details</span><button type="button" class="icon-button popout-editor" aria-label="Open in modal" title="Open in modal">${icon('maximize-2')}</button></div>${fieldsMarkup({task,today,allowPrivate:task.ownerUid===user.uid})}<p class="editor-notice settings-note" role="status"></p><p class="inline-error" role="alert"></p><div class="modal-footer"><button class="primary" type="submit">Save</button><button class="secondary cancel-editor" type="button">Cancel</button><button class="quiet danger icon-button" type="button" id="remove-task" title="Remove task" aria-label="Remove task">${icon('trash-2')}</button></div>`;
@@ -254,7 +276,7 @@ document.addEventListener('click',async event=>{
   if(button.dataset.scope){if(!await leaveInline())return;scope=button.dataset.scope;person='all';saveListPrefs({scope,person});bindViews();render();}
   if(button.dataset.person){if(!await leaveInline())return;person=button.dataset.person;saveListPrefs({person});bindViews();render();}
   if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';restoreView();composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
-  if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task){if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);}}
+  if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task)await changeEditor(async()=>{if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);});}
   if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Reopened':'Done. Nicely done.',task.completed?null:{id:task.id,rev:task.rev+1,patch:{completed:false}});if(!task.completed){motion.burst(rect);motion.travel(rect,category==='todo'?$('[data-view=done]'):$('.simple-completed'));}}}
   if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id),rect=button.getBoundingClientRect();if(task&&await deferTask(task))motion.travel(rect,$('[data-view=upcoming]'));}
   if(button.dataset.move){const task=tasks.find(t=>t.id===button.dataset.move);if(task)moveOptions(task);}
@@ -275,7 +297,7 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="../../FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=sharing2');
+    const {connectFirebase}=await import('./firebase.js?v=editor3');
     store=await connectFirebase(config,{
       tasks:onTasks,status,
       preview(profile){preview=profile;user=profile||signedInAccount;document.documentElement.toggleAttribute('data-preview',!!profile);$('#preview-banner').hidden=!profile;$('#preview-name').textContent=profile?'Viewing as '+profile.name:'';close();},

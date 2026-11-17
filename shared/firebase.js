@@ -1,6 +1,6 @@
 import {candidateTasks,choose,dayKey} from './core.js?v=sharing2';
 import {belongsTo,householdDraft,isAdministrator,memberLabel,householdPeople} from './households.js?v=sharing2';
-import {photoUrl} from './task-fields.js?v=sharing2';
+import {photoUrl} from './task-fields.js?v=editor3';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {

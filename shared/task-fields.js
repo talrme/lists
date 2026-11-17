@@ -34,9 +34,10 @@ export function fieldsMarkup({task={},today,composer=false,allowPrivate=true}){
       <label class="toggle-row waiting-toggle">Waiting for a response<input name="waiting" type="checkbox" role="switch" ${task.waiting?'checked':''}></label>
       <div class="exact-date-row"><label class="compact-date" for="${prefix}-date">Date<input id="${prefix}-date" name="date" type="date" aria-label="Date" value="${esc(task.dueDate||'')}"></label></div>
       <div class="waiting-options" ${task.waiting?'':'hidden'}><div class="followup-heading">Follow-up date <small class="custom-date" hidden>Custom</small></div><div class="followup-choices" role="group" aria-label="Follow up in">${[[3,'3 days'],[7,'1 week'],[14,'2 weeks'],[30,'1 month'],[90,'3 months']].map(([days,label])=>`<button type="button" data-followup="${days}" aria-pressed="false">${label}</button>`).join('')}</div><label class="compact-date"><span class="sr-only">Follow-up date</span><input name="followUp" type="date" aria-label="Follow-up date" value="${esc(task.followUp||'')}"></label></div>
+      ${composer?'<div class="modal-footer composer-actions"><button class="primary" type="submit">Save</button><button class="secondary cancel-new-task" type="button">Cancel</button></div>':''}
     </div>`;
 }
-export function bindFields(form,{uid,members,profiles,today}){
+export function bindFields(form,{uid,members,profiles,today,onOptionsToggle}){
   const $=selector=>form.querySelector(selector),timing=$('.timing-track'),sharing=$('.sharing-track'),options=$('.task-options'),person=form.elements.person;
   function people(){
     if(person.value.startsWith('email:')){const id=Object.keys(profiles).find(id=>!id.startsWith('email:')&&profiles[id].email===person.value.slice(6));if(id)person.value=id;}
@@ -59,7 +60,7 @@ export function bindFields(form,{uid,members,profiles,today}){
     if(button.dataset.sharing){person.value=button.dataset.sharing==='private'?'private':person.value==='private'?(uid||'shared'):person.value;sync();}
     if(button.dataset.assignee){person.value=button.dataset.assignee;sync();}
     if(button.dataset.followup){form.elements.followUp.value=addDays(today,Number(button.dataset.followup));followupSelection(button.dataset.followup);}
-    if(button.classList.contains('options-toggle')){options.hidden=!options.hidden;button.setAttribute('aria-expanded',String(!options.hidden));}
+    if(button.classList.contains('options-toggle')){if(onOptionsToggle)void onOptionsToggle();else setExpanded(options.hidden);}
   });
   function followupSelection(days){
     $('.followup-choices').querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.followup===String(days))));
@@ -73,7 +74,8 @@ export function bindFields(form,{uid,members,profiles,today}){
     if(event.target===person)sync();
   });
   form.addEventListener('error',event=>{if(event.target.tagName==='IMG'){event.target.hidden=true;if(event.target.nextElementSibling)event.target.nextElementSibling.hidden=false;}},true);
-  followupSelection(null);sync();return {updatePeople,setDay(day){today=day;},reset(){form.elements.when.value='asap';form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';person.value='private';options.hidden=true;followupSelection(null);const toggle=$('.options-toggle');if(toggle)toggle.setAttribute('aria-expanded','false');sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
+  function setExpanded(expanded){options.hidden=!expanded;const toggle=$('.options-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',expanded?'Cancel new task':'More task options');toggle.title=expanded?'Cancel new task':'More task options';}}
+  followupSelection(null);sync();return {updatePeople,setExpanded,setDay(day){today=day;},reset(){form.elements.when.value='asap';form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';person.value='private';setExpanded(false);followupSelection(null);sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
 }
 export function fieldValues(form){
   const person=form.elements.person.value,email=person.startsWith('email:')?person.slice(6):null;
