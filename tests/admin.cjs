@@ -9,7 +9,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
  const origin='https://www.gstatic.com/firebasejs/13.3.0/';
  async function openPerson(name,household='home',design='01'){
   const email={Tal:'talrme@gmail.com',Sophie:'sophiegreen2@gmail.com',Alice:'alice@example.com',Bob:'bob@example.com'}[name],uid='test-'+name.toLowerCase();
-  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce',serviceWorkers:'block'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+  await context.grantPermissions(['local-network-access'],{origin:new URL(BASE).origin});
   await page.route('**/config.js*',route=>route.fulfill({contentType:'text/javascript',body:`export const config={firebase:{apiKey:'demo-key',authDomain:'demo-lists-browser.firebaseapp.com',projectId:'${PROJECT}',appId:'demo-app'},space:'home',environment:'staging',timeZone:'America/Los_Angeles',liveUrl:'https://talrme.github.io/lists/'};`}));
   await page.route(origin+'firebase-auth.js',route=>route.fulfill({contentType:'text/javascript',body:`const account=${JSON.stringify({uid,email,emailVerified:true,displayName:name,photoURL:'https://lh3.googleusercontent.com/lists-test-'+uid,providerData:[{providerId:'google.com'}]})};export const browserLocalPersistence={};export const getAuth=()=>({});export const setPersistence=async()=>{};export function onAuthStateChanged(auth,callback){setTimeout(()=>callback(account),0);return ()=>{};}export class GoogleAuthProvider{};export const signInWithPopup=async()=>{};export const signOut=async()=>{};`}));
   await page.route(origin+'firebase-firestore.js',route=>route.fulfill({contentType:'text/javascript',body:`export * from '${origin}firebase-firestore.js?real-emulator-sdk';import {getFirestore as real,connectFirestoreEmulator} from '${origin}firebase-firestore.js?real-emulator-sdk';export function getFirestore(app){const db=real(app);connectFirestoreEmulator(db,'127.0.0.1',${port},{mockUserToken:${JSON.stringify({sub:uid,email,email_verified:true,firebase:{sign_in_provider:'google.com',identities:{'google.com':[uid],email:[email]}}})}});return db;}`}));
@@ -23,6 +24,17 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
  async function admin(page){await settings(page);await page.locator('#settings-admin>summary').click();await page.locator('.admin-households>summary').click();await page.locator('#admin-household-list[aria-busy=false]').waitFor({state:'attached'});}
  async function add(page,title,assigned='private'){await ui.add(page,title,{person:assigned});}
  async function testing(page){await settings(page);await page.locator('#settings-admin>summary').click();await page.locator('#settings-testing>summary').click();await page.locator('#playground-form').waitFor();}
+ async function offlineResources(page){
+  const sdkSources=await Promise.all(['firebase-app.js','firebase-firestore.js'].map(async name=>{const response=await fetch(origin+name);assert(response.ok);return [name,await response.text()];}));
+  for(const [name,body]of sdkSources)await page.route(origin+name+(name==='firebase-firestore.js'?'?real-emulator-sdk':''),route=>route.fulfill({contentType:'text/javascript',body}));
+  await page.route(BASE+'**',async route=>{
+   const relative=decodeURIComponent(new URL(route.request().url()).pathname.slice(new URL(BASE).pathname.length));
+   if(relative==='config.js'||relative==='shared/firebase.js')return route.fallback();
+   const file=path.resolve(__dirname,'..',relative.endsWith('/')?relative+'index.html':relative||'index.html');
+   if(!file.startsWith(path.resolve(__dirname,'..')+path.sep))return route.abort();
+   try{return route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html'});}catch{return route.fallback();}
+  });
+ }
  try{
   for(let i=0;i<100;i++){if(emulator.exitCode!==null)throw Error(logs);try{await fetch(`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/ready`);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   const {page:tal}=await openPerson('Tal');await tal.locator('#gate [data-action=settings]').waitFor();await admin(tal);
@@ -73,6 +85,35 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const nextPick=await draw(tal,'2099-11-17');assert(nextPick);assert.notEqual(nextPick,firstPick,'New date chooses from the remaining eligible tasks');
   assert.deepEqual(await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks'),receiptsBefore,'Next day does not overwrite yesterday or change task due dates');
   await talAgainContext.close();
+  await ui.scope(tal,'mine');await ui.scheduleView(tal,'today');await ui.scheduleView(sophie,'today');
+  await ui.add(tal,'Offline merge task',{person:'shared'});await sophie.getByText('Offline merge task',{exact:true}).waitFor();
+  await ui.add(tal,'Deleted elsewhere task',{person:'shared'});await sophie.getByText('Deleted elsewhere task',{exact:true}).waitFor();
+  const mergeId=await tal.locator('.task-row').filter({hasText:'Offline merge task'}).getAttribute('data-task');
+  const merge=page=>page.locator(`[data-task="${mergeId}"]`),deleted=page=>page.locator('.task-row').filter({hasText:'Deleted elsewhere task'});
+  await offlineResources(tal);await tal.context().setOffline(true);
+  await merge(tal).locator('[data-complete]').click();await merge(tal).waitFor({state:'detached'});
+  await tal.evaluate(id=>window.__testStore.write(id,{title:'Offline title wins'},2),mergeId);
+  await deleted(tal).locator('[data-edit]').click();await tal.locator('#edit-form [name=description]').fill('An unsent offline note');await tal.locator('#edit-form [type=submit]').click();
+  await ui.add(tal,'Created without service');await tal.getByText('Created without service',{exact:true}).waitFor();
+  assert((await tal.locator('#connection').textContent()).includes('pending'));
+  const logoutBlocked=await tal.evaluate(async()=>{try{await window.__testStore.logout();return false;}catch{return true;}});assert(logoutBlocked,'Pending edits must not be silently lost on sign-out');
+  await settings(tal);await tal.locator('summary').filter({hasText:'Account & privacy'}).click();await tal.locator('#sign-out').click();await tal.locator('#sign-out-error').filter({hasText:'waiting to sync'}).waitFor();await tal.locator('[data-close]').first().click();
+  await merge(sophie).locator('[data-edit]').click();await sophie.locator('#edit-form [name=title]').fill('Online title before queued upload');await sophie.locator('#edit-form [name=description]').fill('Edited on the other phone');await sophie.locator('#edit-form [type=submit]').click();await sophie.locator('#edit-form').waitFor({state:'detached'});
+  await deleted(sophie).locator('[data-edit]').click();await sophie.locator('#edit-form').waitFor();await sophie.locator('#remove-task').click();await sophie.locator('#confirmation [value=confirm]').click();await deleted(sophie).waitFor({state:'detached'});
+  await tal.reload();await tal.locator('#workspace').waitFor();await tal.getByText('Created without service',{exact:true}).waitFor();assert.equal(await merge(tal).count(),0);assert((await tal.locator('#connection').textContent()).includes('pending'));
+  await tal.screenshot({path:'/private/tmp/lists-offline-phone.png'});
+  await tal.evaluate(()=>{window.__syncSeen=false;new MutationObserver(()=>{if(document.documentElement.hasAttribute('data-syncing'))window.__syncSeen=true;}).observe(document.documentElement,{attributes:true,attributeFilter:['data-syncing']});});
+  await tal.context().setOffline(false);await tal.getByText('All synced',{exact:true}).waitFor();
+  assert(await tal.evaluate(()=>window.__syncSeen),'Sync progress must be visible during reconnect');
+  await ui.scheduleView(sophie,'done');await merge(sophie).waitFor();await merge(sophie).locator('[data-edit]').click();assert.equal(await sophie.locator('#edit-form [name=title]').inputValue(),'Offline title wins','Same field uses last uploaded change');assert.equal(await sophie.locator('#edit-form [name=description]').inputValue(),'Edited on the other phone','Offline completion must preserve another device notes edits');await sophie.locator('#edit-form .cancel-editor').click();
+  assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),0);
+  const afterOffline=await readCollection('listSpaces/home/environments/staging/tasks');assert.equal(afterOffline.filter(doc=>doc.fields.title.stringValue==='Created without service').length,1,'Offline create uploaded once');assert(!afterOffline.some(doc=>doc.fields.title.stringValue==='Deleted elsewhere task'),'Replay must not resurrect a deleted task');
+  await ui.scheduleView(tal,'today');const offlineTask=tal.locator('.task-row').filter({hasText:'Created without service'});await offlineTask.waitFor();const offlineId=await offlineTask.getAttribute('data-task');
+  await tal.context().setOffline(true);await tal.evaluate(async id=>{await window.__testStore.write(id,{visibility:'shared',assigneeUid:'test-outsider'},1);},offlineId);await tal.context().setOffline(false);
+  await tal.getByText('Pending changes need access restored. They remain saved on this device.',{exact:true}).waitFor();assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),1);
+  await settings(tal);await tal.locator('summary').filter({hasText:'Offline & sync'}).click();await tal.locator('#review-pending').click();await tal.locator('[data-discard-pending]').click();await tal.locator('#confirmation [value=confirm]').click();await tal.getByText('No pending changes on this device.',{exact:true}).waitFor();await tal.locator('[data-close]').click();
+  assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),0);
+  await ui.scheduleView(sophie,'today');
   const homeBefore=await readCollection('listSpaces/home/environments/staging/tasks');
   await testing(tal);await tal.locator('#playground-form [type=submit]').click();await tal.locator('#playground-actions').waitFor();
   await tal.locator('#seed-playground').click();await tal.getByText('Added 9 example tasks to Playground only.',{exact:true}).waitFor();
@@ -136,6 +177,6 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
    await tal.locator('#household-form').screenshot({path:`/private/tmp/lists-admin-form-${design}.png`});await tal.getByRole('button',{name:'Close',exact:true}).click();
    await testing(tal);await tal.locator('.testing-guide>summary').click();for(const palette of ['original','night']){await tal.locator(`button[data-palette=${palette}]`).click();assert(await tal.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));}if(design===10){await tal.locator('#playground-actions').scrollIntoViewIfNeeded();await tal.locator('#dialog').screenshot({path:'/private/tmp/lists-playground-night.png'});}await tal.getByRole('button',{name:'Close',exact:true}).click();
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Household creation, shared completion/Undo and order sync, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Offline cold reload, durable queued create/edit/complete, automatic reconnect, last-uploaded-field wins, remote-field preservation, deleted-task non-resurrection, rejected queue discard, pending sign-out guard, sync indicator; household creation, shared completion/Undo and order sync, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
  }catch(error){const page=browser.contexts()[0]?.pages()[0];if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'/private/tmp/lists-admin-failure.png',fullPage:true});}console.error(errors);console.error(logs.slice(-3500));throw error;}finally{await browser.close();emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

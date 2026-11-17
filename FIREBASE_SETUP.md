@@ -1,5 +1,7 @@
 # Lists: Firebase setup, one step at a time
 
+Offline loading/queued edits need no new Firebase project, service, schema or rule publication. Existing transaction/revision and privacy rules still apply when pending edits upload. After the site updates, open each phone's browser/installed app online once to cache its files and household. Offline access reuses an existing signed-in session; first sign-in and new daily suggestions need a connection. Clearing browser storage/eviction can remove pending local changes.
+
 Task list / Task owner controls are a frontend-only change. Muted private owner choices can be clicked to choose Shared and an assignee together. Existing access rules and creator/assignment fields remain unchanged; no new Firebase setup is needed.
 
 Daily-pick persistence requires no additional setup: the existing per-user/date Firestore record and transaction already preserve the choice across devices/reloads. Regression tests now cover concurrent browser draws, completion, refresh and Pacific midnight. These checks used synthetic users in the local emulator/test fixture only; no real household records were changed.

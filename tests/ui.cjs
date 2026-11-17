@@ -25,6 +25,7 @@ async function editorMode(page,mode){
 }
 async function move(page,row){await row.locator('[data-edit]').click();await page.locator('#edit-form .move-editor').click();}
 async function mockBackend(page,base){
+  await page.addInitScript(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.register=async()=>null;});
   const fixture=new URL('tests/fixtures/store.js',base).href;
   await page.route('https://firestore.googleapis.com/**',route=>route.abort());
   await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:`

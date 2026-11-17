@@ -1,4 +1,10 @@
-# Verification — November 16, 2026
+# Verification — November 17, 2026
+
+## Offline Update
+
+Real SDK/demo Firestore emulator checks passed: offline create/edit/complete persisted through a disconnected reload; automatic reconnect uploaded without duplicates; same-field last-uploaded edits won while unrelated remote notes survived; editing a remotely deleted task did not recreate it. Rejected uploads remained queued and could be discarded individually through Settings. Pending sign-out was blocked, sync progress appeared during reconnect, and existing privacy/admin/Playground/revision tests passed. No real household records were used. Test static/SDK resources are fulfilled locally during offline SDK tests; Chrome loopback permission is granted only to the test origin.
+
+The actual service worker separately passed connected installation, disconnected page reload and opening another design offline in a fresh unsigned-in browser. Pure tests cover queue projection, stable creation IDs, grouped patches, scope separation and merging acknowledgments. Existing browser workflows passed all ten designs and 160 responsive/palette combinations. Offline phone screenshot inspected. Physical iPhone/Android installation, OS background suspension, browser eviction and real Google OAuth after reconnect remain manual checks. No background-while-closed guarantee or new Firebase rules.
 
 ## Passed locally
 

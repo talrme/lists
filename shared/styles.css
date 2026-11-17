@@ -83,3 +83,12 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .ownership-field[data-private=true] .assignee-choice{color:var(--muted)}
 .ownership-field[data-private=true] .avatar{filter:grayscale(1);opacity:.48}
 .ownership-field[data-private=true] .assignee-choice:is(:hover,:focus-visible) .avatar{opacity:.85}
+.sync-progress{position:fixed;inset:0 0 auto;height:3px;z-index:30;overflow:hidden;pointer-events:none;background:var(--soft)}
+.sync-progress:after{content:"";display:block;width:35%;height:100%;background:var(--accent);animation:sync-sweep 1.2s ease-in-out infinite}
+html[data-syncing] .connection:before{content:"";display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:6px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sync-spin .8s linear infinite}
+@keyframes sync-sweep{from{transform:translateX(-110%)}to{transform:translateX(390%)}}
+@keyframes sync-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.sync-progress:after,html[data-syncing] .connection:before{animation:none}.sync-progress:after{width:100%}}
+.offline-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pending-changes>div{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.pending-changes span{min-width:0;flex:1;overflow-wrap:anywhere}.pending-changes strong{display:block;font-size:13px}.pending-changes small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
