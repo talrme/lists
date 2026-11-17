@@ -46,6 +46,16 @@ service cloud.firestore {
         && (task.waiting ? (task.followUp != null && task.dueDate == null) : task.followUp == null)
         && task.rev is int && task.createdAt is number && task.updatedAt == request.time;
     }
+    match /listUsers/{uid} {
+      allow read: if administrator() || (googleAccount() && request.auth.uid == uid);
+      allow create, update: if googleAccount() && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['email','name','updatedAt'])
+        && request.resource.data.keys().hasOnly(['email','name','updatedAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
     match /listSpaces/{space} {
       allow get, list: if googleAccount() && (administrator() || invited(resource.data));
       allow create: if administrator() && space.matches('^[a-z0-9][a-z0-9-]{0,47}$')
@@ -61,7 +71,7 @@ service cloud.firestore {
           : (request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time));
       allow delete: if false;
       match /members/{uid} {
-        allow read: if member(space);
+        allow read: if administrator() || member(space);
         allow create: if member(space) && uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['email','name','joinedAt'])
           && request.resource.data.email == request.auth.token.email
@@ -73,8 +83,8 @@ service cloud.firestore {
         allow delete: if false;
       }
       match /environments/{environment}/tasks/{taskId} {
-        allow get: if member(space) && (!exists(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)) || readable(resource.data));
-        allow list: if member(space) && readable(resource.data);
+        allow get: if administrator() || (member(space) && (!exists(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)) || readable(resource.data)));
+        allow list: if administrator() || (member(space) && readable(resource.data));
         allow create: if member(space) && validTask(request.resource.data) && validAssignee(space,request.resource.data.assigneeUid)
           && request.resource.data.ownerUid == request.auth.uid && request.resource.data.rev == 1;
         allow update: if member(space) && readable(resource.data) && validTask(request.resource.data)
@@ -90,7 +100,7 @@ service cloud.firestore {
             && ((task.visibility == 'private' && task.ownerUid == request.auth.uid)
               || (task.visibility == 'shared' && (task.assigneeUid == null || task.assigneeUid == request.auth.uid)));
         }
-        allow read: if member(space) && uid == request.auth.uid;
+        allow read: if administrator() || (member(space) && uid == request.auth.uid);
         allow create: if member(space) && uid == request.auth.uid && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           && request.resource.data.keys().hasOnly(['taskId','createdAt']) && request.resource.data.createdAt == request.time
           && (request.resource.data.taskId == null || (request.resource.data.taskId is string && eligible(request.resource.data.taskId)));

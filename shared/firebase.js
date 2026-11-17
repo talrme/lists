@@ -9,33 +9,35 @@ export async function connectFirebase(config,events) {
   ]);
   const app=appSdk.initializeApp(config.firebase,'lists'),auth=authSdk.getAuth(app),db=dbSdk.getFirestore(app);
   await authSdk.setPersistence(auth,authSdk.browserLocalPersistence);
-  let user=null,activeId=config.space,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
+  let user=null,preview=null,activeId=config.space,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
+  const subject=()=>preview||user;
   const root=dbSdk.collection(db,'listSpaces');
   const path=()=>['listSpaces',activeId,'environments',config.environment];
   const key=()=>`lists-household-v1-${user?.uid}`;
   function clearChildren(){spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];events.tasks([]);}
   function stop(){authVersion++;stopDiscovery();stopDiscovery=()=>{};stopSpace();stopSpace=()=>{};clearChildren();spaces=[];events.households?.([]);}
-  function availableSpaces(){events.households?.(spaces.filter(space=>belongsTo(space,user)));}
+  function availableSpaces(){events.households?.(spaces.filter(space=>belongsTo(space,subject())));}
   function requireAdmin(){if(!isAdministrator(user))throw new Error('Only Tal can manage households.');}
+  function requireWritable(){if(preview)throw new Error('View as user is read-only. Exit the preview to make changes.');}
   function requireOnline(){if(!navigator.onLine)throw new Error('You are offline. Keep this open and try again when connected.');}
   function selectSpace(id,{remember=true}={}){
     if(!/^[a-z0-9][a-z0-9-]{0,47}$/.test(id))throw new Error('Invalid household link.');
     needsReconnect=false;events.loading?.();stopSpace();clearChildren();activeId=id;const authRun=authVersion;
-    if(remember){try{localStorage.setItem(key(),id);}catch{}}
+    if(remember&&!preview){try{localStorage.setItem(key(),id);}catch{}}
     events.space?.({id,title:id});let fingerprint='';
     stopSpace=dbSdk.onSnapshot(dbSdk.doc(db,'listSpaces',id),async snapshot=>{
       if(authRun!==authVersion||id!==activeId)return;
       if(!snapshot.exists()){fingerprint='';events.unavailable?.('This household has not been created yet.');return;}
       const household={id,...snapshot.data()};events.space?.(household);
-      if(!belongsTo(household,user)){needsReconnect=true;fingerprint='';clearChildren();events.unavailable?.('Your Google account is not a member of this household.');return;}
+      if(!belongsTo(household,subject())){needsReconnect=true;fingerprint='';clearChildren();events.unavailable?.(preview?'This user is not a member of this household.':'Your Google account is not a member of this household.');return;}
       if(!spaces.some(s=>s.id===id)){spaces.push(household);availableSpaces();}
       const signature=JSON.stringify([household.schemaVersion,household.memberEmails,household.memberUids]);
       if(signature===fingerprint)return;fingerprint=signature;clearChildren();const run=spaceVersion;
-      const account=user;
+      const account=subject();
       try{
         // Registration only records the identity already authorized by household rules.
         const profile=dbSdk.doc(db,'listSpaces',id,'members',account.uid);
-        await dbSdk.runTransaction(db,async transaction=>{
+        if(!preview)await dbSdk.runTransaction(db,async transaction=>{
           const old=await transaction.get(profile);
           if(!old.exists())transaction.set(profile,{email:account.email,name:memberLabel(account),joinedAt:dbSdk.serverTimestamp()});
         });
@@ -58,11 +60,12 @@ export async function connectFirebase(config,events) {
     },error=>{if(authRun===authVersion&&id===activeId){needsReconnect=true;clearChildren();events.unavailable?.('Household access is not ready.');events.error(error);}});
   }
   authSdk.onAuthStateChanged(auth,account=>{
-    stop();user=account;events.account(account);if(!account)return;
+    stop();preview=null;user=account;events.account(account);events.preview?.(null);if(!account)return;
     const run=authVersion;
+    dbSdk.setDoc(dbSdk.doc(db,'listUsers',account.uid),{email:account.email,name:memberLabel(account).slice(0,80),updatedAt:dbSdk.serverTimestamp()}).catch(error=>{if(run===authVersion)events.error(error);});
     const query=isAdministrator(account)?root:dbSdk.query(root,dbSdk.where('memberEmails','array-contains',account.email));
     stopDiscovery=dbSdk.onSnapshot(query,snapshot=>{
-      if(run!==authVersion)return;spaces=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));availableSpaces();if(needsReconnect&&spaces.some(space=>space.id===activeId&&belongsTo(space,user)))selectSpace(activeId,{remember:false});
+      if(run!==authVersion)return;spaces=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));availableSpaces();if(needsReconnect&&spaces.some(space=>space.id===activeId&&belongsTo(space,subject())))selectSpace(activeId,{remember:false});
     },error=>{if(run===authVersion)events.status(isAdministrator(account)?'Household management needs the updated Firebase rules.':error.message);});
     let saved='';try{saved=localStorage.getItem(key())||'';}catch{}
     const requested=new URLSearchParams(location.search).get('household');
@@ -72,9 +75,30 @@ export async function connectFirebase(config,events) {
     async login(){await authSdk.signInWithPopup(auth,new authSdk.GoogleAuthProvider());},
     async logout(){stop();await authSdk.signOut(auth);},
     selectSpace,
+    async listUsers(){
+      requireAdmin();
+      const snapshot=await dbSdk.getDocs(dbSdk.collection(db,'listUsers')),profiles=new Map(snapshot.docs.map(doc=>[doc.id,{uid:doc.id,...doc.data()}]));
+      // Include household members who visited before the global directory existed.
+      const households=await dbSdk.getDocs(root);
+      for(const household of households.docs){const members=await dbSdk.getDocs(dbSdk.collection(household.ref,'members'));members.docs.forEach(doc=>{if(!profiles.has(doc.id))profiles.set(doc.id,{uid:doc.id,...doc.data()});});}
+      return [...profiles.values()].sort((a,b)=>a.name.localeCompare(b.name));
+    },
+    async viewAs(profile){
+      requireAdmin();const account=user,run=authVersion;
+      const snapshot=await dbSdk.getDocs(root);if(run!==authVersion||account!==user)return;
+      spaces=snapshot.docs.map(doc=>({id:doc.id,...doc.data()}));
+      preview={uid:profile.uid,email:profile.email,name:profile.name,displayName:profile.name};
+      events.preview?.(preview);availableSpaces();
+      const available=spaces.filter(space=>belongsTo(space,preview));
+      selectSpace(available.some(space=>space.id===activeId)?activeId:available[0]?.id||config.space,{remember:false});
+    },
+    exitPreview(){
+      preview=null;events.preview?.(null);availableSpaces();let saved='';try{saved=localStorage.getItem(key())||'';}catch{}
+      selectSpace(spaces.some(space=>space.id===saved&&belongsTo(space,user))?saved:spaces.find(space=>belongsTo(space,user))?.id||config.space,{remember:false});
+    },
     async listHouseholds(){requireAdmin();const snapshot=await dbSdk.getDocs(root);return snapshot.docs.map(doc=>({id:doc.id,...doc.data()})).sort((a,b)=>(a.title||a.id).localeCompare(b.title||b.id));},
     async saveHousehold(input,expectedRev=null){
-      requireAdmin();requireOnline();const draft=householdDraft(input),account=user;
+      requireAdmin();requireWritable();requireOnline();const draft=householdDraft(input),account=user;
       await dbSdk.runTransaction(db,async transaction=>{
         const ref=dbSdk.doc(db,'listSpaces',draft.id),old=await transaction.get(ref);
         if(expectedRev===null){
@@ -89,7 +113,7 @@ export async function connectFirebase(config,events) {
       return draft;
     },
     async write(id,patch,expectedRev){
-      requireOnline();const ref=dbSdk.doc(db,...path(),'tasks',id);
+      requireWritable();requireOnline();const ref=dbSdk.doc(db,...path(),'tasks',id);
       await dbSdk.runTransaction(db,async transaction=>{
         const snap=await transaction.get(ref);
         if(snap.exists()){
@@ -103,11 +127,12 @@ export async function connectFirebase(config,events) {
       });
     },
     async remove(id,rev){
-      requireOnline();const ref=dbSdk.doc(db,...path(),'tasks',id);
+      requireWritable();requireOnline();const ref=dbSdk.doc(db,...path(),'tasks',id);
       await dbSdk.runTransaction(db,async transaction=>{const snap=await transaction.get(ref);if(!snap.exists()||snap.data().rev!==rev)throw new Error('This task changed. Close and reopen it.');transaction.delete(ref);});
     },
     async pick(day,uid){
       const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(tasks,uid);
+      if(preview){const old=await dbSdk.getDoc(ref);return old.exists()?old.data().taskId:null;}
       return dbSdk.runTransaction(db,async transaction=>{
         const old=await transaction.get(ref);if(old.exists())return old.data().taskId;
         const taskId=choose(candidates)?.id||null;

@@ -1,4 +1,4 @@
-const {chromium}=require('playwright'),assert=require('node:assert/strict'),net=require('node:net'),path=require('node:path'),{spawn}=require('node:child_process');
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),net=require('node:net'),path=require('node:path'),fs=require('node:fs'),{spawn}=require('node:child_process');
 const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='demo-lists-browser';
 (async()=>{
  const reservation=net.createServer();await new Promise(resolve=>reservation.listen(0,'127.0.0.1',resolve));const port=reservation.address().port;await new Promise(resolve=>reservation.close(resolve));
@@ -13,6 +13,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await page.route(origin+'firebase-auth.js',route=>route.fulfill({contentType:'text/javascript',body:`const account=${JSON.stringify({uid,email,emailVerified:true,displayName:name,providerData:[{providerId:'google.com'}]})};export const browserLocalPersistence={};export const getAuth=()=>({});export const setPersistence=async()=>{};export function onAuthStateChanged(auth,callback){setTimeout(()=>callback(account),0);return ()=>{};}export class GoogleAuthProvider{};export const signInWithPopup=async()=>{};export const signOut=async()=>{};`}));
   await page.route(origin+'firebase-firestore.js',route=>route.fulfill({contentType:'text/javascript',body:`export * from '${origin}firebase-firestore.js?real-emulator-sdk';import {getFirestore as real,connectFirestoreEmulator} from '${origin}firebase-firestore.js?real-emulator-sdk';export function getFirestore(app){const db=real(app);connectFirestoreEmulator(db,'127.0.0.1',${port},{mockUserToken:${JSON.stringify({sub:uid,email,email_verified:true,firebase:{sign_in_provider:'google.com',identities:{'google.com':[uid],email:[email]}}})}});return db;}`}));
   await page.route('https://firestore.googleapis.com/**',route=>route.abort());
+  // Expose the adapter only in this intercepted test module, never in deployed code.
+  await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.resolve(__dirname,'../shared/firebase.js'),'utf8').replace('  return {\n    async login','  return window.__testStore={\n    async login')}));
   await page.goto(new URL(`staging/${design}/?mode=live&household=${household}`,BASE).href);return {page,context};
  }
  async function settings(page){await page.getByRole('button',{name:'Settings',exact:true}).first().click();}
@@ -37,12 +39,29 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await admin(tal);await tal.locator('[data-manage=friends]').click();await tal.locator('#household-form [name=emails]').fill('alice@example.com');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await bob.locator('#workspace').waitFor({state:'hidden'});await tal.locator('[data-manage=friends]').click();await tal.locator('#household-form [name=emails]').fill('alice@example.com\nbob@example.com');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await bob.locator('#workspace').waitFor();await bob.getByText('Friends shared item',{exact:true}).waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
   await alice.locator('[data-action=share]').click();assert((await alice.locator('#share-link').inputValue()).includes('household=friends'));await alice.getByRole('button',{name:'Close',exact:true}).click();
   const manifest=await alice.evaluate(async()=>JSON.parse(await (await fetch(document.querySelector('link[rel=manifest]').href)).text()));assert(manifest.start_url.includes('household=friends'));
+  await alice.close();
+  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const receipt=`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/listSpaces/friends/environments/staging/daily/${day}/picks/test-alice`;
+  assert((await fetch(receipt,{method:'DELETE',headers:{Authorization:'Bearer owner'}})).ok);
   await tal.goto(new URL('staging/01/?mode=live&household=friends',BASE).href);await tal.getByText('Your Google account is not a member of this household.',{exact:true}).waitFor();assert(!await tal.locator('#workspace').isVisible());
+  await admin(tal);await tal.locator('.admin-users>summary').click();await tal.locator('#load-users').click();
+  await tal.locator('[data-view-user=test-alice]').waitFor();await tal.locator('[data-view-user=test-alice]').click();
+  await tal.getByText('Alice private entry',{exact:true}).waitFor();await tal.getByText('Friends shared item',{exact:true}).waitFor();
+  assert.equal(await tal.locator('#preview-name').innerText(),'Viewing as Alice');
+  assert(await tal.locator('#new-title').isDisabled());assert(await tal.locator('[data-complete]').first().isDisabled());assert(await tal.locator('[data-edit]').first().isDisabled());
+  const blocked=await tal.evaluate(async()=>{const failures=[];for(const action of [()=>window.__testStore.write('ignored',{title:'No mutation'},1),()=>window.__testStore.remove('ignored',1),()=>window.__testStore.saveHousehold({})]){try{await action();failures.push(false);}catch(error){failures.push(error.message.includes('read-only'));}}return failures;});assert.deepEqual(blocked,[true,true,true]);
+  assert.equal((await fetch(receipt,{headers:{Authorization:'Bearer owner'}})).status,404,'Preview must not create a missing daily receipt');
+  await tal.locator('[data-scope=shared]').click();assert.equal(await tal.getByText('Alice private entry',{exact:true}).count(),0);await tal.locator('[data-scope=mine]').click();
+  for(const width of [320,390,1280]){await tal.setViewportSize({width,height:844});assert(await tal.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await tal.screenshot({path:`/private/tmp/lists-view-as-${width}.png`});}
+  await tal.screenshot({path:'/private/tmp/lists-view-as.png'});
+  await settings(tal);assert.equal(await tal.locator('#settings-admin').count(),0);await tal.getByRole('button',{name:'Done',exact:true}).click();
+  await tal.locator('#exit-preview').click();await tal.getByText('Tal private entry',{exact:true}).waitFor();assert.equal(await tal.getByText('Alice private entry',{exact:true}).count(),0);assert(!await tal.locator('#preview-banner').isVisible());assert(!await tal.locator('#new-title').isDisabled());
+  await settings(sophie);await sophie.locator('summary').filter({hasText:'Account & privacy'}).click();await sophie.getByText('Tal, the administrator, can view all users', {exact:false}).waitFor();assert.equal(await sophie.locator('#settings-admin').count(),0);await sophie.getByRole('button',{name:'Done',exact:true}).click();
   for(let design=1;design<=10;design++){
    await tal.setViewportSize({width:320,height:740});await tal.goto(new URL(`staging/${String(design).padStart(2,'0')}/?mode=live&household=home`,BASE).href);await tal.locator('#workspace').waitFor();await admin(tal);await tal.locator('#create-household').click();
    for(const palette of ['original','night']){await tal.locator(`button[data-palette=${palette}]`).click();assert(await tal.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));}
    await tal.locator('#household-form').screenshot({path:`/private/tmp/lists-admin-form-${design}.png`});await tal.getByRole('button',{name:'Close',exact:true}).click();
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; mocked Google identities only. Tal creates home, Sophie joins without UID entry, shared completion syncs, private isolation, admin creates/manages another household without task access, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install',productionWrites:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Household creation, shared completion sync, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install',productionWrites:0}));
  }catch(error){console.error(logs.slice(-3500));throw error;}finally{await browser.close();emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

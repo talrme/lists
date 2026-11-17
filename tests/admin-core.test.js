@@ -10,7 +10,7 @@ test('Household invitations normalize, deduplicate and validate',()=>{
  assert.deepEqual(householdDraft({id:' Friends ',title:' Friends ',emails:'ALICE@example.com\nbob@example.com;alice@example.com'}),{id:'friends',title:'Friends',memberEmails:['alice@example.com','bob@example.com']});
  for(const input of [{id:'../home',title:'Home',emails:'a@example.com'},{id:'home',title:'',emails:'a@example.com'},{id:'home',title:'Home',emails:'not email'}])assert.throws(()=>householdDraft(input));
 });
-test('New invitations and old manual household compatibility do not grant global admin task access',()=>{
+test('Membership helpers do not silently enroll the admin in a household',()=>{
  assert(belongsTo({schemaVersion:2,memberEmails:['talrme@gmail.com']},tal));
  assert(!belongsTo({schemaVersion:2,memberEmails:['alice@example.com'],memberUids:['test-tal']},tal));
  assert(belongsTo({memberUids:['test-tal']},tal));assert(!belongsTo({schemaVersion:2,memberEmails:['alice@example.com']},tal));

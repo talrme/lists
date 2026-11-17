@@ -50,7 +50,7 @@ An uninvited Google account may authenticate with Google but cannot read househo
 
 ## Then: verify privacy and syncing
 
-1. Tal adds an ASAP task with **Only me · private**. It must not appear for Sophie.
+1. Tal adds an ASAP task with **Personal · not shared**. It must not appear for Sophie.
 2. Tal adds a task assigned to Sophie. Both see it in Shared; Sophie also sees it in Mine.
 3. Sophie completes the shared task. It should update on Tal's phone without refresh.
 4. Add an unassigned shared task and verify either person can complete it.
@@ -70,9 +70,11 @@ As Tal, use **Settings → Admin → Households → New household**:
 4. Save, then use the link icon to copy their household link.
 5. They sign in on that link and register their own names automatically.
 
-Tal does NOT need to be a member of their household. Admin can manage its name and invitations but cannot read its tasks unless explicitly invited; even then other members' private tasks remain private. This is management, not impersonation.
+Tal does NOT need to be a member of their household. As explicitly requested by the owner, Tal can read everyone's personal and shared tasks using **Settings → Admin → View as user → Show registered users → View as**. A visible read-only banner and Exit preview button distinguish this from Tal's own account. Other household members cannot see each other's personal tasks. The UI explains this admin exception.
 
-Use **Manage** to rename a household or change invitations. Removing an email revokes access without deleting its tasks. Reinviting the same account restores access. An unregistered invitee appears as assignable after their first visit. Household deletion, real-user impersonation and authenticated test-user administration are intentionally not implemented yet. The existing device sandbox remains available for pretend Tal/Sophie testing.
+Use **Manage** to rename a household or change invitations. Removing an email revokes access without deleting its tasks. Reinviting the same account restores access. An unregistered invitee appears as assignable after their first visit. Household deletion, true sign-in impersonation, editing on behalf and authenticated test-user administration are intentionally not implemented yet. Read-only View as user is available. The existing device sandbox remains available for pretend Tal/Sophie testing.
+
+Registered users appear after opening the updated app; older household member profiles are also included. Firebase Authentication accounts that never opened the updated app or registered with a household cannot be enumerated from this static frontend. Preview uses your local appearance preferences, not settings stored only on the other person's device. It reads an existing daily suggestion but never creates one on their behalf. Switching households in preview does not change your saved household.
 
 People belonging to multiple households select one under **Settings → Account & privacy → Household**. Share/install links preserve the chosen household. Switching clears unsaved task drafts.
 
