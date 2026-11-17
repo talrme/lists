@@ -1,6 +1,8 @@
 import {config} from '../config.js?v=lists-95c4f';
 import {dayKey,addDays,taskDraft,schedule,inView,isToday,shortDate} from './core.js';
 import {sandboxStore} from './store.js';
+import {isAdministrator} from './households.js';
+import {adminSection,bindAdmin} from './admin.js';
 
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=(name)=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
@@ -9,7 +11,7 @@ const design=Number(document.body.dataset.design||1), sandbox=new URLSearchParam
 const preferenceKey='lists-preferences-v1';
 let prefs={palette:'original',motion:'playful',quickWeek:true,quickWaiting:true,sandboxUser:'tal'};
 try{prefs={...prefs,...JSON.parse(localStorage.getItem(preferenceKey)||'{}')};}catch{}
-let user=null,members={},tasks=[],store=null,view='today',scope='mine',person='all',category='todo',today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null;
+let user=null,members={},tasks=[],store=null,view='today',scope='mine',person='all',category='todo',today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',busy=new Set(),ready=false,pendingCreation=null,households=[],currentSpace={id:config.space},spaceEpoch=0;
 function persist(){try{localStorage.setItem(preferenceKey,JSON.stringify(prefs));}catch{notify('Settings could not be saved on this device.');}}
 function appearance(){document.documentElement.dataset.palette=prefs.palette;document.documentElement.dataset.motion=prefs.motion;}
 appearance();
@@ -21,7 +23,7 @@ function notify(message){$('#toast').textContent=message;$('#toast').classList.a
 function errorText(error){const code=error?.code||'';if(code.includes('permission-denied'))return 'Access is not set up yet. Check household membership and Firestore rules.';if(code.includes('popup-blocked'))return 'Allow the Google sign-in window, then try again.';if(code.includes('unauthorized-domain'))return 'Add this domain under Firebase Authentication → Settings → Authorized domains.';return error?.message||'Something went wrong. Please try again.';}
 function status(message){$('#connection').textContent=message==='Live'?'Live · Changes sync between devices':message;}
 function optionPeople(selected='private',allowPrivate=true){return `${allowPrivate?'<option value="private">Only me · private</option>':''}<option value="shared">Shared · anyone</option>${Object.entries(members).map(([id,name])=>`<option value="${esc(id)}">Assign to ${esc(name)}</option>`).join('')}`;}
-function updatePeople(){const select=$('#new-person'),old=select.value;select.innerHTML=optionPeople();select.value=old||'private';$('#person-filter').innerHTML=`<option value="all">Everyone</option><option value="unassigned">Unassigned</option>${Object.entries(members).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('')}`;$('#person-filter').value=person;$('#profile-name').textContent=members[user?.uid]||user?.displayName?.split(' ')[0]||'Account';}
+function updatePeople(){const select=$('#new-person'),old=select.value;select.innerHTML=optionPeople();select.value=old||'private';if(!select.value)select.value='private';$('#person-filter').innerHTML=`<option value="all">Everyone</option><option value="unassigned">Unassigned</option>${Object.entries(members).map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('')}`;$('#person-filter').value=person;$('#profile-name').textContent=members[user?.uid]||user?.displayName?.split(' ')[0]||'Account';}
 function visibleTasks(){return tasks.filter(t=>t.category===category&&(t.visibility==='shared'||t.ownerUid===user?.uid));}
 function mine(t){return t.visibility==='private'&&t.ownerUid===user?.uid||t.visibility==='shared'&&(!t.assigneeUid||t.assigneeUid===user?.uid);}
 function render(){
@@ -49,9 +51,10 @@ function render(){
   document.querySelectorAll('[data-category]').forEach(b=>b.toggleAttribute('aria-current',b.dataset.category===category));icons();
 }
 async function dailyPick(){
-  if(!ready||!user||picking||pickedDay===`${today}_${user.uid}`)return;
-  const uid=user.uid,day=today;picking=true;
-  try{const id=await store.pick(day,uid);if(user?.uid===uid&&today===day){picks=id?[id]:[];pickedDay=`${day}_${uid}`;render();}}catch(error){status(errorText(error));}finally{picking=false;}
+  const token=`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`;
+  if(!ready||!user||picking===token||pickedDay===token)return;
+  const uid=user.uid,day=today;picking=token;
+  try{const id=await store.pick(day,uid);if(picking===token&&token===`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`){picks=id?[id]:[];pickedDay=token;render();}}catch(error){if(picking===token)status(errorText(error));}finally{if(picking===token)picking=false;}
 }
 function onTasks(value){tasks=value;render();if(ready)void dailyPick();}
 function open(title,body){$('#dialog-title').textContent=title;$('#dialog-body').innerHTML=body;$('#dialog').classList.remove('settings-modal');icons();if(!$('#dialog').open)$('#dialog').showModal();$('#dialog').scrollTop=0;}
@@ -60,8 +63,8 @@ for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener(
 document.addEventListener('click',e=>{if(e.target.closest('[data-close]'))close();});
 function confirmRemove(title,text){const dialog=$('#confirmation');$('#confirmation-title').textContent=title;$('#confirmation-text').textContent=text;dialog.returnValue='cancel';dialog.showModal();return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='confirm'),{once:true}));}
 async function mutate(task,patch,done){
-  if(busy.has(task.id))return;busy.add(task.id);render();
-  try{await store.write(task.id,patch,task.rev);done?.();return true;}catch(error){const region=$('#dialog').open?$('#dialog .inline-error'):null;if(region)region.textContent=errorText(error);else notify(errorText(error));return false;}finally{busy.delete(task.id);render();}
+  if(busy.has(task.id))return;const epoch=spaceEpoch;busy.add(task.id);render();
+  try{await store.write(task.id,patch,task.rev);if(epoch===spaceEpoch)done?.();return true;}catch(error){if(epoch!==spaceEpoch)return false;const region=$('#dialog').open?$('#dialog .inline-error'):null;if(region)region.textContent=errorText(error);else notify(errorText(error));return false;}finally{busy.delete(task.id);render();}
 }
 $('#new-when').addEventListener('change',()=>{$('#new-date').hidden=$('#new-when').value!=='date';if(!$('#new-date').hidden){$('#new-date').value||=today;$('#new-date').focus();}});
 $('#composer').addEventListener('submit',async event=>{
@@ -71,7 +74,7 @@ $('#composer').addEventListener('submit',async event=>{
     const raw={title:$('#new-title').value,category,ownerUid:user.uid,assigneeUid:['private','shared'].includes(assigned)?null:assigned,shared:assigned==='shared',mode:category==='todo'?$('#new-when').value:'later',exact:$('#new-date').value,day:today};
     const fingerprint=JSON.stringify(raw);
     if(pendingCreation?.fingerprint!==fingerprint)pendingCreation={fingerprint,id:crypto.randomUUID(),draft:taskDraft(raw)};
-    button.disabled=true;await store.write(pendingCreation.id,pendingCreation.draft);pendingCreation=null;$('#new-title').value='';$('#new-title').focus();notify('Added');
+    const epoch=spaceEpoch;button.disabled=true;await store.write(pendingCreation.id,pendingCreation.draft);if(epoch!==spaceEpoch)return;pendingCreation=null;if($('#new-title').value===raw.title)$('#new-title').value='';if($('#composer').contains(document.activeElement))$('#new-title').focus();notify('Added');
   }catch(error){$('#compose-error').textContent=errorText(error);}finally{button.disabled=false;}
 });
 function taskEditor(task){
@@ -91,17 +94,29 @@ function waitingEditor(task){
   open('Waiting for a response',`<form id="waiting-form"><p class="task-preview">${esc(task.title)}</p><fieldset class="followups"><legend>Follow up</legend>${[[3,'3 days'],[7,'1 week'],[14,'2 weeks'],[30,'1 month'],[90,'3 months']].map(([n,label])=>`<label><input type="radio" name="days" value="${n}" ${n===7?'checked':''}><span>${label}</span></label>`).join('')}<label><input type="radio" name="days" value="exact"><span>Exact date</span></label></fieldset><label class="field" id="followup-exact" hidden>Date<input name="exact" type="date" value="${addDays(today,7)}"></label><p class="inline-error" role="alert"></p><div class="modal-footer"><button class="primary" type="submit">Set follow-up</button><button class="secondary" type="button" data-close>Cancel</button></div></form>`);
   const form=$('#waiting-form');form.addEventListener('change',()=>$('#followup-exact').hidden=form.elements.days.value!=='exact');form.addEventListener('submit',async e=>{e.preventDefault();const value=form.elements.days.value,followUp=value==='exact'?form.elements.exact.value:addDays(today,Number(value));if(!followUp){form.querySelector('.inline-error').textContent='Choose a follow-up date.';return;}form.querySelector('[type=submit]').disabled=true;await mutate(task,{waiting:true,followUp,dueDate:null},()=>{close();notify('Follow-up set');});form.querySelector('[type=submit]').disabled=false;});
 }
+function householdPicker(){
+  return `<label class="field">Household<select id="household-select"><option value="" disabled ${households.some(h=>h.id===currentSpace.id)?'':'selected'}>Choose household</option>${households.map(h=>`<option value="${esc(h.id)}" ${h.id===currentSpace.id?'selected':''}>${esc(h.title||h.id)}</option>`).join('')}</select></label>`;
+}
+function switchHousehold(id){
+  if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);
+}
+let installManifest=null;
+function updateInstallManifest(){
+  if(sandbox)return;const url=new URL(location.href);url.searchParams.set('mode','live');url.searchParams.set('household',currentSpace.id);
+  const root=new URL('../../',url);const manifest={name:'Lists',short_name:'Lists',id:url.pathname+'?household='+encodeURIComponent(currentSpace.id),start_url:url.href,scope:new URL('./',url).pathname,display:'standalone',background_color:'#f1f6f2',theme_color:'#285e47',icons:[192,512].map(size=>({src:new URL('assets/icon-'+size+'.png',root).href,sizes:size+'x'+size,type:'image/png'}))};
+  if(installManifest)URL.revokeObjectURL(installManifest);installManifest=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));document.querySelector('link[rel=manifest]').href=installManifest;
+}
 function settings(){
-  open('Settings',`<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset><label class="field">Animations<select id="motion"><option value="off">Off</option><option value="gentle">Gentle</option><option value="playful">Playful</option></select></label></details><details class="settings-group"><summary>Quick actions</summary>${[['quickWeek','Move to next week'],['quickWaiting','Waiting for a response']].map(([id,label])=>`<label class="toggle-row">${label}<input type="checkbox" role="switch" data-preference="${id}" ${prefs[id]?'checked':''}></label>`).join('')}</details><details class="settings-group"><summary>Account &amp; privacy</summary>${sandbox?`<label class="field">Sandbox person<select id="sandbox-person"><option value="tal">Tal</option><option value="sophie">Sophie</option></select></label><p class="settings-note">Sample data stays in this browser. This switch is not real authentication.</p><button class="secondary" id="reset-sandbox">Reset sample tasks</button><a class="text-link" href="?mode=live">Open Google sign-in version</a>`:`<p class="account-email">${esc(user?.email)}</p><p class="settings-note">Private tasks are readable only by you. Assigning or sharing a task makes it visible to both household members.</p><button class="secondary" id="sign-out">Sign out</button>`}</details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">Calendar: America/Los_Angeles. Next 5 weekdays includes today when it is a weekday. Next week means next Monday–Friday. Weekdays exclude Saturday and Sunday, not public holidays.</p><p class="settings-note">One daily nudge is drawn from your private later tasks, shared tasks assigned to you, and unassigned shared tasks. It is picked on your first visit each day, stays stable across your devices, and does not become overdue.</p></details><div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');
+  open('Settings',`<details class="settings-group" open><summary>Appearance</summary><fieldset><legend>Color scheme</legend><div class="palette-choices">${[['original','Original'],['garden','Garden'],['cherry','Cherry'],['night','Night']].map(([id,label])=>`<button class="palette ${id}" data-palette="${id}" aria-label="${label}" title="${label}" aria-pressed="${prefs.palette===id}"><span></span><small>${label}</small></button>`).join('')}</div></fieldset><label class="field">Animations<select id="motion"><option value="off">Off</option><option value="gentle">Gentle</option><option value="playful">Playful</option></select></label></details><details class="settings-group"><summary>Quick actions</summary>${[['quickWeek','Move to next week'],['quickWaiting','Waiting for a response']].map(([id,label])=>`<label class="toggle-row">${label}<input type="checkbox" role="switch" data-preference="${id}" ${prefs[id]?'checked':''}></label>`).join('')}</details><details class="settings-group"><summary>Account &amp; privacy</summary>${sandbox?`<label class="field">Sandbox person<select id="sandbox-person"><option value="tal">Tal</option><option value="sophie">Sophie</option></select></label><p class="settings-note">Sample data stays in this browser. This switch is not real authentication.</p><button class="secondary" id="reset-sandbox">Reset sample tasks</button><a class="text-link" href="?mode=live">Open Google sign-in version</a>`:`<p class="account-email">${esc(user?.email)}</p>${householdPicker()}<p class="settings-note">Private tasks are readable only by you. Assigning or sharing a task makes it visible to household members.</p><button class="secondary" id="sign-out">Sign out</button>`}</details><details class="settings-group"><summary>Scheduling</summary><p class="settings-note">Calendar: America/Los_Angeles. Next 5 weekdays includes today when it is a weekday. Next week means next Monday–Friday. Weekdays exclude Saturday and Sunday, not public holidays.</p><p class="settings-note">One daily nudge is drawn from your private later tasks, shared tasks assigned to you, and unassigned shared tasks. It is picked on your first visit each day, stays stable across your devices, and does not become overdue.</p></details>${adminSection(user,sandbox)}<div class="modal-footer"><button class="primary" data-close>Done</button></div>`);$('#dialog').classList.add('settings-modal');
   $('#motion').value=prefs.motion;$('#motion').addEventListener('change',e=>{prefs.motion=e.target.value;persist();appearance();});
   document.querySelectorAll('button[data-palette]').forEach(button=>button.addEventListener('click',()=>{prefs.palette=button.dataset.palette;persist();appearance();document.querySelectorAll('button[data-palette]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));}));
   document.querySelectorAll('[data-preference]').forEach(input=>input.addEventListener('change',()=>{prefs[input.dataset.preference]=input.checked;persist();render();}));
   if(sandbox){$('#sandbox-person').value=user.uid;$('#sandbox-person').addEventListener('change',async e=>{prefs.sandboxUser=e.target.value;persist();user={uid:prefs.sandboxUser};picks=[];pickedDay='';updatePeople();render();await dailyPick();});$('#reset-sandbox').addEventListener('click',async()=>{if(await confirmRemove('Reset sample tasks?','Only the device sandbox will be reset.')){picks=[];pickedDay='';store.reset();close();notify('Sandbox reset');}});}
-  else $('#sign-out').addEventListener('click',async()=>{close();await store.logout();});
+  else {$('#sign-out').addEventListener('click',async()=>{close();await store.logout();});$('#household-select')?.addEventListener('change',event=>switchHousehold(event.target.value));bindAdmin({account:user,sandbox,store,onOpen:switchHousehold,liveUrl:config.liveUrl});}
 }
 function share(){
-  const link=new URL(`staging/${String(design).padStart(2,'0')}/`,config.liveUrl).href+(sandbox?'':'?mode=live');
-  open('Save / Share',`<div class="install-heading"><img src="../../assets/icon-192.png" width="52" height="52" alt="Lists app icon"><div><h3>Save Lists to your phone</h3><span>${esc(names[category])}</span></div></div><details class="install-details"><summary>iPhone</summary><p>Open this page in Safari. Tap Share, then Add to Home Screen, then Add.</p></details><details class="install-details"><summary>Android</summary><p>Open this page in Chrome. Tap the menu, then Add to Home screen, then Create shortcut or Install.</p></details><div class="share-area"><h3>Share Lists</h3><div id="qr"></div><label class="field">Link<input id="share-link" readonly value="${esc(link)}"></label><button class="primary" id="copy-link">${icon('copy')} Copy link</button><p class="settings-note">${sandbox?'This link opens the device-only sandbox.':'Signing in with an approved household account is still required.'}</p></div>`);
+  const url=new URL(`staging/${String(design).padStart(2,'0')}/`,config.liveUrl);if(!sandbox){url.searchParams.set('mode','live');url.searchParams.set('household',currentSpace.id);}const link=url.href;
+  open('Save / Share',`<div class="install-heading"><img src="../../assets/icon-192.png" width="52" height="52" alt="Lists app icon"><div><h3>Save Lists to your phone</h3><span>${esc(names[category])}</span></div></div><details class="install-details"><summary>iPhone</summary><p>Open this page in Safari. Tap Share, then Add to Home Screen, then Add.</p></details><details class="install-details"><summary>Android</summary><p>Open this page in Chrome. Tap the menu, then Add to Home screen, then Create shortcut or Install.</p></details><div class="share-area"><h3>Share Lists</h3><div id="qr"></div><label class="field">Link<input id="share-link" readonly value="${esc(link)}"></label><button class="primary" id="copy-link">${icon('copy')} Copy link</button><p class="settings-note">${sandbox?'This link opens the device-only sandbox.':'An invited household Google account is still required.'}</p></div>`);
   if(window.QRCode)new window.QRCode($('#qr'),{text:link,width:140,height:140,colorDark:'#172d28',colorLight:'#ffffff',correctLevel:window.QRCode.CorrectLevel.M});
   $('#copy-link').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link);notify('Link copied');}catch{$('#share-link').select();notify('Select and copy the link above.');}});icons();
 }
@@ -120,6 +135,9 @@ document.addEventListener('click',async event=>{
 });
 $('#person-filter').addEventListener('change',e=>{person=e.target.value;render();});
 function gate(message,extra=''){$('#workspace').hidden=true;$('#gate').hidden=false;$('#gate').innerHTML=`<img src="../../assets/icon-192.png" width="64" height="64" alt=""><h1>Lists</h1><p>${esc(message)}</p>${extra}`;icons();}
+function accessGate(message){
+  gate(message,'<button class="secondary" data-action="settings">Settings</button><p id="access-error" class="inline-error" role="alert"></p>');
+}
 function showWorkspace(){$('#gate').hidden=true;$('#workspace').hidden=false;updatePeople();render();}
 async function start(){
   if(sandbox){$('#mode-status').textContent='Sandbox · sample data · this device only';members={tal:'Tal',sophie:'Sophie'};user={uid:prefs.sandboxUser==='sophie'?'sophie':'tal'};store=sandboxStore(onTasks,status);ready=true;await store.ready();showWorkspace();status('Device sandbox · not connected to Firebase');await dailyPick();return;}
@@ -127,13 +145,22 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="primary" href="?">Explore the sandbox</a><a class="text-link" href="../../FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js');
+    const {connectFirebase}=await import('./firebase.js?v=households3');
     store=await connectFirebase(config,{
       tasks:onTasks,status,
-      account(account){close();$('#confirmation').close();$('#new-title').value='';pendingCreation=null;user=account;ready=false;picks=[];pickedDay='';tasks=[];members={};if(account){gate('Checking household access…',`<p class="settings-note">Your user ID</p><code class="uid">${esc(account.uid)}</code><p class="settings-note">If this is your first sign-in, add this ID to the household in Firebase.</p><button class="secondary" id="retry-access">Check access again</button>`);$('#retry-access').onclick=()=>location.reload();}else gate('Your lists, together. Your private tasks, just yours.',`<button class="primary" id="google-login">${icon('log-in')} Continue with Google</button>`);$('#google-login')?.addEventListener('click',async()=>{try{await store.login();}catch(error){notify(errorText(error));}});},
-      members(value){members=value;},
+      account(account){
+        close();$('#confirmation').close();$('#new-title').value='';pendingCreation=null;user=account;ready=false;picks=[];picking=false;pickedDay='';tasks=[];members={};households=[];spaceEpoch++;
+        if(account){updatePeople();accessGate('Checking household access…');}
+        else gate('Your lists, together. Your private tasks, just yours.',`<button class="primary" id="google-login">${icon('log-in')} Continue with Google</button>`);
+        $('#google-login')?.addEventListener('click',async()=>{try{await store.login();}catch(error){notify(errorText(error));}});
+      },
+      households(value){households=value;const select=$('#household-select');if(select){const parent=select.parentElement;parent.outerHTML=householdPicker();$('#household-select').addEventListener('change',event=>switchHousehold(event.target.value));}},
+      space(value){currentSpace=value;updateInstallManifest();$('#mode-status').textContent='Private household · '+(value.title||value.id);},
+      loading(){ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};category='todo';view='today';scope='mine';person='all';$('#new-person').value='private';pendingCreation=null;$('#new-title').value='';close();accessGate('Loading household…');},
+      unavailable(message){ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};if(!$('#dialog').classList.contains('settings-modal'))close();accessGate(message);},
+      members(value){members=value;updatePeople();render();},
       ready(){ready=true;showWorkspace();void dailyPick();},
-      error(error){ready=false;status(errorText(error));if($('#gate').hidden)notify(errorText(error));else $('#gate').insertAdjacentHTML('beforeend',`<p class="inline-error" role="alert">${esc(errorText(error))}</p>`);},
+      error(error){status(errorText(error));const region=$('#access-error');if(region)region.textContent=errorText(error)+(isAdministrator(user)?' Open Settings → Admin after publishing the updated rules.':' Ask your household administrator to check your Google email invitation.');else notify(errorText(error));},
     });
   }catch(error){gate('Could not connect to Google sign-in. Check your connection and try again.',`<button class="primary" onclick="location.reload()">Try again</button>`);status(errorText(error));}
 }

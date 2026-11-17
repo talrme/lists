@@ -1,133 +1,97 @@
-# Lists: Firebase setup, click by click
+# Lists: Firebase setup, one step at a time
 
 **Website:** https://talrme.github.io/lists/
 
-**Repository:** https://github.com/talrme/lists
+**Project:** lists-95c4f
 
-The ten sandboxes already work without Firebase. They are **sample data on one device**, not a private shared backend. Real sign-in pages use `?mode=live`; those stay locked until configuration is supplied. Do not enter sensitive information in the sandbox.
+## Current progress
 
-**Current progress:** configuration supplied for `lists-95c4f`; owner confirmed Google sign-in, authorized Pages domain, Firestore creation and published rules. Configuration is in `config.js`, and both user IDs have now been supplied. Household creation remains unconfirmed. We are planning a browser-assisted Create our household button; wait for that implementation and its updated rules rather than repeating UID collection. The manual Step 7 below remains an alternative, not a prerequisite for the planned button. The user prefers an outline followed by one detailed manual step at a time.
+Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. Browser household management is now implemented, but needs the NEW rules below published before it can write. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.
 
-## 1. Create a separate Firebase project
+The owner wants ONE detailed manual step, then a pause for “done.” The outline is: publish new rules → create household inside Lists → Sophie opens it → test private/shared syncing.
 
-1. On a computer, open https://console.firebase.google.com/ and sign into your Google account.
-2. Click **Create a project** (sometimes **Add project**).
-3. Name it **Lists**. The generated project ID can have extra letters or numbers; that is fine.
-4. Skip Google Analytics and Gemini features if offered. Neither is needed.
-5. Click **Create project**, wait, then **Continue**.
+## Next: publish the updated rules
 
-Do not reuse Huck's public database. This one needs different, private security rules. Start with the no-cost Spark plan; no payment or hosted server is required for this prototype. Google can change plan limits; check the console before enabling a paid product.
+1. Open https://console.firebase.google.com/project/lists-95c4f/firestore/rules .
+2. Select the **Rules** tab if necessary.
+3. In another tab, open [firestore.rules](https://github.com/talrme/lists/blob/main/firestore.rules).
+4. Click **Copy raw file**, or open **Raw**, select all and copy. Copy the entire file, not a diff with plus/minus markers.
+5. Return to Firebase, click inside its rules editor, press **Command+A**, then **Command+V**.
+6. Click **Publish**. Wait for confirmation. Pasting alone does not apply it.
+7. Tell Codex **done**. We will give only the next step.
 
-## 2. Register the website
+No API key, service-account key, billing upgrade, Cloud Function or Google Sheet is needed. The public Firebase config is already permanently connected in config.js.
 
-1. From Project Overview, click the **web icon `</>`**. If necessary, use the gear → Project settings → General → Your apps → Add app → Web.
-2. App nickname: **Lists website**.
-3. Leave **Also set up Firebase Hosting** unchecked. GitHub Pages already hosts the site.
-4. Click **Register app**.
-5. Choose **Use a script tag** if the page offers npm versus script. We only need the `firebaseConfig` object; ignore the installation commands.
-6. Copy the entire `const firebaseConfig = { ... };` object and send it to Codex in this chat.
-7. Click **Continue to console**. You can retrieve the object later under gear → Project settings → General → Your apps → SDK setup and configuration → Config.
+## Then: create your household from Lists
 
-This web configuration is designed to be public. It is **not** a service-account/private key. Never send or commit a service-account JSON, OAuth client secret, or Admin SDK key.
+Do this after the rules have published:
 
-## 3. Enable Google sign-in
+1. Open https://talrme.github.io/lists/staging/01/?mode=live .
+2. Sign in with **talrme@gmail.com** if needed.
+3. Open **Settings**. Before setup, a Settings button is available on the access screen; the account button at the top also opens it.
+4. Scroll to the bottom of the settings modal. Expand **Admin**, then **Households**.
+5. Click **Create our household**.
+6. Review household name **Tal & Sophie**, link name **home**, and the two Google email addresses already filled in.
+7. Click **Create household** and wait for it to finish.
+8. Click **Done** to close Settings. Your real To-do list should now open empty, without sample tasks.
 
-1. Open **Build → Authentication**. Click **Get started**.
-2. Open **Sign-in method** (or **Sign-in providers**).
-3. Click **Google**, enable it, select your email as the support email, and click **Save**.
-4. Do not enable Anonymous authentication or Email/Password. We do not need them.
-5. Open **Authentication → Settings → Authorized domains**.
-6. Click **Add domain**, enter **`talrme.github.io`**, and save. Enter the domain only: no `https://`, no `/lists`.
-7. For local testing only, also add **`localhost`** and **`127.0.0.1`**. New Firebase projects do not automatically include localhost. They can be removed after testing.
+Only Tal's verified Google account gets Admin. It is not a setting Sophie can enable. Firebase rules independently enforce the permission. If rules are still old, the form shows a permission message and saves nothing; publish the new file and use Refresh in the Households section.
 
-The app uses Google's sign-in window, opened by an explicit tap, rather than redirect-based sign-in. GitHub Pages cannot host Firebase's `/__/auth` helper endpoints, and cross-site redirect flows are unreliable in browsers that block third-party storage. If your phone blocks the sign-in window, open the site in Safari/Chrome (not an embedded messaging-app browser), allow the window, and retry. We should test sign-in on your actual phones before promotion.
+If home already exists, creation refuses to overwrite it. Use **Manage** to review/update invitations instead. Existing manual memberUids/names documents can be migrated by an explicit Manage save; their fields and task paths are preserved, while current invitations become the access authority.
 
-## 4. Create Cloud Firestore, locked down
+## Then: Sophie joins
 
-1. Open **Build → Firestore Database**.
-2. Click **Create database**.
-3. If offered an edition, choose **Standard edition**, then database ID **`(default)`**.
-4. Select a nearby US location (for example `us-west1` if available). The exact region does not affect the app's calendar timezone. Database location is not easily changed later.
-5. Choose **Start in production mode**, **not test mode**. Click **Create** / **Enable** and wait.
-6. Open the **Rules** tab.
-7. In the GitHub repository, open [`firestore.rules`](https://github.com/talrme/lists/blob/main/firestore.rules), click **Raw**, select all, and copy the **whole file**, not a diff with `+` and `-` markers.
-8. Select everything in Firebase's rules editor and paste the file over it.
-9. Click **Publish**. Merely pasting is not enough. Wait for the published confirmation.
+1. Sophie opens https://talrme.github.io/lists/staging/01/?mode=live&household=home .
+2. She signs in with **sophiegreen2@gmail.com**.
+3. Her name registers automatically with the identity that is already invited. No UID copying, Firebase Console editing or second setup form is required.
+4. After she joins, she appears as an assignment option on Tal's phone. She has Settings but no Admin section.
 
-These rules allow only verified Google sign-ins for `talrme@gmail.com` and `sophiegreen2@gmail.com`, AND require membership in your household. Private tasks can only be read by their owner. Both members can read/complete/edit shared tasks. Only a task's creator can make it private again. No client can change the household membership document. The Firebase Console can edit it because you own the project.
+An uninvited Google account may authenticate with Google but cannot read household metadata/tasks or grant itself membership.
 
-## 5. Send the configuration to Codex
+## Then: verify privacy and syncing
 
-Send the object from step 2. I will put it in `config.js`, commit/push it, and confirm the live sign-in links. There is **nothing to paste into either phone**.
+1. Tal adds an ASAP task with **Only me · private**. It must not appear for Sophie.
+2. Tal adds a task assigned to Sophie. Both see it in Shared; Sophie also sees it in Mine.
+3. Sophie completes the shared task. It should update on Tal's phone without refresh.
+4. Add an unassigned shared task and verify either person can complete it.
+5. Refresh/reopen both browsers. Tasks remain and Google normally keeps you signed in.
+6. Open an incognito window: sign-in is required. A different uninvited account must not gain access.
+7. Disconnect the internet and try a save. The app must not claim it saved; reconnect and retry. Failed editor saves retain drafts.
 
-Keep the database closed while waiting. The website's normal sample previews remain separate and never upload sample tasks to Firebase.
+Tell Codex about any error or unexpected result. Local emulator tests already cover rules and task propagation with synthetic users, but do not replace your actual Google OAuth/mobile test.
 
-## 6. Get your two user IDs
+## Future households for other people
 
-Once Codex confirms the configuration is published:
+As Tal, use **Settings → Admin → Households → New household**:
 
-1. Open https://talrme.github.io/lists/staging/01/?mode=live in your browser.
-2. Tap **Continue with Google**, and choose **talrme@gmail.com**.
-3. You will see an access message and a **user ID**. This is expected before membership is added. Copy it; double-click/select the displayed ID if needed.
-4. Have Sophie open the same link and sign in as **sophiegreen2@gmail.com**. Copy her user ID too.
-5. Send those two IDs to Codex, labeled Tal and Sophie, or use them in the next step yourself. They are identifiers, not passwords.
+1. Enter a household name.
+2. Enter a unique link name using lowercase letters, numbers and hyphens.
+3. List each person's actual Google sign-in email, one per line.
+4. Save, then use the link icon to copy their household link.
+5. They sign in on that link and register their own names automatically.
 
-Neither account can read any tasks yet. The app does not automatically grant the first visitor membership.
+Tal does NOT need to be a member of their household. Admin can manage its name and invitations but cannot read its tasks unless explicitly invited; even then other members' private tasks remain private. This is management, not impersonation.
 
-## 7. Add the household once
+Use **Manage** to rename a household or change invitations. Removing an email revokes access without deleting its tasks. Reinviting the same account restores access. An unregistered invitee appears as assignable after their first visit. Household deletion, real-user impersonation and authenticated test-user administration are intentionally not implemented yet. The existing device sandbox remains available for pretend Tal/Sophie testing.
 
-In Firebase → Firestore Database → **Data**:
+People belonging to multiple households select one under **Settings → Account & privacy → Household**. Share/install links preserve the chosen household. Switching clears unsaved task drafts.
 
-1. Click **Start collection**. Collection ID: **`listSpaces`**. Click Next.
-2. Document ID: **`home`**. Do not use Auto-ID.
-3. Add a field **`memberUids`**, choose type **array**. Add two **string** elements: Tal's ID and Sophie's ID. The IDs are case-sensitive.
-4. Add a second field **`names`**, choose type **map**.
-5. Inside that map, add a field whose **name is Tal's actual UID**, type **string**, value **`Tal`**.
-6. Add another map field whose **name is Sophie's actual UID**, type **string**, value **`Sophie`**.
-7. Click **Save**.
+## If you need to reproduce initial project setup
 
-The resulting document looks like this (replace the placeholders, do not type the angle brackets):
+The completed basics were: create a separate Firebase project → register a Web app (no Firebase Hosting) → enable Google under Authentication and select support email → add talrme.github.io under Authentication → Settings → Authorized domains → create a Standard edition Firestore database in production mode → provide the public firebaseConfig to Codex.
 
-```text
-listSpaces / home
-  memberUids: ["<Tal UID>", "<Sophie UID>"]
-  names:
-    <Tal UID>: "Tal"
-    <Sophie UID>: "Sophie"
-```
+For local authenticated testing, also authorize localhost and 127.0.0.1. Do not paste a service-account JSON, OAuth secret or Admin SDK key into the repo. Firebase web config is public; actual privileges come from verified identity and rules.
 
-No task collections need to be created by hand. Click **Check access again** on both phones or refresh. The authenticated app should open with an empty real list, not sample tasks.
+If Firestore requests a composite index, create it using its console link: collection group tasks, Collection scope, visibility Ascending + ownerUid Ascending. The declaration is in firestore.indexes.json. Household discovery uses the automatic memberEmails array index.
 
-## 8. Check indexes if Firebase requests one
-
-Private tasks use two equality filters. Firestore can generally merge their automatic single-field indexes. If an error requests a composite index, follow its console link, confirm the collection group **tasks**, scope **Collection**, fields **visibility Ascending** and **ownerUid Ascending**, click **Create**, and wait for **Enabled**. The same index is declared in `firestore.indexes.json` for future CLI deployment.
-
-## 9. Prove privacy and sync before using real lists
-
-1. Tal adds an ASAP task with **Only me · private**. Sophie should not see it, including in Shared.
-2. Tal adds a task assigned to Sophie. It should appear in **Shared** on both phones, and in Sophie's **Mine** view.
-3. Sophie completes that task. Both phones should update without refreshing.
-4. Add a shared unassigned task. Both can see and complete it.
-5. Refresh/reopen both browsers. Entries should remain; Google should normally keep you signed in.
-6. Open an incognito window. It should require sign-in and show no household tasks.
-7. Try a different Google account. It must not gain access.
-8. Turn off the internet, attempt a task edit, and confirm the app does not claim it was saved. Reconnect and retry. Existing draft text stays in the editor if a save fails.
-
-Tell me when steps 1–4 are ready; I can run authenticated checks once a browser session or test setup is available. I cannot publish console rules or create your project from only the public web config. Until then, automated checks cover the actual sandbox workflows and scheduling logic, not live Google sign-in or deployed rule enforcement.
-
-## Staying signed in and saving to your phone
-
-Firebase uses **local authentication persistence**, so closing a browser normally does not sign you out. Private browsing, clearing website data, explicit sign-out, revoked sessions, or OS storage cleanup can require signing in again. Safari and an installed Home Screen app may have separate sessions; you may sign in once in each. This is not a promise of never signing in again.
-
-Use **Save / Share** in an authenticated design to get installation instructions and its link. Installed staging shortcuts open that design's **live sign-in** version. After you choose one design, we will promote it to the root, update the install link, and remove the other nine without deleting backend data.
+Google uses local session persistence; clearing website data, private browsing, revocation, or a separate installed-app browser context can require another sign-in. Open Google login in Safari/Chrome rather than an embedded messaging browser if a popup is blocked.
 
 ## Sources
 
-- [Firebase project and web setup](https://firebase.google.com/docs/web/setup)
 - [Google sign-in](https://firebase.google.com/docs/auth/web/google-signin)
 - [Authentication persistence](https://firebase.google.com/docs/auth/web/auth-state-persistence)
 - [Redirect restrictions and popup alternative](https://firebase.google.com/docs/auth/web/redirect-best-practices)
-- [Authorized-domain changes](https://firebase.google.com/docs/auth/faq-and-troubleshooting)
-- [Firestore access rules](https://firebase.google.com/docs/firestore/security/rules-conditions)
+- [Role-based access](https://firebase.google.com/docs/firestore/solutions/role-based-access)
+- [Rules conditions and identity](https://firebase.google.com/docs/firestore/security/rules-conditions)
 
-Reviewed November 16, 2026. Console labels may vary slightly.
+Updated November 16, 2026.
