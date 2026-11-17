@@ -3,7 +3,7 @@ import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,ins
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=playground1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues} from './task-fields.js?v=sharing2';
-import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=1';
+import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=2';
 import {taskGestures} from './gestures.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
 
@@ -77,8 +77,11 @@ function render(){
   $('#composer .timing-track').hidden=!todo;$('#composer .exact-date-row').classList.toggle('category-hidden',!todo);$('#composer .waiting-toggle').classList.toggle('category-hidden',!todo);
   const captions={today:'Today',upcoming:'Coming up',later:'Sometime later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];
   const list=currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row]));
+  let completionExit=false;
   // Preserve an open form node: a live snapshot must not dismiss a phone keyboard or erase a draft.
-  for(const row of rows.values())if(!ids.has(row.dataset.task)&&row.dataset.task!==inlineEditor?.id)row.remove();
+  for(const row of rows.values())if(!ids.has(row.dataset.task)&&row.dataset.task!==inlineEditor?.id){
+    if(!row.classList.contains('completed')&&tasks.some(task=>task.id===row.dataset.task&&task.completed))completionExit=!!motion.depart(row)||completionExit;else row.remove();
+  }
   const grouped=todo&&view==='today',days=grouped?Array.from({length:prefs.daysShown},(_,i)=>addDays(today,i)):[''];
   const groups=new Map([...host.children].map(group=>[group.dataset.day,group]));
   for(const day of days){let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';host.append(group);groups.set(day,group);}group.querySelector('.day-tasks').dataset.day=day;const heading=group.querySelector('.day-heading');heading.hidden=!grouped||prefs.daysShown===1;heading.textContent=(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');}
@@ -102,7 +105,7 @@ function render(){
   $('#empty-state').hidden=list.length>0||!!inlineEditor;
   document.querySelectorAll('[data-view]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.view===view));
   document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));
-  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions);gestures?.sync();
+  $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions,completionExit?60:0);gestures?.sync();
 }
 async function dailyPick(){
   const token=`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`;if(!ready||!user||picking===token||pickedDay===token)return;

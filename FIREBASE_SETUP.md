@@ -6,6 +6,8 @@
 
 ## Current progress
 
+The smooth completion exit/slide-up animation is frontend-only; it requires no additional Firebase setup or rules change beyond the sharing rules already noted below.
+
 **Latest sharing fix:** publish the current rules using the next section. They add optional `assigneeEmail`, checked against the household invitations, so Tal can assign a shared task to Sophie even before she visits that household. Her tasks then appear on her first sign-in. No database editing, UID copying, public access, new index or migration is needed. Existing UID assignments are unchanged. This rules version has been tested locally, not published by the agent.
 
 Firebase project, web configuration, Google sign-in, authorized Pages domain and Firestore already exist. Tal and Sophie have both signed in. The owner confirmed publishing the admin/household/user-preview rules. Subsequent updates add optional task descriptions, Google avatar URLs and synced task ordering (sortOrder) and Playground metadata (kind/playgroundRun); publish the latest rules file once more to allow those fields. Do not recreate the project or delete any data. Do not repeat completed setup, copy user IDs into code, create the household manually, or make the database public.

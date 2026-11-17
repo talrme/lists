@@ -1,4 +1,4 @@
-export const labels={confetti:'Completion confetti',travel:'Tasks flying to their next stop',arrival:'New task bounce',reorder:'Smooth list rearrangement',navigation:'Staggered list entrances',dialogs:'Dialog entrances',taps:'Button pops',ambient:'Goofy idle wiggles'};
+export const labels={confetti:'Completion confetti',travel:'Tasks flying to their next stop',arrival:'New task bounce',reorder:'Smooth completion & list rearrangement',navigation:'Staggered list entrances',dialogs:'Dialog entrances',taps:'Button pops',ambient:'Goofy idle wiggles'};
 const all=value=>Object.fromEntries(Object.keys(labels).map(key=>[key,value]));
 export const presets={off:all(false),light:{...all(false),reorder:true,dialogs:true},medium:{...all(true),ambient:false},wild:all(true)};
 export function restore(value={}){
@@ -25,13 +25,24 @@ export function createMotion(getPrefs){
  function pop(key,node){const wild=getPrefs().animationLevel==='wild',row=node?.classList.contains('task-row');return animate(key,node,[{transform:'scale(1)'},{transform:`scale(${row?1.025:wild?1.14:1.06}) rotate(${row?0:wild?-4:-1}deg)`,offset:.45},{transform:'scale(1)'}]);}
  function enter(nodes){nodes.slice(0,16).forEach((node,i)=>animate('navigation',node,[{opacity:0,transform:'translateY(12px) rotate(-.6deg)'},{opacity:1,transform:'none'}],{delay:i*24,fill:'backwards'}));}
  function snapshot(){if(!enabled('reorder')||document.querySelector('.task-edit-form'))return new Map();return new Map([...document.querySelectorAll('.task-row')].map(node=>[node.dataset.task,node.getBoundingClientRect()]));}
- function rearrange(before){
+ function rearrange(before,delay=0){
   if(!enabled('reorder')||document.querySelector('.task-edit-form'))return;
   for(const node of document.querySelectorAll('.task-row')){
    const old=before.get(node.dataset.task);if(!old)continue;
    const next=node.getBoundingClientRect(),dy=old.top-next.top,dx=old.left-next.left;
-   if(Math.abs(dy)+Math.abs(dx)>1)animate('reorder',node,[{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}]);
+   if(Math.abs(dy)+Math.abs(dx)>1)animate('reorder',node,[{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{delay,fill:'backwards'});
   }
+ }
+ function depart(node){
+  if(!enabled('reorder')){node.remove();return;}
+  const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
+  if(rect.bottom<0||rect.top>innerHeight){node.remove();return;}
+  // Keep the departing row visible, but remove it from layout so its neighbors can glide up.
+  const look=Object.fromEntries(['background','color','borderTop','borderRight','borderBottom','borderLeft','borderRadius','boxShadow','padding','fontFamily'].map(key=>[key,style[key]]));
+  node.classList.remove('task-row');node.classList.add('completion-exit');node.inert=true;node.setAttribute('aria-hidden','true');
+  Object.assign(node.style,look,{position:'fixed',display:'block',left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px',minHeight:'0',margin:'0',pointerEvents:'none',zIndex:'6',transformOrigin:'center'});
+  const check=node.querySelector('.task-check');if(check){check.classList.add('checked');check.innerHTML='<i data-lucide="check" aria-hidden="true"></i>';}
+  return animate('reorder',node,[{opacity:1,transform:'none'},{opacity:.25,transform:'translateY(-3px) scale(.98)',offset:.35},{opacity:0,transform:'translateY(-8px) scale(.95)'}],{duration:220,easing:'cubic-bezier(.3,0,.3,1)',fill:'forwards'},true);
  }
  function burst(rect){
   if(!rect||!enabled('confetti'))return;
@@ -57,5 +68,5 @@ export function createMotion(getPrefs){
  function dialog(node){animate('dialogs',node,[{opacity:0,transform:'translateY(18px) scale(.92) rotate(-1deg)'},{opacity:1,transform:'translateY(-3px) scale(1.01)',offset:.75},{opacity:1,transform:'none'}],{duration:360});}
  function arrival(id,target){const node=[...document.querySelectorAll('.task-row')].find(row=>row.dataset.task===id);pop('arrival',node||target);}
  document.addEventListener('click',event=>{const button=event.target.closest('button');if(button&&!button.disabled)pop('taps',button);});
- return {enabled,animate,pop,enter,snapshot,rearrange,burst,travel,dialog,arrival,sync,clear};
+ return {enabled,animate,pop,enter,snapshot,rearrange,depart,burst,travel,dialog,arrival,sync,clear};
 }
