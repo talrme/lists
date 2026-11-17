@@ -63,6 +63,8 @@ Each design offers Original / Garden / Cherry / Night palettes and Off / Gentle 
 
 Save / Share includes a local QR code, link copying and iPhone/Android installation instructions. Sign-in, favicon, and phone icons share the green checklist artwork under `assets/`; no remote image service, analytics or runtime AI.
 
+Open **Save / Share** at the bottom of any design. On iPhone use Safari → Share → Add to Home Screen (leave Open as Web App on if offered); on Android use Chrome's menu → Add to Home screen / Install app. The installed app opens that design and household without browser chrome. All ten designs include standalone manifests, iPhone web-app metadata and phone-sized PNG icons. Household-specific manifests use absolute URLs, including scope, so browsers can parse them from their generated blob URL. Internet and an invited Google sign-in are still required; this does not add offline task storage. Physical-phone installation needs a final device check.
+
 ## Run and verify
 
 Future testing idea, **not implemented**: an admin-only Playground household with the same Google sign-in, isolated sample tasks, a clear Testing label and a reset limited to Playground. The owner wants to approve the design before implementation. No test household has been created by the agent.

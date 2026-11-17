@@ -33,6 +33,8 @@ The user explicitly requested removing public sandboxes and wants to review a te
 
 Bare staging links now always use Firebase; no mode flag activates another backend. Share links and installed start URLs preserve household without mode. Static manifest id retains its historical mode=live suffix only to preserve install identity, not as a backend switch; dynamic household-specific manifest ids remain unchanged.
 
+Phone installation: all ten generated heads include Apple standalone/title/status-bar metadata, mobile-web-app-capable, apple-touch-icon and static manifests. Dynamic blob manifests MUST use absolute id, scope, start_url and icon URLs; relative scope otherwise triggers a Chrome parse warning. Preserve existing effective install identities. Save / Share renders a local QR, household link, Copy and platform instructions. No service worker or offline private-task cache is introduced. tests/share.cjs checks manifest parsing, icons, copying, dismissal and responsive share panels with test-only interception; native physical-phone install is not automated.
+
 ### Current phone layout
 
 The composer is the first normal workspace element. Do not restore the top logo, date, To-do heading or Mine/Shared strip. Keep household/connection notices visible BELOW footer utilities. Ten distinct styling directions remain intentionally selectable.
