@@ -7,6 +7,8 @@ const BASE='http://127.0.0.1:5195/lists/';
   await page.clock.setFixedTime(new Date('2026-11-18T20:00:00Z'));await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
   const drawer=page.locator('#navigation-drawer');await page.locator('#open-menu').click();
   assert.equal(await page.locator('[data-menu-audience][aria-pressed=true]').count(),2);
+  assert(await page.locator('#drawer-task-filters').evaluate(n=>n.previousElementSibling.querySelector('[data-menu-action=share]')&&n.nextElementSibling.querySelector('[data-menu-action=guide]')));
+  assert.equal(await page.locator('.drawer-filter-label').textContent(),'View tasks in');assert.equal(await page.locator('[data-menu-audience=private] [data-lucide=list-checks]').count(),1);
   assert.equal(await page.locator('[data-menu-audience=tal]').getAttribute('aria-pressed'),'true');
   await page.locator('[data-menu-audience=sophie]').click();await page.locator('#close-menu').click();assert(await page.locator('#back-asap').isVisible());
   await page.locator('#back-asap').click();await page.locator('#open-menu').click();assert.equal(await page.locator('[data-menu-audience=sophie]').getAttribute('aria-pressed'),'false');await page.locator('#close-menu').click();assert(await page.locator('#back-asap').isHidden());

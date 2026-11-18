@@ -2,6 +2,8 @@
 
 ## Compact Filters And Later Dates (November 18)
 
+Follow-up menu refinement passed60 menu-later layouts and30 phone-ux layouts: filters below Share/above Quick guide, checklist icon, View tasks in label and bracketed shared owners. Light/dark screenshots inspected; filter state and touch dismissal unchanged. Production shell12.
+
 New menu-later browser suite passed60 style/palette/phone/desktop combinations: Private/owner/Unassigned circles, defaults for both synthetic users, reset of view+audience, no return link for Week/Later alone, flexible date save/reopen, keyboard-free Edit, live extended-day changes, and reload to ASAP preserving day count. Production80, task-header60 and phone-ux30 passed. Phone tests caught and fixed filter-strip horizontal scrolling stealing drawer-dismiss swipes. Keyboard-aware modal now permits408px at a420px visible viewport, meeting its bottom edge rather than keeping the former bottom gap. Light/dark drawer screenshots inspected. Pure later-date tests cover five distinct weekdays, weekends, leap/nonleap month-end clamping, year boundaries and DST dates. All test tasks are synthetic; no production data writes or backend/schema changes.
 
 ## Automatic Safe Updates (November 18)

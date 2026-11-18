@@ -188,6 +188,7 @@ drawerSwipe($('#navigation-drawer'),closeDrawer,motion);
 $('#open-menu').addEventListener('click',openDrawer);$('#close-menu').addEventListener('click',()=>void closeDrawer());
 $('#navigation-drawer').addEventListener('cancel',event=>{event.preventDefault();void closeDrawer();});
 $('#navigation-drawer nav').insertAdjacentHTML('beforeend',`<div class="drawer-group"><button data-menu-action="guide">${icon('circle-help')}Quick guide</button></div>`);
+$('#navigation-drawer nav').lastElementChild.before($('#drawer-task-filters'));
 icons();
 $('#navigation-drawer').addEventListener('click',async event=>{
  const drawer=event.currentTarget,button=event.target.closest('button');if(event.target===drawer){const rect=drawer.getBoundingClientRect();if(event.clientX>rect.right||event.clientX<rect.left||event.clientY<rect.top||event.clientY>rect.bottom)void closeDrawer();return;}
@@ -317,7 +318,7 @@ function renderDrawerFilters(){
  const root=$('#drawer-task-filters');root.hidden=!ready;if(!ready)return;
  const chosen=selection(),people=Object.keys(members).sort((a,b)=>Number(b===user.uid)-Number(a===user.uid));
  const circle=(id,label,content)=>`<button type="button" data-menu-audience="${esc(id)}" aria-label="Show ${esc(label)}" aria-pressed="${!!chosen[id]}" title="${esc(label)}"><span class="filter-circle">${content}</span><small>${esc(label)}</small></button>`;
- root.innerHTML=circle('private','Private',icon('lock-keyhole'))+`<div class="drawer-shared-filters"><div>${people.map(id=>circle(id,(members[id]||'Member').split(' ')[0],avatar(id,members,profiles))).join('')}${circle('unassigned','Unassigned',icon('circle-help'))}</div><small>Shared</small></div>`;icons();
+ root.innerHTML='<span class="drawer-filter-label">View tasks in</span>'+circle('private','Private',icon('list-checks'))+`<div class="drawer-shared-filters"><div>${people.map(id=>circle(id,(members[id]||'Member').split(' ')[0],avatar(id,members,profiles))).join('')}${circle('unassigned','Unassigned',icon('circle-help'))}</div><small>Shared</small></div>`;icons();
 }
 $('#drawer-task-filters').addEventListener('click',event=>{
  const button=event.target.closest('[data-menu-audience]');if(!button||!ready)return;

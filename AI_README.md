@@ -2,6 +2,8 @@
 
 ## Compact Audience And Flexible Later Dates (November 18, Newest)
 
+Menu refinement: filters now sit between Save / Share and Quick guide. Small View tasks in label; Private uses Lucide list-checks (not a privacy-action lock); shared owner circles have a square-ended bracket and Shared caption. Existing toggle semantics and per-account defaults unchanged. Worker production-12, app32/css24 supersede versions below. menu-later verifies placement and icon as well as60 responsive layouts; phone-ux30 verifies touch/keyboard regression.
+
 Drawer shows one compact row of independent Private, household member avatar, Unassigned toggles, with Shared under the owner group. Defaults are own private plus own assigned shared; photos use the existing validated Google URL/initials fallback. Same per-account/category audiences storage as Settings, with privacy checked separately. Taps keep drawer open. The filter overflow strip uses touch-action:pan-y so it cannot steal left-swipe drawer dismissal. Pending-invite IDs/email normalization remain intact.
 
 Back to my ASAP tasks appears for Waiting/Completed, active multi-day view, or nondefault audience; Week/Later alone do not trigger it. It returns to one-day ASAP with own private+shared selected. App launch/reload starts ASAP but retains saved daysShown and filters. Changing extendedDays also changes daysShown immediately when expanded; collapsed stays one day. Later rows alone show shortDate(effective due/follow-up date), with undated rows blank.
