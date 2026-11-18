@@ -6,6 +6,7 @@ import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorAct
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=4';
 import {taskGestures} from './gestures.js?v=6';
 import {createNotices} from './notices.js?v=1';
+import {guideMarkup} from './guide.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
 
 const $=selector=>document.querySelector(selector),icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
@@ -172,12 +173,15 @@ async function normalASAP(){
 }
 $('#open-menu').addEventListener('click',openDrawer);$('#close-menu').addEventListener('click',()=>void closeDrawer());
 $('#navigation-drawer').addEventListener('cancel',event=>{event.preventDefault();void closeDrawer();});
+$('#navigation-drawer nav').insertAdjacentHTML('beforeend',`<div class="drawer-group"><button data-menu-action="guide">${icon('circle-help')}Quick guide</button></div>`);
+icons();
 $('#navigation-drawer').addEventListener('click',async event=>{
  const drawer=event.currentTarget,button=event.target.closest('button');if(event.target===drawer){const rect=drawer.getBoundingClientRect();if(event.clientX>rect.right||event.clientX<rect.left||event.clientY<rect.top||event.clientY>rect.bottom)void closeDrawer();return;}
  if(!button||!await closeDrawer())return;
  if(button.dataset.menuDays){if(!await leaveInline())return;view='today';prefs.daysShown=Number(button.dataset.menuDays);persist();composerFields.setTiming('asap');render();}
  if(button.dataset.menuView){if(!await leaveInline())return;view=button.dataset.menuView;composerFields.setTiming(composerMode());render();}
  if(button.dataset.menuAction==='settings')settings();
+ if(button.dataset.menuAction==='guide')open('Quick guide',guideMarkup());
  if(button.dataset.menuAction==='share')share();
  if(button.dataset.menuAction==='views')views();
  if(button.dataset.menuAction==='days-settings')settings({focusDays:true});

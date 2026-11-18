@@ -18,6 +18,8 @@ Styles, palettes and animation preferences are saved on the device. The old desi
 
 ## Navigation
 
+**Menu -> Quick guide** offers a one-minute introduction with illustrated timing and swipe examples, sharing, follow-ups, the daily Later pick and offline behavior. Close with Got it, X, Escape or a click outside.
+
 The top-left menu slides out with grouped list views, Today only / Next 5 days, Waiting, Completed, View options, Settings and Save / Share. Its header shows the signed-in account (or Not signed in). Click outside, X or Escape to close it. The gear beside Next 5 days opens the matching day-count setting in Settings; View retains the same control. Existing footer shortcuts remain available.
 
 A top-right ASAP shortcut returns any alternate To-do view or multi-day view to ASAP with today only. Routine household/All synced footer text is hidden; the sync progress line and actionable offline/pending/error status remain.

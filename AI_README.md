@@ -1,5 +1,9 @@
 # Lists: AI Handoff
 
+## One-Minute Quick Guide
+
+Menu -> Quick guide opens shared/guide.js in the normal dialog (Got it/X/Escape/backdrop). Theme-aware HTML illustrations stay legible across styles and palettes without screenshot maintenance. Update the guide whenever user-facing scheduling, gestures, sharing, daily picks or offline behavior changes; keep the reading time around one minute and run tests/guide.cjs. It is available before sign-in, contains no personal data, never auto-opens, and is part of the offline shell. Worker version is now lists-shell-production-6.
+
 ## Task Name Header and Date-Based Selection (Latest)
 
 Task modals now use taskHeading(form): a muted Task name label, editable name input, and check-Save / X-Cancel at the far top-right in one sticky heading. Generic Add/Edit h2 and redundant generic X are visually hidden only when .task-editor-heading exists. The generic title remains for other dialogs. Name receives focus on opening; underline-only focus styling avoids an awkward outlined box. Bottom full actions/Delete stay. Both top/bottom Cancel routes still share delegated handlers. Heading wraps the SAME original input, not a clone; restoreComposer MUST move it back into .compose-line and restore home aria/placeholder before removing the temporary heading. This preserves title drafts and form membership. Existing-task inline forms gain the heading only when opened/popped out into a modal.

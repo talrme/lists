@@ -174,5 +174,14 @@ html[data-syncing] .connection:before{content:"";display:inline-block;width:10px
 @keyframes sync-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.sync-progress:after,html[data-syncing] .connection:before{animation:none}.sync-progress:after{width:100%}}
 .offline-actions{display:flex;flex-wrap:wrap;gap:8px}
+.quick-guide{font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+.quick-guide .guide-intro{color:var(--muted);margin:0 0 16px}
+.quick-guide section{padding:14px 0;border-top:1px solid var(--line)}
+.quick-guide h3{font-size:16px;margin:0 0 8px}
+.quick-guide p{margin:8px 0 0}
+.guide-buckets,.guide-gestures{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+.guide-buckets span,.guide-gestures span{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:6px;background:var(--surface);color:var(--ink);font-size:12px}
+.guide-buckets span{flex:1;box-shadow:inset 0 -3px var(--accent);font-weight:700}
+.guide-gestures svg{width:18px;height:18px;color:var(--accent);flex-shrink:0}
 .pending-changes>div{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
 .pending-changes span{min-width:0;flex:1;overflow-wrap:anywhere}.pending-changes strong{display:block;font-size:13px}.pending-changes small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
