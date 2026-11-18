@@ -1,134 +1,74 @@
 # Lists
 
-## Current Controls
+**[Open Lists](https://talrme.github.io/lists/)** · [GitHub](https://github.com/talrme/lists)
 
-- Task details open in a modal by default, with sticky Save/Cancel actions at the top for phone keyboards. Existing devices switch to this new default once; Settings retains an optional inline editor.
-- The add-task arrow opens details. Closing with the arrow, X, Escape or backdrop preserves the draft in the current session; explicit Cancel clears it.
-- With a title in the main add row, tapping ASAP or ~ Week adds immediately. Later only chooses timing. In the details modal, timing never submits; use Save. + and Enter still add.
-- ASAP contains due/overdue tasks and the stable daily Later suggestion. ~ Week contains dates within the next six future business days. Later contains undated tasks and dates beyond that horizon. These are live date-based groupings, not permanent task categories.
-- Waiting is an overlapping flag, using the follow-up date for grouping. A small clock identifies it; Waiting and Completed filters are directly below the composer. Setting Waiting does not switch your view.
-- View controls audience, shared assignee filtering and days shown. Settings controls appearance, animations, editor/gesture behavior, account and offline recovery.
-- Rows show a short description preview, not due dates. Hold a task for 220ms to drag; a successful drop stays in place without a second rearrangement animation.
+Phone-first private and shared lists for Tal and Sophie, with Google sign-in and Firestore syncing.
 
-Preview locally at http://127.0.0.1:5195/lists/ when the preview server is running.
+## Appearance
+
+Clear Day (former staging 1) is the default. Under **Settings -> Appearance**, choose Style first, then Color schemes:
+
+1. Clear Day (1)
+2. Daybook (7)
+3. The Edit (4)
+4. Metro (8)
+5. Block Party (9)
+
+Styles, palettes and animation preferences are saved on the device. The old design chooser and staging folders are removed. Sharing and installation use the main URL with the selected household. Old bookmarks redirect to the main site; an old offline installation may need one connected visit and all old tabs closed to update its worker.
+
+## Tasks
+
+- Start directly with the add field. With a title entered, ASAP or ~ Week adds immediately. Later only selects timing; + and Enter also add.
+- The arrow opens the add-task dialog. Add and edit share the same fields, a subtle sticky Save/Cancel row at the top, and full-size Save/Cancel at the bottom. Existing items also have a confirmed Delete. Closing the add dialog preserves its draft; explicit Cancel clears it.
+- ASAP shows due/overdue tasks plus today's stable From Later suggestion. ~ Week covers the next six future business days; Later holds undated and farther-out tasks. Calendar: America/Los_Angeles; weekends excluded, not public holidays.
+- Adding with ~ Week chooses one of the next five weekdays, including weekday today. Punting chooses a weekday in the following Monday-Friday. In ~ Week, right swipe or the priority icon brings the task into ASAP instead.
+- Waiting is a response-bubble flag across date lists. Follow-up date controls where it appears; quick actions retain that flag. Description snippets appear under names, without date clutter.
+- At the bottom, Show 5 more days expands ASAP (up to 14 days); Today only collapses it. View also has the day count. Waiting and Completed filters sit below the list; Active returns to normal tasks. Completed includes all due dates within the current category and selected people filter.
+- Hold a row for 150ms to drag. Ordinary scrolling remains scrolling. Reorder/date-drag saves are quiet; completion and punt actions have stacked Undo notices. The flying, spinning task tile respects animation preferences/reduced motion.
+- Task order is currently stored on each task, so it syncs across devices **and across household members for shared items**. Per-person ordering would require a separate account-level record. Existing behavior was retained.
+- Keyboard users can focus a task and press Alt+M for the accessible Move menu; no move icon is shown in the task modal.
+
+## Privacy and Sync
+
+Private is the default. Sharing defaults assignment to the signed-in person; select an invited person or Unassigned to change it. Private owner choices are muted but can be clicked to select Shared and assign together. Shared items can be seen by household members; private items cannot, except for the explicitly disclosed Tal administrator preview.
+
+View selects For me / Shared / All tasks and shared assignees. Settings contains appearance, animation presets/effects, per-category editing/gesture behavior, offline recovery, account/privacy, and admin-only household/Playground tools.
+
+Google sessions persist on trusted devices, subject to browser/OS restrictions. Firestore listeners update other devices without polling. One Later suggestion is stored transactionally per person, household and Pacific date. Completion counts for the day: no replacement draw. The pool is undated, nonwaiting private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks.
+
+**Data preservation:** the production frontend deliberately keeps `config.environment = 'staging'`, the existing Firestore namespace containing your real tasks. The name is a legacy internal path, not a remaining staging website. Do not rename, migrate or clear it during UI cleanup.
 
 ## Offline Use
 
-After loading a household online once, you can reopen it without service, see the last saved state and add/edit/complete/defer/delete tasks. A small top progress line and footer status show Connecting, Syncing, pending changes or All synced. Pending edits survive closing/reloading and upload when the app is open with service again; background uploads while completely closed are not guaranteed.
+Load the site and household online once. Afterwards, the service worker caches the public app shell and account-scoped IndexedDB stores the last accessible workspace plus durable queued edits. The top sync line/footer distinguish saved locally, pending, offline and server-synced states.
 
-Different-field edits merge; the last uploaded edit wins for the same field, so an older offline edit can overwrite a more recent online edit to that field when it uploads later. Deleted tasks are not recreated. Rejected edits remain saved under **Settings -> Offline & sync -> Pending changes**, where you can discard one unsent operation without deleting server data. Signing out requires pending changes to finish and then clears that account's saved workspace data. This is for trusted personal devices; clearing browser data or browser storage eviction can remove unsynced edits. First sign-in and initial offline setup need service. Today's cached Later pick remains the same offline; a new day's pick waits for a connection.
+Queued changes upload when the app is open with a connection. Different-field edits merge; the last uploaded edit wins for the same field. Remote deletion does not resurrect tasks. Online stale revisions are rejected. Review/discard unsent operations under Settings -> Offline & sync; sign-out is blocked while pending changes exist, then clears that user's cached data. First login, initial setup and a new day's suggestion require service. Browser eviction/cleared storage can remove unsent edits; uploads while the app is completely closed are not guaranteed.
 
-Task options now use **Task list** with Private / Shared underneath, followed by **Task owner**. Owner choices stay visible but muted for private tasks. Tap a person (or Unassigned) to switch to Shared and select them in one step. Switching Private to Shared directly defaults to the signed-in person; pressing Shared again preserves an existing selection. Choices are saved only with the task, not merely by tapping a control.
+## Firebase and Admin
 
-One top row now handles both browsing and new-task scheduling: **ASAP / ~ Week / Later**, with the options arrow on its left. ASAP shows today's/overdue tasks plus your daily **From Later** suggestion. ~ Week schedules within the next five weekdays and shows upcoming dated tasks, including farther-out dates. **Waiting** and **Completed** are under footer **View**. These controls do not reschedule existing tasks. The daily suggestion remains one pick per person/day when eligible Later tasks exist; completing it counts for that day rather than drawing another.
+The project is `lists-95c4f`; public web config is checked in. Google sign-in plus verified household invitations and Firestore rules enforce access. No public fallback, fake user switch, runtime sample data or service-account secrets.
 
-New tasks appear first in their destination list, with position synced across devices and existing manual order preserved. This uses the same optional `sortOrder` field as dragging; the latest repository rules are required.
+See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for one-step-at-a-time setup. Production promotion, styles, dialogs and contextual swipe changes require **no new rules or migration**. Do not claim the latest optional schema rules are published without owner confirmation.
 
-The daily Later choice is saved in Firestore per household, person and Pacific date, not just in browser memory. An atomic transaction reuses that same record on every device/refresh, even if two browsers open together. At the next Pacific day, yesterday's projection stops applying and a new dated choice is drawn. The original task stays in Later with no due date added; unfinished tasks can be picked again on another day. Completing, deleting, deferring or otherwise moving a pick out of Later removes it from the current suggestion without drawing a replacement. Empty pools save an empty choice for that day. Old daily records are retained, not deleted.
+Tal's collapsed Settings -> Admin supports household invitations, read-only View as user, and the explicitly approved isolated Playground. Only explicit admin actions seed/reset Playground examples. No real household data is used for automated tests.
 
-**Live website:** [talrme.github.io/lists](https://talrme.github.io/lists/)
-
-**Repository:** [talrme/lists](https://github.com/talrme/lists)
-
-Phone-first private and shared lists for Tal and Sophie. Ten fully interactive staging designs use Google sign-in and the same live household data, so you can compare layouts without re-entering tasks.
-
-## Try the designs
-
-Open the live website to pick from Clear Day, Ticket Office, High Tide, The Edit, Little Wins, Command Line, Daybook, Metro, Block Party and After Hours. Each lives in `staging/01/` through `staging/10/`.
-
-**All staging designs are live.** Every design link requires Google sign-in (or reuses your existing session). Changes affect the same real household tasks across all ten designs; these are layout options, not isolated databases. There is no local sandbox, pretend-person switch, or unconfigured fallback. The approved admin-only Playground is a separate, explicitly selected test household. Old local sample data is ignored, never uploaded or automatically deleted. Legacy mode query parameters no longer select a different backend.
-
-Each design's **Open** link connects to Firebase project `lists-95c4f`. The owner confirmed publishing the admin/household rules. The newer description/avatar/task-order/Playground schema needs one further rules publication; see FIREBASE_SETUP.md. There is no public-data fallback. Grocery, Movies and Other lists have working basic add/edit/complete/remove functionality; To-do has the full scheduling workflow.
-
-## Firebase setup
-
-**Setup progress:** the owner confirmed publishing the admin/user-preview rules. Publish the latest file again to enable description, Google-photo, synced task-order and Playground metadata fields. If a household has not yet been created, sign in as Tal and open **Settings → Admin → Households → Create our household**. Review the prefilled Tal/Sophie emails and save. No manually copied user IDs or database fields are needed. The Admin section exists only for Tal's verified Google account, is collapsed at the bottom of Settings, and is enforced by server rules. It is available before household membership is created. Admin also includes **View as user**, a read-only preview of registered users' personal and shared tasks, explicitly authorized by the owner. True sign-in impersonation and editing on behalf remain deferred.
-
-Follow [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed, click-by-click instructions. No Google Sheet or Apps Script is involved.
-
-For a fresh installation, register a Firebase web app, enable Google sign-in, authorize `talrme.github.io`, create Firestore in production mode and publish the supplied rules. Those project steps are already done here; only the new schema rules update and, if needed, browser household creation remain. The public configuration is in the repository. Nothing gets pasted into a phone.
-
-Local auth persistence keeps sessions across normal closes. The public Firebase web configuration is saved permanently in the repository; no per-phone configuration is needed. Actual mobile sign-in, household membership and deployed privacy rules still need checking with authenticated accounts.
-
-## Task behavior
-
-**Latest controls:** descriptions are now plain text, without formatting buttons/preview. Date is a compact, initially empty field: clicking inside opens the native picker. Waiting for a response is above Date and replaces it with Follow-up date, 3 days / 1 week / 2 weeks / 1 month / 3 months and a small date box. A manually selected follow-up clears the presets and displays Custom (months mean 30/90 days).
-
-**Sharing fix:** invited people now appear immediately, without needing to visit that household first. The home household shows Tal, Sophie and Unassigned. Pending assignments use the invited Google email and work on that person's first visit; registered accounts continue using real UIDs. **Publish the latest firestore.rules once in Firebase Console to enable this.** It does not make the database public or require a migration. The agent has not deployed production rules.
-
-**View:** For me is the default in every list: own private tasks, shared tasks assigned to you, and shared unassigned tasks. Shared uses person buttons instead of a dropdown. Both views means your private tasks plus all household shared tasks; it never includes another person's private tasks. View preferences remain local per list.
-
-- **Private by default.** Shared initially selects the signed-in person; choose another invited member or Unassigned. Shared rows display the assignee's avatar; personal rows have none. For me / Shared / Both views have explanations and person-button filters. Other household members cannot read your personal tasks; **Tal, the administrator, can view all users' tasks** through an explicitly labeled read-only preview.
-- **ASAP:** due today. Unfinished due tasks stay Today on subsequent days.
-- **Soon (next 5 weekdays):** randomly chooses one of the next five Monday–Friday dates, including today if it is a weekday. Selection happens once when saving, not on every render. Weekends are excluded; holidays are not.
-- **Sometime later:** no due date. Each person gets one random daily suggestion from their private later tasks, shared later tasks assigned to them, and shared unassigned later tasks. Waiting/completed/dated items and other categories are excluded. The selection is stored once per person per day, consistent across devices, and does not give the task a permanent due date. Two people can draw the same unassigned shared task; completing it completes it for both.
-- Suggestions are chosen on the first visit after the date changes, not by a scheduled server job. An empty pool records no suggestion for that day. Completing/deleting/rescheduling a suggestion does not draw a replacement that day. At the next day boundary, an untouched suggestion returns to Later; it can be randomly chosen again on a later day. Editing it to ASAP pins it in Today.
-- **Defer (curved-arrow button or right swipe):** randomly chooses Monday through Friday of the following week, starting with the next Monday. Using it on a Monday skips to the following Monday's week; on Saturday/Sunday it uses the approaching Monday's week. Existing scheduled tasks do not change retroactively. Swipe right past the threshold and release to save, or slide back to cancel. Swipe-to-defer is on by default and can be switched off in Settings → Today view.
-- **Waiting for a response:** removes the current due date, puts the item in Waiting, and sets a follow-up. Presets: 3/7/14/30/90 days or exact date. It returns to Today on that date and rolls over if still unfinished.
-- Completed tasks can be reopened from the checkmark tab. Tasks can be edited or removed, with confirmation before removal. Deleting a shared task affects both people. Concurrent stale edits are rejected instead of silently overwriting a newer revision.
-
-The household's day is **America/Los_Angeles**, including daylight saving. A local-only minute check notices midnight while open; opening/foregrounding checks immediately. It is **not** a network polling timer. Keep both phones' clocks accurate.
-
-## Sync and privacy
-
-Completion, reopening, Defer and Move offer **Undo** in a compact bottom notice with the task name and an X to dismiss. Up to four recent notices stack above navigation; each action lasts six seconds and pauses while hovered or keyboard-focused. General notices last 3.5 seconds. Undo changes only its action's fields, checks the saved revision, and refuses to overwrite newer edits. A new action on the same task replaces its older notice, avoiding misleading Undo choices. Dismissal does not undo anything; switching account/household clears the stack. Completed tasks can always be reopened later from the checkmark tab.
-
-Completing a task briefly shows its checkmark and fades/slides the row away while the remaining tasks glide up. This uses the existing Smooth completion & list rearrangement setting (included in Light/Medium/All out), never delays the write or Undo, and is skipped with animations Off or reduced motion. Failed saves leave the task in place.
-
-**Settings → Today view → Days to show** accepts 1–14 calendar days (default 1), saved on this device. Multiple days appear as a vertically scrolling agenda with dated Today/Tomorrow sections and empty drop targets. Overdue tasks and today's random nudge stay under Today; future due tasks/follow-ups appear under their actual dates and can also appear in Upcoming/Waiting. Future daily random suggestions are not pre-drawn.
-
-Hold a task for 350ms to lift it, then drag up/down or between displayed days. There are no drag dots. Ordinary taps still edit and quick vertical gestures scroll. Completion/defer controls and open editors do not start dragging. Task details also offer a Move icon for accessible Move up / Move down / Move to date controls. Within a date, dragging changes order; between dates, it changes the due date (or follow-up for a waiting task). Order and dates sync through Firestore. Order uses optional numeric sortOrder; older tasks still work. Most drops write one task; rare equal/precision-exhausted ranks are renumbered in a revision-checked transaction. **Publish the updated firestore.rules before using synced drag ordering**; permission failures revert the visual move. No new background sync or polling.
-
-Swipe **right** to Defer. The task follows your finger with no early travel cap, revealing the action underneath. Release after about 28% of its width (threshold bounded to 72–120px) to commit; shorter/reversed swipes cancel. The whole card can slide away, but you do not have to reach the edge. The row's curved forward-arrow icon does the same action. Settings → Today view can turn right-swipe deferral off. Both paths use the following week's Monday–Friday schedule.
-
-Firestore uses two live task listeners: the signed-in person's private tasks and household shared tasks. Each task is a separate document. Connected saves retain revision-checked transactions. Offline saves are acknowledged only after the device's IndexedDB transaction commits, shown as pending, and replayed automatically when the page reconnects. Replays merge only changed fields against the current server revision; the last uploaded edit wins for the same field. Stable create IDs avoid duplicate uploads; an offline edit never recreates a remotely deleted task.
-
-No 15-second polling. Task snapshots and pending edits are now stored on this device, separately by Firebase project, Google account, household and Playground run. A service worker caches only public site files and the Firebase SDK, never authenticated API responses. Sign-out clears the current account's saved workspace data and is blocked while unsent edits remain. Admin previews are not persisted. Server rules still protect all uploads and private/shared access; configuration values in JavaScript are not secrets.
-
-### Multiple households
-
-Tal's **Settings → Admin → Households** supports creating named households, inviting Google emails, editing names/invitations and copying household links. Creation refuses to overwrite existing households; concurrent edits require the current revision. There is no household delete button. Tal can create a household for other people without joining it. **Settings → Admin → View as user** lists registered visitors and opens their personal/shared task view with an Exit preview banner. The real Google sign-in never changes. Preview disables task edits/completions and reads the existing daily suggestion without creating one. Users with multiple households can be previewed in each; local color/action preferences remain those of the viewing device. Directory entries register on an updated-app visit, with existing household member profiles included as a fallback. It does not enumerate never-registered Firebase Auth accounts. Adding Tal as a household member remains an explicit invitation choice, not automatic.
-
-Every invited verified Google account can enter its household and is assignable before visiting. On first visit, it registers its own email/name/photo. Other users never get the Admin section. Members with several households choose under **Settings → Account & privacy → Household**. Selection is remembered per signed-in account/device; share links and installed app start URLs include the household. Tasks and daily suggestions are scoped to each household. Switching clears old task data/drafts and opens To-do/Today with that device's saved To-do visibility preference. Revoking an email stops access; reinviting restores it without deleting tasks. Existing manually created UID/name households remain supported and can be explicitly updated through Manage without moving their tasks.
-
-The first prototype listens to all of your private tasks and all household shared tasks, including completed ones; reads/memory will grow with history. Before years of heavy use, archive completed tasks and use indexed status/date-window queries. Daily-pick receipts are tiny but also accumulate. Do not introduce a global database listener or per-second writes.
-
-## Phone settings
-
-Each design starts directly with the add field and ASAP / ~ Week / Later timing segments. No logo/date/category heading or top Mine/Shared controls. A chevron reveals description, privacy/assignment, exact date and waiting/follow-up options. Household/connection notices are at the bottom, not above the task list.
-
-Descriptions use a plain text area (10,000 characters). Existing text and Markdown are preserved; read-only admin descriptions retain sanitized rendering. A subtle ellipsis marks tasks with details. No raw user HTML is trusted or description images loaded.
-
-Task details default to inline expansion. The expand icon transfers the SAME unsaved draft into a modal. Settings → [current list] settings can choose Inline or Modal, independently for To-do, Groceries, Movies and Other lists. View preferences are also per list; color and animation choices apply across the app. Inline editors preserve draft nodes/focus during listener updates, warn on changed/deleted tasks, and require confirmation before discarding a dirty draft via navigation. Waiting is edited inside details, never a quick action on a task row. The separate defer icon can be toggled under To-do settings.
-
-Only one task form can be expanded at once, including the top add form. Opening another closes the current form; unsaved work requires discard confirmation first. The expanded add form has Save and Cancel, while the plus button still saves. Cancel or its up-arrow clears the unsaved task and collapses it. Both save buttons share the same pending-save guard, so they cannot create duplicates; failed saves keep the form and draft open. Existing task editors retain their inline-to-modal expand icon.
-
-Each design offers Original / Garden / Cherry / Night palettes. **Settings → Animation settings** has Off / Light / Medium / All out presets, eight individual effect switches, and a Try it out button. Individual changes show Custom. Medium is the default; existing Off/Gentle choices migrate to Off/Light. All out adds bigger confetti bursts and idle icon wiggles. Settings apply immediately and save only on this device. Reduced motion overrides all effects, and backgrounding stops active effects.
-
-Effects include completion confetti, a checkmark flying toward Completed or Upcoming, new-task bounce, smooth list rearrangement, staggered tab/list entrances, springy dialogs, button pops and optional idle wiggles. Completion/add/defer effects wait for successful saves; incoming sync updates never trigger celebrations. Effects never delay writes or add database traffic, and open editors are excluded from list rearrangement. Dialogs close on X, Escape, or backdrop; closing does not save task drafts. Task editors sit near the phone's top, and can scroll so controls stay reachable with the keyboard. Settings and confirmations remain centered.
-
-Save / Share includes a local QR code, link copying and iPhone/Android installation instructions. Sign-in, favicon, and phone icons share the green checklist artwork under `assets/`; no remote image service, analytics or runtime AI.
-
-Open **Save / Share** at the bottom of any design. On iPhone use Safari -> Share -> Add to Home Screen; on Android use Chrome's menu -> Add to Home screen / Install app. The installed app opens that design and household without browser chrome. Each browser/install must first load the site and household online. Subsequent offline opens show its last saved tasks and accept queued changes. Actual Google sign-in, new household setup and new daily suggestions require a connection. The service worker uses a versioned, complete app-shell cache; updates wait for existing tabs to close rather than forcing reloads during edits.
-
-## Run and verify
-
-**Approved Playground:** after publishing the latest rules, open **Settings → Admin → Testing** as Tal. Create Playground (Tal and Sophie are prefilled), add the clearly marked example tasks, and open it. Only this explicit action seeds examples; nothing is copied from your real lists. Creation is a browser action, not something the agent ran against production.
-
-Use the same Playground invitation link in two browser profiles or phones, each signed into its own invited Google account. Shared edits/completions sync; private tasks remain hidden from the other member, with the existing disclosed admin-preview exception. A spare Google account you control also works. Two tabs signed in as Tal test syncing but not account isolation. View as user stays read-only.
-
-Reset Playground confirms first, then switches every connected device to a fresh empty test round. It retains invitations and older test rounds; it does not delete any tasks or real-household data. Example tasks are added only to the current Playground round, under the actual seeding user's identity; adding examples again leaves edited existing examples alone. Reset/seed cannot target an arbitrary household, and UI plus adapter/rules enforce admin-only setup/reset. No new Firebase project, auth provider or polling job is needed.
-
-With Node installed:
+## Develop and Test
 
 ```sh
 node tools/build.mjs
-node --test tests/core.test.js
 node tools/serve.cjs
+node --test tests/core.test.js tests/device-store.test.js tests/admin-core.test.js tests/motion.test.js
+node tests/production.cjs
+node tests/touch.cjs
+node tests/drop.cjs
+node tests/share.cjs
+node tests/offline-shell.cjs
+node tests/rules.cjs
+node tests/admin.cjs
 ```
 
-Open **http://localhost:5195/lists/**. Port can be changed with `PORT=5196`. The preview server serves only this project, handles `/lists/` like GitHub Pages, and disables caching. Static files are also GitHub Pages compatible without a build server.
+Local preview: **http://127.0.0.1:5195/lists/**. Change the port with `PORT=5196`.
 
-Browser checks use Playwright and Chrome: `node tests/browser.cjs` and `node tests/review.cjs`. They use a test-only intercepted backend for synthetic UI workflows, responsive settings and fail-closed unconfigured pages. The sample store lives under tests/fixtures; no production module imports it and no URL/settings flag enables it. `node tests/rules.cjs` uses a local Firestore emulator for 76 permission checks. `node tests/admin.cjs` drives real Firestore SDK transactions/listeners against that emulator with synthetic Google identities: household creation, two-browser shared completion, private isolation, household switching, membership revocation/reinstatement and all ten small-phone admin forms. Set `LISTS_TEST_JAVA` and `LISTS_TEST_FIRESTORE_JAR` to a Java 21 executable and Google's Firestore emulator JAR. No production records are used or written. Actual Google OAuth and physical-phone behavior still require the owner's live setup checks. See VERIFICATION.md.
+The build generates only the root page and manifest. Shared modules hold all behavior. Playwright/Chrome tests use intercepted fixtures or a local demo Firestore emulator; they never edit real tasks. The emulator requires Java 21 and Google's Firestore emulator JAR, configurable with `LISTS_TEST_JAVA` and `LISTS_TEST_FIRESTORE_JAR`. Real Google OAuth, physical phone keyboards and OS installation still need manual testing.
 
-`tools/build.mjs` generates the chooser, ten HTML entry points and manifests. Edit shared application modules and styles for behavior; do not manually fork ten logic implementations. See [AI_README.md](AI_README.md) for invariants and handoff context.
+See [AI_README.md](AI_README.md) for handoff context and [VERIFICATION.md](VERIFICATION.md) for test results.

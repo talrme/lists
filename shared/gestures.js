@@ -1,4 +1,4 @@
-export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context}){
+export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context,swipeLabel}){
  const host=document.querySelector('#task-list'),sortables=new Map();let active=false,dragging=false,chosen=false,swipe=null,suppressUntil=0;
  const idle=()=>{active=false;document.body.classList.remove('task-dragging');onIdle();};
  function sync(){
@@ -6,7 +6,7 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
   host.querySelectorAll('.day-tasks').forEach(node=>{
    if(!sortables.has(node))sortables.set(node,new window.Sortable(node,{
     group:'list-tasks',draggable:'.task-row',filter:'.is-editing,.completed,button:not(.task-content),input,textarea,select,a',preventOnFilter:false,
-    delay:220,delayOnTouchOnly:false,touchStartThreshold:6,
+    delay:150,delayOnTouchOnly:false,touchStartThreshold:6,
     animation:motion.enabled('reorder')?180:0,forceFallback:true,fallbackOnBody:true,fallbackTolerance:4,
     ghostClass:'task-drag-placeholder',chosenClass:'task-drag-chosen',fallbackClass:'task-drag-float',scrollSensitivity:70,scrollSpeed:12,
     onChoose(){chosen=true;swipe=null;active=true;sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
@@ -30,6 +30,7 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
  host.addEventListener('pointerdown',event=>{
   if(active||!canSwipe()||event.button!==0||event.target.closest('.task-check,.defer-task,.task-edit-form'))return;
   const row=event.target.closest('.task-row'),task=findTask(row?.dataset.task);if(!row||row.classList.contains('is-editing')||!task||task.completed)return;
+  row.dataset.swipeLabel=swipeLabel();
   swipe={row,summary:row.querySelector('.task-summary'),pointer:event.pointerId,x:event.clientX,y:event.clientY,distance:0,locked:false,task,epoch:context()};
  });
  host.addEventListener('pointermove',event=>{

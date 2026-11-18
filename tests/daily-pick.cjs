@@ -5,7 +5,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
  try{
   const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();await ui.mockBackend(page,BASE);
   await page.clock.install({time:new Date('2026-11-17T07:59:00Z')});
-  await page.goto(new URL('staging/01/',BASE).href);await page.locator('.suggestion').waitFor();
+  await page.goto(new URL('',BASE).href);await page.locator('.suggestion').waitFor();
   const first=await page.locator('.suggestion').getAttribute('data-task');
   const receipt=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('lists-sandbox-v1')).picks);
   assert.equal((await receipt())['2026-11-16_tal'],first);

@@ -9,7 +9,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    await page.addInitScript(()=>{window.__motion=[];const original=Element.prototype.animate;Element.prototype.animate=function(frames,options){window.__motion.push({className:this.className,frames,duration:options.duration});return original.call(this,frames,options);};});
    await ui.mockBackend(page,BASE);
    await page.route('**/tests/fixtures/store.js',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(require.resolve('./fixtures/store.js'),'utf8').replace('async write(id,patch,expectedRev){',"async write(id,patch,expectedRev){if(window.__failWrite)throw Error('Test save failed');if(window.__delayWrite)await new Promise(resolve=>setTimeout(resolve,500));")}));
-   await page.goto(new URL(`staging/${String(design).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
    for(const width of [390,1280]){
     await page.setViewportSize({width,height:844});await page.waitForTimeout(450);
     const row=page.locator('.task-row').filter({hasText:'Book the dentist'});

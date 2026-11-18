@@ -1,5 +1,5 @@
 import {belongsTo,HOME_EMAILS,isAdministrator} from './households.js';
-import {testingSection,bindTesting} from './testing.js?v=1';
+import {testingSection,bindTesting} from './testing.js?v=production1';
 import {isPlayground} from './playground.js?v=1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function adminSection(account){
@@ -48,7 +48,7 @@ export function bindAdmin({account,store,onOpen,onPreview,showError,liveUrl,conf
     const button=event.target.closest('button');if(!button)return;
     if(button.dataset.manage){const h=households.find(h=>h.id===button.dataset.manage);editor({...h,existing:true,memberEmails:h.memberEmails||(h.id==='home'?HOME_EMAILS:[])});}
     if(button.dataset.openHousehold)onOpen(button.dataset.openHousehold);
-    if(button.dataset.linkHousehold){const link=new URL('staging/'+String(document.body.dataset.design).padStart(2,'0')+'/',liveUrl);link.searchParams.set('household',button.dataset.linkHousehold);try{await navigator.clipboard.writeText(link.href);message.textContent='Household link copied. Invitees must sign in with a listed Google email.';}catch{message.textContent=link.href;}}
+    if(button.dataset.linkHousehold){const link=new URL(liveUrl);link.searchParams.set('household',button.dataset.linkHousehold);try{await navigator.clipboard.writeText(link.href);message.textContent='Household link copied. Invitees must sign in with a listed Google email.';}catch{message.textContent=link.href;}}
   });
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(form.querySelector('[type=submit]').disabled)return;

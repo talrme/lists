@@ -15,7 +15,7 @@ async function settings(page){await page.locator('[data-action=settings]').click
    });
    await ui.mockBackend(page,BASE);
    await page.route('**/tests/fixtures/store.js',route=>route.fulfill({contentType:'text/javascript',body:readFileSync(require.resolve('./fixtures/store.js'),'utf8').replace('async write(id,patch,expectedRev){',"async write(id,patch,expectedRev){ if(window.__failWrite)throw new Error('Test save failed'); if(window.__delayWrite)await new Promise(resolve=>setTimeout(resolve,500));")}));
-   await page.goto(new URL(`staging/${String(design).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
    await settings(page);await level(page,3);assert.equal(await page.locator('#animation-level-name').innerText(),'All out');
    await page.locator('.custom-effects>summary').click();assert.equal(await page.locator('[data-effect]:checked').count(),8);
    for(const width of [320,390,1280])for(const palette of ['original','garden','cherry','night']){

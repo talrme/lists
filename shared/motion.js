@@ -68,5 +68,11 @@ export function createMotion(getPrefs){
  function dialog(node){animate('dialogs',node,[{opacity:0,transform:'translateY(18px) scale(.92) rotate(-1deg)'},{opacity:1,transform:'translateY(-3px) scale(1.01)',offset:.75},{opacity:1,transform:'none'}],{duration:360});}
  function arrival(id,target){const node=[...document.querySelectorAll('.task-row')].find(row=>row.dataset.task===id);pop('arrival',node||target);}
  document.addEventListener('click',event=>{const button=event.target.closest('button');if(button&&!button.disabled)pop('taps',button);});
- return {enabled,animate,pop,enter,snapshot,rearrange,depart,burst,travel,dialog,arrival,sync,clear};
+ function punt(rect,target,title){
+  if(!rect||!target||!enabled('travel'))return;
+  const end=target.getBoundingClientRect(),chip=document.createElement('span');chip.className='motion-traveler punt-traveler';chip.textContent=title;chip.style.width=rect.width+'px';chip.style.height=rect.height+'px';chip.setAttribute('aria-hidden','true');chip.style.left=rect.left+'px';chip.style.top=rect.top+'px';document.body.append(chip);
+  const x=end.left+end.width/2-rect.left-rect.width/2,y=end.top+end.height/2-rect.top-rect.height/2;
+  animate('travel',chip,[{transform:'scale(1) rotate(0)',opacity:1},{transform:`translate(${x*.5}px,${y*.5-65}px) scale(1.3) rotate(360deg)`,offset:.5,opacity:1},{transform:`translate(${x}px,${y}px) scale(.25) rotate(720deg)`,opacity:0}],{duration:650},true);pop('travel',target);
+ }
+ return {enabled,animate,pop,enter,snapshot,rearrange,depart,burst,travel,punt,dialog,arrival,sync,clear};
 }

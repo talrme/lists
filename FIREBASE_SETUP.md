@@ -50,7 +50,7 @@ No API key, service-account key, billing upgrade, Cloud Function or Google Sheet
 
 Do this after the rules have published:
 
-1. Open https://talrme.github.io/lists/staging/01/ .
+1. Open https://talrme.github.io/lists/ .
 2. Sign in with **talrme@gmail.com** if needed.
 3. Open **Settings**. Before setup, a Settings button is available on the access screen; after setup it is in the footer.
 4. Scroll to the bottom of the settings modal. Expand **Admin**, then **Households**.
@@ -65,7 +65,7 @@ If home already exists, creation refuses to overwrite it. Use **Manage** to revi
 
 ## Then: Sophie joins
 
-1. Sophie opens https://talrme.github.io/lists/staging/01/?household=home .
+1. Sophie opens https://talrme.github.io/lists/?household=home .
 2. She signs in with **sophiegreen2@gmail.com**.
 3. Her name registers automatically with the identity that is already invited. No UID copying, Firebase Console editing or second setup form is required.
 4. She already appears as an assignment option from the invitation; after joining, her Google photo becomes available. She has Settings but no Admin section.

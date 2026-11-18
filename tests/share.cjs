@@ -8,7 +8,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true}),page=await context.newPage(),errors=[];
    page.on('pageerror',error=>errors.push(error.message));
    await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.__copied=text;}}}));
-   await ui.mockBackend(page,BASE);await page.goto(new URL(`staging/${String(design).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await ui.mockBackend(page,BASE);await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
    for(const name of ['mobile-web-app-capable','apple-mobile-web-app-capable'])assert.equal(await page.locator(`meta[name="${name}"]`).getAttribute('content'),'yes');
    assert.equal(await page.locator('meta[name="apple-mobile-web-app-title"]').getAttribute('content'),'Lists');
    const cdp=await context.newCDPSession(page),manifest=await cdp.send('Page.getAppManifest');
@@ -17,7 +17,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    const sizes=await page.evaluate(async icons=>Promise.all(icons.map(icon=>new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image.naturalWidth+'x'+image.naturalHeight);image.onerror=reject;image.src=icon.src;}))),data.icons);
    assert.deepEqual(sizes,['192x192','512x512']);
    await page.locator('[data-action=share]').click();const link=await page.locator('#share-link').inputValue();
-   assert.equal(link,`https://talrme.github.io/lists/staging/${String(design).padStart(2,'0')}/?household=home`);
+   assert.equal(link,`https://talrme.github.io/lists/?household=home`);
    await page.waitForFunction(()=>document.querySelector('#qr img')?.naturalWidth>0);
    await page.locator('#copy-link').click();assert.equal(await page.evaluate(()=>window.__copied),link);
    for(const width of [320,390,1280])for(const palette of ['original','garden','cherry','night']){

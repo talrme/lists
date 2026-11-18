@@ -1,5 +1,15 @@
 # Verification — November 17, 2026
 
+## Production Promotion
+
+Staging 1 is promoted to the root, with styles 1/7/4/8/9 selectable under Appearance and no staging folders/gallery. tests/production.cjs passed all five styles across 80 width/palette combinations, including portrait, landscape, desktop and night. Tested bottom-only Waiting/Completed/Active controls, 5-more-days/Today-only, top and bottom modal Save, no move icon, response-bubble waiting indicator, contextual ~ Week -> ASAP action/Undo, canonical household share URLs and root installation icons. Phone screenshots of both modal forms and the five styles were inspected.
+
+Trusted CDP touch tests passed with a 150ms hold, including a 190ms intentional hold, regular scrolling, free-travel right swipe, drag across days and Undo. Animation-enabled tests confirmed the dropped tile stays put through a delayed save, no reorder notice, and the task-sized punt tile animates then cleans up. Repeated root planning, sharing, preserved-draft and failed-save regression workflows passed. Pure suites: 28 passed.
+
+Real signed-out SDK initialization passed at root; old demo parameters/sample-person records cannot bypass sign-in. The actual production worker passed offline root reload plus legacy-staging navigation redirect with the household retained. Share/install tests passed manifest parsing, icon dimensions, QR/copy and modal dismissal. Real SDK/local demo emulator passed private/shared/admin/Playground/revision and offline replay checks, with zero production writes. Existing task/order data remains in the legacy Firestore 'staging' namespace; no migration or rules change.
+
+These are browser emulation and local emulator results, not physical-phone keyboard, actual OS installation or real Google OAuth completion claims. Older ten-design test sections below are historical; only five Appearance styles now ship.
+
 ## Offline Update
 
 Real SDK/demo Firestore emulator checks passed: offline create/edit/complete persisted through a disconnected reload; automatic reconnect uploaded without duplicates; same-field last-uploaded edits won while unrelated remote notes survived; editing a remotely deleted task did not recreate it. Rejected uploads remained queued and could be discarded individually through Settings. Pending sign-out was blocked, sync progress appeared during reconnect, and existing privacy/admin/Playground/revision tests passed. No real household records were used. Test static/SDK resources are fulfilled locally during offline SDK tests; Chrome loopback permission is granted only to the test origin.

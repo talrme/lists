@@ -6,7 +6,7 @@ export function testingSection(){
 export function bindTesting({root,store,onOpen,confirmAction,liveUrl}){
  const section=root.querySelector('#settings-testing');if(!section)return;
  const form=section.querySelector('#playground-form'),message=section.querySelector('#playground-message'),actions=section.querySelector('#playground-actions');let state=null,loaded=false,pending=false;
- const link=new URL(`staging/${String(document.body.dataset.design).padStart(2,'0')}/`,liveUrl);link.searchParams.set('household',PLAYGROUND_ID);
+ const link=new URL(liveUrl);link.searchParams.set('household',PLAYGROUND_ID);
  function render(){form.hidden=false;actions.hidden=!state;form.elements.emails.value=(state?.memberEmails||HOME_EMAILS).join('\n');form.querySelector('[type=submit]').textContent=state?'Save invitations':'Create Playground';section.querySelector('#playground-link').value=link.href;}
  async function perform(work,success=''){
   if(pending)return;pending=true;section.querySelectorAll('input,textarea,button').forEach(node=>node.disabled=true);message.textContent='Working…';

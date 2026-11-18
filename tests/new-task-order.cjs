@@ -6,7 +6,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
   for(let design=1;design<=10;design++){
    const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
    page.on('pageerror',error=>errors.push(error.message));await ui.mockBackend(page,BASE);
-   await page.goto(new URL(`staging/${String(design).padStart(2,'0')}/`,BASE).href);await page.locator('#workspace').waitFor();
+   await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
    const titles=()=>page.locator('.task-row .task-name').allTextContents();
    await ui.add(page,'Older addition');await ui.add(page,'Newest addition');
    assert.deepEqual((await titles()).slice(0,2),['Newest addition','Older addition']);

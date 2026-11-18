@@ -2,6 +2,9 @@ import {addDays,shortDate} from './core.js?v=nextweek1';
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
+export function editorActions({composer=false,top=false}={}){
+  return `<div class="${top?'editor-top-actions':'modal-footer'} ${composer?'composer-actions':''}"><button class="${top?'text-button':'primary'}" type="submit">${top?icon('check'):''}Save</button><button class="${top?'text-button':'secondary'} ${composer?'cancel-new-task':'cancel-editor'}" type="button">Cancel</button>${!composer&&!top?`<button class="quiet danger icon-button" type="button" id="remove-task" title="Remove task" aria-label="Remove task">${icon('trash-2')}</button>`:''}</div>`;
+}
 export function photoUrl(value){
   try{const url=new URL(value);return url.protocol==='https:'&&(url.hostname==='googleusercontent.com'||url.hostname.endsWith('.googleusercontent.com'))?url.href:'';}catch{return '';}
 }
@@ -31,10 +34,10 @@ export function fieldsMarkup({task={},today,composer=false,allowPrivate=true}){
     <div class="task-options" id="${prefix}-options" ${composer?'hidden':''}>
       <div class="description-field"><label for="${prefix}-description">Description</label><textarea name="description" id="${prefix}-description" rows="3" maxlength="10000" aria-label="Description">${esc(task.description)}</textarea></div>
       <div class="sharing-line"><span>Task list</span><div class="choice-track sharing-track" role="group" aria-label="Task list"><span class="choice-indicator" aria-hidden="true"></span><button type="button" data-sharing="private" ${allowPrivate?'':'disabled'} aria-pressed="${task.visibility!=='shared'}">Private</button><button type="button" data-sharing="shared" aria-pressed="${task.visibility==='shared'}">Shared</button></div></div><input type="hidden" name="person" id="${prefix}-person" value="${esc(task.visibility==='shared'?task.assigneeUid||'shared':'private')}"><div class="ownership-field" data-private="${task.visibility!=='shared'}"><span id="${prefix}-owner-label">Task owner for shared items</span><div class="assignee-choices" role="group" aria-labelledby="${prefix}-owner-label"></div></div>
-      <label class="toggle-row waiting-toggle">Waiting for a response<input name="waiting" type="checkbox" role="switch" ${task.waiting?'checked':''}></label>
+      <label class="toggle-row waiting-toggle"><span class="waiting-label">${icon('message-circle-more')}Waiting for a response</span><input name="waiting" type="checkbox" role="switch" ${task.waiting?'checked':''}></label>
       <div class="exact-date-row"><label class="compact-date" for="${prefix}-date">Date<input id="${prefix}-date" name="date" type="date" aria-label="Date" value="${esc(task.dueDate||'')}"></label></div>
       <div class="waiting-options" ${task.waiting?'':'hidden'}><div class="followup-heading">Follow-up date <small class="custom-date" hidden>Custom</small></div><div class="followup-choices" role="group" aria-label="Follow up in">${[[3,'3 days'],[7,'1 week'],[14,'2 weeks'],[30,'1 month'],[90,'3 months']].map(([days,label])=>`<button type="button" data-followup="${days}" aria-pressed="false">${label}</button>`).join('')}</div><label class="compact-date"><span class="sr-only">Follow-up date</span><input name="followUp" type="date" aria-label="Follow-up date" value="${esc(task.followUp||'')}"></label></div>
-      ${composer?'<div class="modal-footer composer-actions"><button class="primary" type="submit">Save</button><button class="secondary cancel-new-task" type="button">Cancel</button></div>':''}
+      ${composer?editorActions({composer:true}):''}
     </div>`;
 }
 export function bindFields(form,{uid,members,profiles,today,onOptionsToggle,onTimingSelect,onScheduleChange}){
