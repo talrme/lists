@@ -1,5 +1,9 @@
 # Verification — November 17, 2026
 
+## Update Progress Feedback
+
+Safe-update suite passed with explicit visible Undo-delay reason, Updating... button and applying status after activation request, plus existing idle auto-update, draft/dialog/offline/pending guards, multi-tab catch-up and real worker/offline lifecycle. No production writes or timing/safety policy changes.
+
 ## Today/Week Phone Polish (Latest)
 
 Today/Week overlap was explicitly rejected; tests now enforce mutually exclusive base views, with creation landing today displayed only Today. Every punt date is strictly future and inside Week. Daily Later pick loses its Today projection if punted into Week.

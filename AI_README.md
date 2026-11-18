@@ -1,5 +1,9 @@
 # Lists: AI Handoff
 
+## Update Progress Feedback (Newest)
+
+User reported Reload looked unresponsive then eventually updated. Cannot identify their historical blocking condition from code alone. Existing safety waits (draft/dialog, pending sync, active action, Undo6s) and4s AUTO idle remain; manual Reload skips idle but not safety. updates.js?v=3 now immediately labels button Updating..., shows checking/applying/reloading status, and gives visible block reasons for BOTH automatic and manual attempts. Activity-race deferral explicitly says waiting to settle and automatic retry; blocked attempts reset button to Reload. Undo gets its own clear waiting message instead of generic current action. No weakened guards, no forced reload, no extra Firebase traffic. App37/shell17. updates.cjs asserts visible Undo/applying feedback in addition to all lifecycle/draft/multitab/offline tests.
+
 ## Today/Week Phone Polish (Newest, Overrides Overlap Notes)
 
 User explicitly REJECTED Today/Week overlap. Visible labels are Today and Week everywhere, internal enum/element IDs retained for storage compatibility. Creation Week still samples5weekdays including weekday today; if today is selected it belongs only Today. Week filters dates strictly AFTER today through fifth future weekday. Punt from Today chooses5futureweekdays, excludes today. Later RIGHT and Week LEFT swipe promote to Today (also quick icon list-start). Today RIGHT punts to Week. Waiting preserves flag, moves follow-up date. Daily Later projection only applies while selected task still belongs to Later; a punted pick no longer sticks in Today.

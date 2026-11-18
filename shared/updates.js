@@ -15,19 +15,21 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000}){
  const show=()=>{bar.hidden=!available();queue();};
  async function safe(manual,activity){
   const reason=await canReload();
-  if(reason){if(manual)message.textContent=reason;return false;}
-  return navigator.onLine&&!document.hidden&&activity===lastActivity&&(manual||performance.now()-lastActivity>=idleMs);
+  if(reason){message.textContent=reason;return false;}
+  const ready=navigator.onLine&&!document.hidden&&activity===lastActivity&&(manual||performance.now()-lastActivity>=idleMs);
+  if(!ready)message.textContent=!navigator.onLine?'Reconnect to apply the update.':'Waiting for the page to settle. The update will retry automatically.';
+  return ready;
  }
  async function apply(manual){
   if(applying||requested||reloading||!available())return;
-  applying=true;button.disabled=true;message.textContent='';
+  applying=true;button.disabled=true;button.textContent='Updating...';message.textContent='Checking that your changes are saved...';
   const activity=lastActivity;
   try{
    if(!await safe(manual,activity))return;
-   if(registration?.waiting){requested=true;requestedActivity=activity;requestedManual=manual;registration.waiting.postMessage({type:'ACTIVATE_UPDATE'});}
-   else {reloading=true;location.reload();}
+   if(registration?.waiting){requested=true;requestedActivity=activity;requestedManual=manual;message.textContent='Applying the downloaded update...';registration.waiting.postMessage({type:'ACTIVATE_UPDATE'});}
+   else {reloading=true;message.textContent='Reloading the updated app...';location.reload();}
   }catch{requested=false;if(manual)message.textContent='Could not update. Please try again.';}
-  finally{applying=false;if(!requested&&!reloading){button.disabled=false;queue(retryMs);}}
+  finally{applying=false;if(!requested&&!reloading){button.disabled=false;button.textContent='Reload';queue(retryMs);}}
  }
  // Every tab checks its own draft/sync safety, including when another tab activates a worker.
  navigator.serviceWorker.addEventListener('controllerchange',async()=>{
@@ -36,7 +38,7 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000}){
   if(requested){
    requested=false;
    try{if(await safe(requestedManual,requestedActivity)){reloading=true;location.reload();return;}}catch{}
-   button.disabled=false;
+   button.disabled=false;button.textContent='Reload';
   }
   queue();
  });
