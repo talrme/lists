@@ -3,10 +3,10 @@ import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,ins
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=production1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=editor6';
-import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=4';
+import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
 import {taskGestures} from './gestures.js?v=7';
 import {createNotices} from './notices.js?v=2';
-import {guideMarkup} from './guide.js?v=2';
+import {guideMarkup} from './guide.js?v=3';
 import {setupUpdates} from './updates.js?v=3';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -33,6 +33,8 @@ let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],
 let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',pickedPool='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
 let gestures=null,lastRealSpace='',editorTransition=false,skipDropAnimation=false;
+const pendingCompletions=new Map();
+function displayTasks(){return !pendingCompletions.size?tasks:tasks.map(task=>pendingCompletions.has(task.id)?{...task,completed:pendingCompletions.get(task.id).completed}:task);}
 const dayControls=document.createElement('div');
 function listPrefs(){return {editor:'modal',...(prefs.lists?.[category]||{})};}
 function selection(){return normalizeSelection(listPrefs().audiences?.[user?.uid]||{private:true,[user?.uid]:true},profiles);}
@@ -96,7 +98,7 @@ function updatePeople(){
 }
 function currentTasks(){
   const chosen=selection(),lastDay=dayGroups(today,prefs.daysShown).at(-1).end;
-  return tasks.filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
+  return displayTasks().filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
     .filter(task=>selectedTask(task,{uid:user?.uid,email:user?.email,selection:chosen,profiles})||category==='todo'&&view==='today'&&picks.includes(task.id)&&candidateTasks([{...task,dueDate:null}],user?.uid,user?.email,today).length)
     .filter(task=>category==='todo'?view==='today'?!!taskDay(task,today,picks)&&taskDay(task,today,picks)<=lastDay:inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
     .sort(taskOrder);
@@ -105,7 +107,7 @@ function rowMarkup(task){
   task={...task,assigneeUid:task.assigneeUid||(task.assigneeEmail?'email:'+task.assigneeEmail:null)};
   const suggestion=category==='todo'&&view==='today'&&!task.waiting&&dateTiming(task.dueDate,today)==='later'&&picks.includes(task.id);
   const metadata=[suggestion?'From Later':null,view==='later'&&(task.waiting?task.followUp:task.dueDate)?shortDate(task.waiting?task.followUp:task.dueDate):null].filter(Boolean),hasDetails=!!task.description?.trim();
-  return `<div class="task-summary"><button class="task-check ${task.completed?'checked':''}" data-complete="${esc(task.id)}" aria-label="${task.completed?'Reopen':'Complete'} ${esc(task.title)}" ${busy.has(task.id)||preview?'disabled':''}>${icon(task.completed?'check':'circle')}</button><button class="task-content" aria-keyshortcuts="Alt+M" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${task.waiting?'<span class="waiting-badge" role="img" aria-label="Waiting for a response" title="Waiting for a response">'+icon('message-circle-more')+'</span>':''}</span>${hasDetails?`<span class="task-excerpt">${esc(task.description.trim().replace(/\s+/g,' '))}</span>`:''}${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&quickActionsVisible()?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="${view==='upcoming'||view==='later'?'Move to Today':'Punt to Week'} ${esc(task.title)}" title="${view==='upcoming'||view==='later'?'Move to Today':'Punt to Week'}" ${preview?'disabled':''}>${icon(view==='upcoming'||view==='later'?'list-start':'corner-up-right')}</button>`:''}</div>`;
+  return `<div class="task-summary"><button class="task-check ${task.completed?'checked':''}" data-complete="${esc(task.id)}" aria-label="${task.completed?'Reopen':'Complete'} ${esc(task.title)}" ${busy.has(task.id)||preview?'disabled':''}>${icon(task.completed?'check':'circle')}${!task.completed?`<span class="complete-preview" aria-hidden="true">${icon('check')}</span>`:''}</button><button ${pendingCompletions.has(task.id)?'disabled':''} class="task-content" aria-keyshortcuts="Alt+M" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${task.waiting?'<span class="waiting-badge" role="img" aria-label="Waiting for a response" title="Waiting for a response">'+icon('message-circle-more')+'</span>':''}</span>${hasDetails?`<span class="task-excerpt">${esc(task.description.trim().replace(/\s+/g,' '))}</span>`:''}${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&quickActionsVisible()?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="${view==='upcoming'||view==='later'?'Move to Today':'Punt to Week'} ${esc(task.title)}" title="${view==='upcoming'||view==='later'?'Move to Today':'Punt to Week'}" ${preview||busy.has(task.id)?'disabled':''}>${icon(view==='upcoming'||view==='later'?'list-start':'corner-up-right')}</button>`:''}</div>`;
 }
 function render(){
   if(!user||gestures?.isActive())return;
@@ -116,11 +118,11 @@ function render(){
   $('#new-title').setAttribute('aria-label',todo?'New task':'New item');$('#composer .schedule-line').classList.toggle('no-timing',!todo);
   $('#composer .timing-track').hidden=!todo;$('#composer .exact-date-row').classList.toggle('category-hidden',!todo);$('#composer .waiting-toggle').classList.toggle('category-hidden',!todo);
   const captions={today:'Today',upcoming:'Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',!todo||['today','upcoming','later'].includes(view));
-  const list=currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row]));
+  const list=currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
   let completionExit=false;
   // Preserve an open form node: a live snapshot must not dismiss a phone keyboard or erase a draft.
   for(const row of rows.values())if(!ids.has(row.dataset.task)&&row.dataset.task!==inlineEditor?.id){
-    if(!row.classList.contains('completed')&&tasks.some(task=>task.id===row.dataset.task&&task.completed))completionExit=!!motion.depart(row)||completionExit;else row.remove();
+    if(!row.classList.contains('completed')&&completedIds.has(row.dataset.task))completionExit=!!motion.depart(row)||completionExit;else row.remove();
   }
   const grouped=todo&&view==='today',buckets=grouped?dayGroups(today,prefs.daysShown):[{start:'',end:'',weekend:false}],days=buckets.map(bucket=>bucket.start);
   const groups=new Map([...host.children].map(group=>[group.dataset.day,group]));
@@ -244,6 +246,20 @@ function draftFrom(form,task=null){
   if(task)draft.completed=task.completed;
   return {raw,draft};
 }
+async function completeTask(task,rect){
+ if(preview||busy.has(task.id)||pendingCompletions.has(task.id))return;
+ const epoch=spaceEpoch,operation={completed:!task.completed};pendingCompletions.set(task.id,operation);busy.add(task.id);
+ render();if(operation.completed){motion.burst(rect);motion.travel(rect,$('#open-menu'));}
+ try{
+  await store.write(task.id,{completed:operation.completed},task.rev);if(epoch!==spaceEpoch)return;
+  tasks=tasks.map(item=>item.id===task.id&&item.rev<=task.rev?{...item,completed:operation.completed,rev:task.rev+1}:item);
+  notify(operation.completed?'Task completed':'Task reopened',{id:task.id,label:task.title,rev:task.rev+1,patch:{completed:task.completed}});
+ }catch(error){if(epoch===spaceEpoch)notify('Could not save “'+task.title+'”. Showing the latest saved state. '+errorText(error));}
+ finally{
+  if(pendingCompletions.get(task.id)===operation)pendingCompletions.delete(task.id);
+  busy.delete(task.id);if(epoch===spaceEpoch)render();
+ }
+}
 async function deferTask(task){
   const asap=view==='upcoming'||view==='later',rect=[...document.querySelectorAll('.task-row')].find(row=>row.dataset.task===task.id)?.getBoundingClientRect();
   const date=asap?today:schedule('defer',today),patch=task.waiting?{dueDate:task.dueDate,waiting:true,followUp:date}:{dueDate:date,waiting:false,followUp:null};
@@ -343,7 +359,7 @@ function householdPicker(){return `<label class="field">Household<select id="hou
 function bindDaysSetting(){
  if($('#days-shown'))bindDayWheel($('#days-shown'),prefs.extendedDays,value=>{prefs.extendedDays=value;if(prefs.daysShown>1)prefs.daysShown=value;persist();render();});
 }
-function resetWorkspace(){notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
+function resetWorkspace(){pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
 function switchHousehold(id){if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);}
 function updateInstallManifest(){
   const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.set('household',currentSpace.id);const root=appRoot;
@@ -361,12 +377,18 @@ function bindAnimations(){
   $('#preview-animations').onclick=()=>{const button=$('#preview-animations');motion.pop('arrival',button);motion.dialog($('#dialog'));motion.burst(button.getBoundingClientRect());};
 }
 function openSearch(){
- open('Search tasks','<label class="field search-field"><span class="sr-only">Search tasks</span><input id="task-search" type="search" placeholder="Search tasks" autocomplete="off" maxlength="200" aria-label="Search tasks"></label><div id="search-results" class="search-results" aria-live="polite"><p class="settings-note">Search names and descriptions across your lists.</p></div>');
+ open('Search tasks','<label class="field search-field"><span class="sr-only">Search tasks</span><input id="task-search" type="search" placeholder="Search tasks" autocomplete="off" maxlength="200" aria-label="Search tasks"></label><label class="search-completed"><input id="include-completed" type="checkbox">Include completed tasks</label><div id="search-results" class="search-results" aria-live="polite"><p class="settings-note">Search names and descriptions across your lists.</p></div>');
  $('#dialog').classList.add('search-modal');const input=$('#task-search'),results=$('#search-results');input.focus({preventScroll:true});
- input.oninput=()=>{
-  const readable=tasks.filter(task=>task.visibility==='shared'||task.ownerUid===user?.uid),matches=searchTasks(readable,input.value);
-  results.innerHTML=matches.length?matches.slice(0,100).map(task=>`<button type="button" data-search-edit="${esc(task.id)}"><strong>${esc(task.title)}</strong><small>${esc(names[task.category])} · ${task.completed?'Completed':task.waiting?'Waiting for a response':({asap:'Today',week:'Week',later:'Later'})[dateTiming(task.dueDate,today)]}</small></button>`).join(''):'<p class="settings-note">No matching tasks.</p>';
+ const updateResults=()=>{
+  const readable=displayTasks().filter(task=>(task.visibility==='shared'||task.ownerUid===user?.uid)&&($('#include-completed').checked||!task.completed));
+  const matches=searchTasks(readable,input.value).sort((a,b)=>Number(a.completed)-Number(b.completed)).slice(0,100);
+  let completedHeading=false;
+  results.innerHTML=matches.length?matches.map(task=>{
+   const heading=task.completed&&!completedHeading?'<h3 class="search-completed-heading">Completed</h3>':'';if(task.completed)completedHeading=true;
+   return heading+`<button type="button" data-search-edit="${esc(task.id)}" class="${task.completed?'search-result-completed':''}"><span class="search-result-status" role="img" aria-label="${task.completed?'Completed':'Not completed'}">${icon(task.completed?'circle-check':'circle')}</span><span class="search-result-copy"><strong>${esc(task.title)}</strong><small>${esc(names[task.category])} · ${task.completed?'Completed':task.waiting?'Waiting for a response':({asap:'Today',week:'Week',later:'Later'})[dateTiming(task.dueDate,today)]}</small></span></button>`;
+  }).join(''):'<p class="settings-note">No matching tasks.</p>';icons();
  };
+ input.oninput=updateResults;$('#include-completed').onchange=updateResults;
  results.onclick=event=>{const button=event.target.closest('[data-search-edit]'),task=tasks.find(task=>task.id===button?.dataset.searchEdit);if(task)void taskEditor(task,{modal:true});};
 }
 function settings(){
@@ -428,7 +450,7 @@ document.addEventListener('click',async event=>{
   if(button.dataset.view&&!button.closest('#composer')){if(!await leaveInline())return;view=button.dataset.view;composerFields.setTiming(composerMode());if(button.closest('#dialog'))close();render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.category){if(!await leaveInline())return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;category=button.dataset.category;view=category==='todo'?'today':'later';composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
   if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task)await changeEditor(async()=>{if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);});}
-  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete),rect=button.getBoundingClientRect();if(task&&await mutate(task,{completed:!task.completed})){notify(task.completed?'Task reopened':'Task completed',{id:task.id,label:task.title,rev:task.rev+1,patch:{completed:task.completed}});if(!task.completed){motion.burst(rect);motion.travel(rect,$('#open-menu'));}}}
+  if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete);if(task)void completeTask(task,button.getBoundingClientRect());}
   if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id);if(task)await deferTask(task);}
   if(button.dataset.move){const task=tasks.find(t=>t.id===button.dataset.move),form=$('#edit-form');if(task&&await leaveInline()){if(form?.isConnected&&formFingerprint(form)!==form._initial&&!await confirmAction('Discard unsaved changes?','Your task has not been changed.','Discard'))return;moveOptions(task);}}
   if(button.dataset.action==='settings')settings();

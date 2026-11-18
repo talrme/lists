@@ -27,9 +27,9 @@ async function settings(page){await ui.menuAction(page,'settings');await page.lo
    await ui.add(page,'Motion task '+design);const row=page.locator('.task-row').filter({hasText:'Motion task '+design});
    assert(await page.evaluate(async()=>{for(let i=0;i<20;i++){await new Promise(requestAnimationFrame);if(document.documentElement.scrollWidth>innerWidth+1)return false;}return true;}),'Task bounce must not create horizontal scrolling');
    assert((await page.evaluate(()=>window.__effects)).some(name=>String(name).includes('task-row')));
-   await page.evaluate(()=>{window.__flights=0;window.__failWrite=true;});await row.locator('[data-complete]').click();await page.getByText('Test save failed',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__bursts),0);
-   await page.evaluate(()=>{window.__failWrite=false;window.__delayWrite=true;});await row.locator('[data-complete]').click();assert.equal(await page.evaluate(()=>window.__bursts),0);
-   await page.waitForFunction(()=>window.__bursts===1&&window.__flights===1);assert.equal(await page.locator('.motion-confetti b').count(),64);
+   await page.evaluate(()=>{window.__flights=0;window.__failWrite=true;});await row.locator('[data-complete]').click();await page.getByText(/Test save failed/).waitFor();assert.equal(await page.evaluate(()=>window.__bursts),1);await row.waitFor();await page.waitForFunction(()=>!document.querySelector('.motion-confetti,.motion-traveler'));
+   await page.evaluate(()=>{window.__failWrite=false;window.__delayWrite=true;window.__bursts=0;window.__flights=0;});await row.locator('[data-complete]').click();assert.equal(await page.evaluate(()=>window.__bursts),1);
+   await page.locator('.task-notice').filter({hasText:'Motion task '+design}).locator('.toast-undo').waitFor();await page.waitForFunction(()=>window.__bursts===1&&window.__flights===1);assert.equal(await page.locator('.motion-confetti b').count(),64);
    if(design===1)await page.screenshot({path:'/private/tmp/lists-animations-confetti.png',timeout:5000});
    await page.waitForFunction(()=>!document.querySelector('.motion-confetti,.motion-traveler'));console.log('Completion cleanup '+design);
    await ui.scheduleView(page,'done');await row.locator('[data-complete]').click();await page.locator('[data-view=today]').click();await row.locator('[data-quick=week]').click();await page.waitForFunction(()=>window.__flights===2);

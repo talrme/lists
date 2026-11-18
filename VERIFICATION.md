@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Instant Completion And Optional Completed Search
+
+instant-completion passed60 phone/desktop style/palette layouts, press-only check without mutation, immediate row exit/confetti before1000ms persistence, two pending completions, Undo after ack, save rejection rollback, remote deletion without resurrection, active-only search default, optional completed section/checkmarks after active results, and per-opening reset. Production80 layouts passed. Light/dark search screenshots inspected at settled palette colors. Test fixtures only, no production writes. Backend/rules unchanged.
+
+Full motion120 and feedback120 layouts passed with optimistic-feedback expectations, reduced-motion/Off, effect cleanup, stale Undo, dismissal and independent timers. Actual SDK/local emulator private/shared/revision/cross-device/offline checks passed. Safe updater and offline shell passed; core/search/motion32 checks passed. All test accounts/data synthetic; physical Android remains a device check.
+
 ## Update Progress Feedback
 
 Safe-update suite passed with explicit visible Undo-delay reason, Updating... button and applying status after activation request, plus existing idle auto-update, draft/dialog/offline/pending guards, multi-tab catch-up and real worker/offline lifecycle. No production writes or timing/safety policy changes.

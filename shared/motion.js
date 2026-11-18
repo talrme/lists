@@ -29,6 +29,7 @@ export function createMotion(getPrefs){
   if(!enabled('reorder')||document.querySelector('.task-edit-form'))return;
   for(const node of document.querySelectorAll('.task-row')){
    const old=before.get(node.dataset.task);if(!old)continue;
+   node.getAnimations().filter(animation=>animation.id==='lists-reorder').forEach(animation=>animation.cancel());
    const next=node.getBoundingClientRect(),dy=old.top-next.top,dx=old.left-next.left;
    if(Math.abs(dy)+Math.abs(dx)>1)animate('reorder',node,[{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{delay,fill:'backwards'});
   }

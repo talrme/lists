@@ -4,6 +4,8 @@
 
 Phone-first private and shared lists for Tal and Sophie, with Google sign-in and Firestore syncing.
 
+Completing a task responds immediately: press to preview the check, release to dismiss with confetti while saving finishes. Failed saves restore the latest saved state; Undo becomes available after the save. Search excludes completed tasks by default. Check **Include completed tasks** to show them below active results with checked-circle markers.
+
 **Week scheduling:** creation picks one of the next five weekdays, including today when it is a weekday. Punting picks one of the next five weekdays strictly after today. Today and Week do not overlap: if creation picks today, the task appears only in Today; future dates through the fifth future weekday appear in Week. Existing saved dates are not automatically changed.
 
 **Quick actions:** swipe right in Today to punt to Week; swipe right in Later or left in Week to move to Today. Quick Action icons are hidden by default on phones and shown on larger screens; override this under To-do settings. Undo notices have no X: swipe them away on a phone, or let them expire. Dismissing is not Undo.
