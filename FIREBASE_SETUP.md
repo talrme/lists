@@ -122,4 +122,8 @@ Google uses local session persistence; clearing website data, private browsing, 
 - [Role-based access](https://firebase.google.com/docs/firestore/solutions/role-based-access)
 - [Rules conditions and identity](https://firebase.google.com/docs/firestore/security/rules-conditions)
 
-Updated November 16, 2026.
+Updated November 18, 2026.
+
+## November 18 Daily Pick Update
+
+Publish the current `firestore.rules` in Firestore Database -> Rules. A legacy daily receipt with `taskId:null` may now be filled once by its own user, preserving `createdAt`. Nonempty receipts cannot be replaced or deleted. Eligible farther-out dated Later tasks may also be selected. Website deployment does not publish these rules. No data migration or public access is required.

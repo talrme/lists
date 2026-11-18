@@ -4,6 +4,12 @@
 
 Phone-first private and shared lists for Tal and Sophie, with Google sign-in and Firestore syncing.
 
+Type a task and tap **ASAP**, **~ Week** or **Later** to add it without switching lists. Enter adds to the current list. The theme-colored leaf opens details, preserving your text. Menu -> Search tasks searches names/descriptions across accessible lists, including small one-letter typos. To-do settings opens first and has small help buttons explaining controls.
+
+Reopening from the background returns to ASAP with your saved day count, unless a draft/dialog/action needs protection. One eligible Later task appears in ASAP each day, including when Later was initially empty; completion counts as that day's pick. Farther-out dated Later tasks can also be selected without changing their date.
+
+**Setup action for this update:** publish the current `firestore.rules` in Firebase Console -> Firestore Database -> Rules. This allows an old empty daily pick to be filled once and permits farther-out dated Later picks. Nonempty daily picks remain immutable. Pushing the website alone does not deploy these rules.
+
 The menu's Private and household-avatar circles quickly filter tasks. Your private tasks and shared tasks assigned to you are selected by default. **Back to my ASAP tasks** restores that view. Lists opens in ASAP, keeping your preferred day count; changing the extended-day setting updates an expanded list immediately.
 
 Later task options include **~2 weeks, ~1 month, ~2 months**, each choosing a weekday from a five-business-day window around that date. The chosen date is shown before saving and also appears in Later's task list. Edit dialogs open without automatically summoning the keyboard.

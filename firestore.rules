@@ -113,7 +113,7 @@ service cloud.firestore {
       match /environments/{environment}/daily/{day}/picks/{uid} {
         function eligible(taskId) {
           let task = get(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)).data;
-          return task.category == 'todo' && !task.completed && !task.waiting && task.dueDate == null
+          return task.category == 'todo' && !task.completed && !task.waiting && (task.dueDate == null || task.dueDate > day)
             && ((task.visibility == 'private' && task.ownerUid == request.auth.uid)
               || (task.visibility == 'shared' && ((task.assigneeUid == null && task.get('assigneeEmail', null) == null)
                 || task.assigneeUid == request.auth.uid || task.get('assigneeEmail', null) == request.auth.token.email)));
@@ -122,7 +122,10 @@ service cloud.firestore {
         allow create: if member(space) && uid == request.auth.uid && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           && request.resource.data.keys().hasOnly(['taskId','createdAt']) && request.resource.data.createdAt == request.time
           && (request.resource.data.taskId == null || (request.resource.data.taskId is string && eligible(request.resource.data.taskId)));
-        allow update, delete: if false;
+        allow update: if member(space) && uid == request.auth.uid && resource.data.taskId == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['taskId'])
+          && request.resource.data.taskId is string && eligible(request.resource.data.taskId);
+        allow delete: if false;
       }
     }
     match /{document=**} { allow read, write: if false; }

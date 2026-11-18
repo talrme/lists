@@ -11,7 +11,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   for(const view of ['waiting','done']){
    await open();await menu.locator('[data-menu-view="'+view+'"]').click();await menu.waitFor({state:'hidden'});assert(await page.locator('#back-asap').isVisible());await page.locator('#back-asap').click();assert.equal(await page.locator('#view-title').textContent(),'ASAP');assert(await page.locator('#back-asap').isHidden());
   }
-  await open();await menu.locator('[data-menu-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator('#days-shown').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),'Settings');assert.equal(await page.locator('#days-shown').inputValue(),'5');await page.getByRole('button',{name:'Done',exact:true}).click();
+  await open();await menu.locator('[data-menu-action=settings]').click();await ui.section(page,'list-settings');await page.locator('#days-shown').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),'Settings');assert.equal(await page.locator('#days-shown').inputValue(),'5');await page.getByRole('button',{name:'Done',exact:true}).click();
   for(const action of ['settings','share']){
    await open();await menu.locator('[data-menu-action="'+action+'"]').click();await page.locator('#dialog').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),action==='settings'?'Settings':'Save / Share');await page.locator('#dialog [data-close]').first().click();
   }

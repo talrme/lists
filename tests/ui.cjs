@@ -1,3 +1,4 @@
+async function section(page,id){if(!await page.locator('#'+id).evaluate(n=>n.open))await page.locator('#'+id+'>summary').click();}
 async function options(page){const button=page.locator('#composer .options-toggle');if(await button.getAttribute('aria-expanded')==='false')await button.click();}
 async function assign(page,person){
   await options(page);
@@ -8,7 +9,7 @@ async function add(page,title,{when='asap',person='private',description}={}){
   const timing=page.locator(`#composer [data-timing=${when}]`);if(await timing.isVisible())await timing.click();await page.locator('#new-title').fill(title);
   if(person!=='private')await assign(page,person);
   if(description!==undefined){await options(page);await page.locator('#new-description').fill(description);}
-  if(await page.locator('#composer.modal-composer').count())await page.locator('#composer .modal-footer.composer-actions [type=submit]').click();else await page.getByRole('button',{name:'Add task',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#composer [type=submit]').disabled);
+  if(await page.locator('#composer.modal-composer').count())await page.locator('#composer .modal-footer.composer-actions [type=submit]').click();else await page.locator('#new-title').press('Enter');await page.waitForFunction(()=>!document.querySelector('#composer [type=submit]').disabled);
   const error=await page.locator('#compose-error').textContent();if(error)throw Error(error);
 }
 async function scope(page,value,person='all'){
@@ -29,10 +30,10 @@ async function menuAction(page,action){
  await page.locator('#open-menu').click();await page.locator(`#navigation-drawer [data-menu-action=${action}]`).click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
 }
 async function editorMode(page,mode){
-  await menuAction(page,'settings');await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
+  await menuAction(page,'settings');await section(page,'list-settings');await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
 }
 async function extended(page,days){
- await menuAction(page,'settings');await page.locator('#list-settings>summary').click();await page.locator('#days-shown').fill(String(days));await page.locator('#days-shown').dispatchEvent('change');await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#open-menu').click();await page.locator('[data-menu-days=extended]').click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
+ await menuAction(page,'settings');await section(page,'list-settings');await page.locator('#days-shown').fill(String(days));await page.locator('#days-shown').dispatchEvent('change');await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#open-menu').click();await page.locator('[data-menu-days=extended]').click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
 }
 async function move(page,row){await row.locator('[data-edit]').press('Alt+m');}
 async function mockBackend(page,base){
@@ -49,4 +50,4 @@ async function mockBackend(page,base){
     }
   `}));
 }
-module.exports={options,assign,add,scope,scheduleView,editorMode,extended,menuAction,move,mockBackend};
+module.exports={section,options,assign,add,scope,scheduleView,editorMode,extended,menuAction,move,mockBackend};

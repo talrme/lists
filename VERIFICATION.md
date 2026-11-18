@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Leaf, Daily Recovery, Search And Resume (November 18)
+
+creation-search passed synthetic empty-null receipt -> first Later pick, refresh stability, completed-pick consumption without replacement, immediate Later/Week add without view change, Enter in Later, leaf preserves title and opens without keyboard, fuzzy search/edit of completed task, To-do settings first/open, inline help, resume-ASAP and draft protection. Responsive phone/desktop screenshots include accent-colored leaf. Core/search suites30 passed. Production80, menu-later60 and phone-ux30 passed.
+
+Actual local emulator rules89 passed including legacy null receipt fill by self, other-person denial and nonempty replacement denial. Real Firebase SDK+emulator admin suite passed including previously empty day recovery, legacy null repair, concurrent two-browser receipt, refresh and completion-no-replacement, plus existing privacy/revision/offline/cross-device tests. All synthetic demo projects, zero production data writes. An initial help-button placement intercepted section-center clicks; moving summary help to the right fixed it and the full suite passed. Production rules still REQUIRE manual publication, not done by git push. Physical Android launcher/keyboard behavior remains a device check.
+
 ## Compact Filters And Later Dates (November 18)
 
 Follow-up menu refinement passed60 menu-later layouts and30 phone-ux layouts: filters below Share/above Quick guide, checklist icon, View tasks in label and bracketed shared owners. Light/dark screenshots inspected; filter state and touch dismissal unchanged. Production shell12.

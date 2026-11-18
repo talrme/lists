@@ -193,6 +193,11 @@ dialog.navigation-drawer[open]{display:flex;flex-direction:column;touch-action:p
 .visibility-option input{width:20px;height:20px;accent-color:var(--accent);flex-shrink:0}
 .drawer-task-filters{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 8px;padding:14px 3px;overflow-x:auto;touch-action:pan-y;border-top:1px solid var(--line)}
 .drawer-filter-label{flex-basis:100%;font-size:11px;color:var(--muted);padding-left:5px}
+.leaf-options{color:var(--accent);border-radius:50%}.leaf-options svg{width:30px;height:30px;fill:currentColor;stroke:none}
+.leaf-options:hover{background:var(--soft)}
+.search-results{display:grid;gap:6px}.search-results>button{text-align:left;padding:12px;background:var(--soft);border-radius:6px;display:grid;gap:5px;overflow-wrap:anywhere}.search-results strong{font-size:14px}.search-results small{font-size:11px;color:var(--muted)}
+.setting-info{display:inline-grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:var(--muted);vertical-align:middle;padding:5px}.setting-info svg{width:16px;height:16px}.setting-help{padding:8px 10px;background:var(--soft);border-radius:5px}
+summary>.setting-info{float:right;margin-top:-4px}.toggle-row>.setting-info{order:1}.toggle-row>input{order:2}
 .drawer-task-filters button{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:48px;max-width:64px;padding:3px;color:var(--muted);flex-shrink:0}
 .drawer-task-filters small{font-size:10px;line-height:1.3;max-width:100%;overflow-wrap:anywhere;text-align:center}
 .filter-circle{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--soft);opacity:.4;filter:grayscale(1)}

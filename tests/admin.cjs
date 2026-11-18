@@ -39,6 +39,13 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   for(let i=0;i<100;i++){if(emulator.exitCode!==null)throw Error(logs);try{await fetch(`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/ready`);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   const {page:tal}=await openPerson('Tal');await tal.locator('#gate [data-action=settings]').waitFor();await admin(tal);
   await tal.locator('#create-home').click();assert.equal(await tal.locator('#household-form [name=id]').inputValue(),'home');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await tal.locator('#workspace').waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
+  await tal.evaluate(async()=>{
+   const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js'),db=sdk.getFirestore(app.getApp('lists'));
+   if(await window.__testStore.pick('2099-11-14','test-tal')!==null)throw Error('Empty pool must not select');
+   const ref=sdk.doc(db,'listSpaces','home','environments','staging','daily','2099-11-14','picks','test-tal');
+   if((await sdk.getDoc(ref)).exists())throw Error('Empty pool must not permanently consume today');
+   await sdk.setDoc(sdk.doc(db,'listSpaces','home','environments','staging','daily','2099-11-15','picks','test-tal'),{taskId:null,createdAt:sdk.serverTimestamp()});
+  });
   await ui.add(tal,'Assigned before first visit',{person:'email:sophiegreen2@gmail.com'});assert.equal(await tal.getByText('Assigned before first visit',{exact:true}).count(),0);
   await ui.scope(tal,'shared','email:sophiegreen2@gmail.com');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
   await ui.add(tal,'Pending later suggestion',{person:'email:sophiegreen2@gmail.com',when:'later'});await ui.scheduleView(tal,'today');
@@ -71,6 +78,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await ui.add(tal,'Daily persistence candidate A',{when:'later'});await ui.add(tal,'Daily persistence candidate B',{when:'later'});await ui.scheduleView(tal,'today');
   const {page:talAgain,context:talAgainContext}=await openPerson('Tal');await talAgain.locator('#workspace').waitFor();
   const draw=(page,day)=>page.evaluate(day=>window.__testStore.pick(day,'test-tal'),day);
+  assert(await draw(tal,'2099-11-14'),'Previously empty day can select after candidates arrive');
+  assert(await draw(tal,'2099-11-15'),'Legacy null receipt fills after candidates arrive');
   const [firstPick,concurrentPick]=await Promise.all([draw(tal,'2099-11-16'),draw(talAgain,'2099-11-16')]);
   assert(firstPick);assert.equal(concurrentPick,firstPick,'Two browsers must reuse one transactionally saved daily choice');
   const receiptsBefore=await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks');

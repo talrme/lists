@@ -23,7 +23,7 @@ export function sandboxStore(onChange,onStatus) {
       save();
     },
     async remove(id,rev){const task=state.tasks.find(t=>t.id===id);if(!task||task.rev!==rev)throw new Error('This task changed. Reopen it first.');state.tasks=state.tasks.filter(t=>t.id!==id);save();},
-    async pick(day,uid){const key=`${day}_${uid}`;if(!(key in state.picks)){state.picks[key]=choose(candidateTasks(state.tasks,uid))?.id||null;save();}return state.picks[key];},
+    async pick(day,uid){const key=`${day}_${uid}`;if(!state.picks[key]){const id=choose(candidateTasks(state.tasks,uid,null,day))?.id;if(id){state.picks[key]=id;save();}}return state.picks[key];},
     reset(){state={tasks:seededTasks(dayKey()),picks:{}};save();},
     close(){window.removeEventListener('storage',receive);},
   };

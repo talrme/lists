@@ -103,7 +103,8 @@ test('Ordinary due tasks roll over; later nudges do not acquire a due date',()=>
 });
 test('One personal candidate pool includes private, assigned shared, and unassigned shared only',()=>{
  const tasks=[task({id:'private'}),task({id:'assigned',visibility:'shared',assigneeUid:'tal'}),task({id:'unassigned',visibility:'shared'}),task({id:'other-private',ownerUid:'sophie'}),task({id:'other-assigned',visibility:'shared',assigneeUid:'sophie'}),task({id:'done',completed:true}),task({id:'waiting',waiting:true}),task({id:'dated',dueDate:'2027-01-01'}),task({id:'milk',category:'grocery'})];
- assert.deepEqual(candidateTasks(tasks,'tal').map(t=>t.id),['assigned','private','unassigned']);
+ assert.deepEqual(candidateTasks(tasks,'tal',null,'2026-11-18').map(t=>t.id),['assigned','dated','private','unassigned']);
+ assert(isToday(tasks.find(t=>t.id==='dated'),'2026-11-18',['dated']));
 });
 test('Waiting leaves today until follow-up, then stays overdue until handled',()=>{
  const waiting=task({waiting:true,followUp:'2026-11-19'});

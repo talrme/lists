@@ -106,6 +106,12 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   await read(picks+'test-sophie',tal,true,'Admin reads exact daily choice for preview');
   await write(picks+'test-alice',{taskId:null},tal,false,'Admin cannot create choice on behalf of another user',['createdAt']);
   await write(picks+'test-sophie',{taskId:'private-tal'},sophie,false,'Cannot pick other private task',['createdAt']);
+  const repair='listSpaces/home/environments/staging/daily/2026-11-18/picks/';
+  await write(repair+'test-tal',{taskId:null},tal,true,'Legacy empty daily receipt',['createdAt']);
+  await write('listSpaces/home/environments/staging/tasks/future-later',{...task('test-tal'),dueDate:'2027-01-01'},tal,true,'Future Later task');
+  await write(repair+'test-tal',{taskId:'future-later'},sophie,false,'Other member cannot fill empty receipt',[],true);
+  await write(repair+'test-tal',{taskId:'future-later'},tal,true,'Owner fills empty receipt once without replacing timestamp',[],true);
+  await write(repair+'test-tal',{taskId:'private-tal'},tal,false,'Nonempty receipt remains immutable',[],true);
   await write('listSpaces/legacy',{memberUids:['test-tal','test-sophie'],names:{'test-tal':'Tal','test-sophie':'Sophie'}},'owner',true,'Seed old manual format in demo emulator only',[]);
   await read('listSpaces/legacy',sophie,true,'Legacy manual household still accessible');
   await write('listSpaces/legacy',{schemaVersion:2,title:'Migrated',memberEmails:['talrme@gmail.com','sophiegreen2@gmail.com'],createdBy:'test-tal',rev:1},tal,true,'Explicit admin migration preserves legacy fields',['createdAt','updatedAt'],true);

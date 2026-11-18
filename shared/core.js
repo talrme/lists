@@ -58,13 +58,13 @@ export function taskDraft({title, description, category='todo', ownerUid, assign
 }
 export const unassigned=task=>!task.assigneeUid&&!task.assigneeEmail;
 export const assignedTo=(task,uid,email)=>!!uid&&task.assigneeUid===uid||!!email&&task.assigneeEmail===email;
-export function candidateTasks(tasks, uid, email) {
-  return tasks.filter(t => t.category==='todo' && !t.completed && !t.waiting && !t.dueDate && ((t.visibility==='private'&&t.ownerUid===uid)||(t.visibility==='shared'&&(unassigned(t)||assignedTo(t,uid,email))))).sort((a,b)=>a.id.localeCompare(b.id));
+export function candidateTasks(tasks, uid, email, day=dayKey()) {
+  return tasks.filter(t => t.category==='todo' && !t.completed && !t.waiting && dateTiming(t.dueDate,day)==='later' && ((t.visibility==='private'&&t.ownerUid===uid)||(t.visibility==='shared'&&(unassigned(t)||assignedTo(t,uid,email))))).sort((a,b)=>a.id.localeCompare(b.id));
 }
 export function isToday(task, day, picks = []) {
   if (task.completed) return false;
   if (task.waiting) return !!task.followUp && task.followUp<=day;
-  return !!task.dueDate && task.dueDate<=day || !task.dueDate && picks.includes(task.id);
+  return !!task.dueDate && task.dueDate<=day || picks.includes(task.id);
 }
 export function inView(task, view, day, picks=[]) {
   if (view==='done') return task.completed;

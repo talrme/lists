@@ -295,15 +295,17 @@ export async function connectFirebase(config,events) {
       return mutateItems([{id,type:'remove',rev}]);
     },
     async pick(day,uid){
-      const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(tasks,uid,subject()?.email);
+      const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(serverTasks,uid,subject()?.email,day),version=spaceVersion,cacheKey=recordKey;
       if(preview){const old=await dbSdk.getDoc(ref);return old.exists()?old.data().taskId:null;}
       if(!navigator.onLine||!networkReady)return record?.picks?.[day]??null;
       const taskId=await dbSdk.runTransaction(db,async transaction=>{
-        const old=await transaction.get(ref);if(old.exists())return old.data().taskId;
+        const old=await transaction.get(ref);if(old.exists()&&old.data().taskId)return old.data().taskId;
         const taskId=choose(candidates)?.id||null;
-        transaction.set(ref,{taskId,createdAt:dbSdk.serverTimestamp()});return taskId;
+        if(!taskId)return null;
+        if(old.exists())transaction.update(ref,{taskId});
+        else transaction.set(ref,{taskId,createdAt:dbSdk.serverTimestamp()});return taskId;
       });
-      if(device&&recordKey)await saveRecord({picks:{...record.picks,[day]:taskId}});return taskId;
+      if(device&&cacheKey&&version===spaceVersion&&recordKey===cacheKey&&record?.picks?.[day]!==taskId)await saveRecord({picks:{[day]:taskId}},cacheKey);return taskId;
     },
     close:stop,
   };
