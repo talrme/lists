@@ -1,5 +1,9 @@
 # Verification — November 17, 2026
 
+## Compact Filters And Later Dates (November 18)
+
+New menu-later browser suite passed60 style/palette/phone/desktop combinations: Private/owner/Unassigned circles, defaults for both synthetic users, reset of view+audience, no return link for Week/Later alone, flexible date save/reopen, keyboard-free Edit, live extended-day changes, and reload to ASAP preserving day count. Production80, task-header60 and phone-ux30 passed. Phone tests caught and fixed filter-strip horizontal scrolling stealing drawer-dismiss swipes. Keyboard-aware modal now permits408px at a420px visible viewport, meeting its bottom edge rather than keeping the former bottom gap. Light/dark drawer screenshots inspected. Pure later-date tests cover five distinct weekdays, weekends, leap/nonleap month-end clamping, year boundaries and DST dates. All test tasks are synthetic; no production data writes or backend/schema changes.
+
 ## Automatic Safe Updates (November 18)
 
 Actual service-worker lifecycle tests passed automatic idle activation and reload, no first-install reload loop, a second tab keeping its draft after another tab activates the worker, automatic catch-up after that draft clears, pending-change deferral, activity-triggered release detection, immediate manual fallback, and offline reopening of the updated shell. Real app/synthetic backend checks passed draft/dialog/offline guards and preserving the full Undo opportunity before automatic activation. No production writes or Firebase polling. Idle is4s; deferred local-only checks retry every2s while visible/online. Production responsive regression passed80 layouts and full offline-shell checks passed. Weekday-layout tests now use an explicit test clock so merged-weekend counts do not depend on the execution date.

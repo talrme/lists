@@ -30,7 +30,7 @@ export function modalViewport(dialog){
  const update=()=>{
   if(Math.abs(innerWidth-width)>100){width=innerWidth;baseline=viewport?.height||innerHeight;}
   const height=viewport?.height||innerHeight;baseline=Math.max(baseline,height);
-  keyboard=baseline-height>120;if(keyboard)lastKeyboard=Date.now();
+  keyboard=baseline-height>120;if(keyboard)lastKeyboard=Date.now();dialog.toggleAttribute('data-keyboard',keyboard);
   dialog.style.setProperty('--visible-height',`${height}px`);
   dialog.style.setProperty('--visible-top',`${viewport?.offsetTop||0}px`);
  };

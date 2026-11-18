@@ -25,6 +25,20 @@ export function businessDays(day, nextWeek = false) {
 export function choose(items, random = Math.random) {
   return items.length ? items[Math.min(items.length-1,Math.floor(random()*items.length))] : null;
 }
+export function laterDate(day,period,random=Math.random){
+  if(!validDay(day)||!['fortnight','month','two-months'].includes(period))throw new Error('Choose a valid date shortcut.');
+  let target=addDays(day,14);
+  if(period!=='fortnight'){
+    const date=new Date(day+'T12:00:00Z'),original=date.getUTCDate();
+    date.setUTCDate(1);date.setUTCMonth(date.getUTCMonth()+(period==='month'?1:2));
+    const last=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
+    date.setUTCDate(Math.min(original,last));target=date.toISOString().slice(0,10);
+  }
+  while([0,6].includes(new Date(target+'T12:00:00Z').getUTCDay()))target=addDays(target,1);
+  const before=[];let date=target;
+  while(before.length<2){date=addDays(date,-1);if(![0,6].includes(new Date(date+'T12:00:00Z').getUTCDay()))before.unshift(date);}
+  return choose([...before,...businessDays(target).slice(0,3)],random);
+}
 export function schedule(mode, day, exact = '', random = Math.random) {
   if (!validDay(day)) throw new Error('Choose a valid day.');
   if (mode === 'later') return null;

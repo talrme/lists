@@ -1,5 +1,15 @@
 # Lists: AI Handoff
 
+## Compact Audience And Flexible Later Dates (November 18, Newest)
+
+Drawer shows one compact row of independent Private, household member avatar, Unassigned toggles, with Shared under the owner group. Defaults are own private plus own assigned shared; photos use the existing validated Google URL/initials fallback. Same per-account/category audiences storage as Settings, with privacy checked separately. Taps keep drawer open. The filter overflow strip uses touch-action:pan-y so it cannot steal left-swipe drawer dismissal. Pending-invite IDs/email normalization remain intact.
+
+Back to my ASAP tasks appears for Waiting/Completed, active multi-day view, or nondefault audience; Week/Later alone do not trigger it. It returns to one-day ASAP with own private+shared selected. App launch/reload starts ASAP but retains saved daysShown and filters. Changing extendedDays also changes daysShown immediately when expanded; collapsed stays one day. Later rows alone show shortDate(effective due/follow-up date), with undated rows blank.
+
+Later nonwaiting options offer ~2weeks/~1month/~2months. core.laterDate uses date-only Pacific calendar keys, calendar months clamped to month-end, weekend target rolled to Monday, then picks one of the two preceding weekdays, target weekday, or two following weekdays. No holiday calendar. Each click chooses once, displays an exact Date and saves through existing mode=date. Unrelated edits preserve it; no backend jobs or new fields. Waiting retains its existing follow-up shortcuts. Clearing/changing the date clears shortcut selection.
+
+Add AND Edit modals focus the top Save action instead of opening the keyboard; same editable title remains available on tap. modalViewport marks keyboard-visible state; phone modal extends to the visual viewport bottom with square lower corners, retains sticky actions and internal scrolling. Physical Android keyboard appearance remains a device check, not proven by emulation. Worker production-11, app31/css23, fields editor5/mobile-ui2. Tests menu-later/later-date cover new behavior with synthetic data only.
+
 ## Expand/Collapse, Weekends And Natural Drag Reflow (Newest)
 
 The footer utilities and Waiting/Completed/Active shortcuts are removed from the DOM. Use the drawer for Settings, Share, Waiting and Completed; the top list-heading Back to ASAP view remains. Bottom ASAP control is a single left-aligned soft row, Show N days OR Today only, setting active daysShown to extendedDays (default5) OR1. It no longer adds N repeatedly. Category navigation and actionable connection status remain.

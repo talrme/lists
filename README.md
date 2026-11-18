@@ -4,6 +4,10 @@
 
 Phone-first private and shared lists for Tal and Sophie, with Google sign-in and Firestore syncing.
 
+The menu's Private and household-avatar circles quickly filter tasks. Your private tasks and shared tasks assigned to you are selected by default. **Back to my ASAP tasks** restores that view. Lists opens in ASAP, keeping your preferred day count; changing the extended-day setting updates an expanded list immediately.
+
+Later task options include **~2 weeks, ~1 month, ~2 months**, each choosing a weekday from a five-business-day window around that date. The chosen date is shown before saving and also appears in Later's task list. Edit dialogs open without automatically summoning the keyboard.
+
 ## Appearance
 
 Clear Day (former staging 1) is the default. Under **Settings -> Appearance**, choose Style first, then Color schemes:

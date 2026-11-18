@@ -5,7 +5,7 @@ const BASE='http://127.0.0.1:5195/lists/';
  try{
   const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);await page.clock.setFixedTime(new Date('2026-11-17T20:00:00Z'));await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
   await ui.options(page);const form=page.locator('#composer');
-  assert(await form.locator('[name=title]').evaluate(node=>node===document.activeElement));assert(await page.locator('#dialog>.modal-header').isHidden());assert.equal(await form.locator('.task-name-label').textContent(),'Task name');assert.equal(await form.locator('.editor-top-actions button').count(),2);assert.equal(await form.locator('.editor-top-actions [data-lucide=x]').count(),1);
+  assert(await form.locator('[name=title]').evaluate(node=>node!==document.activeElement));assert(await page.locator('#dialog>.modal-header').isHidden());assert.equal(await form.locator('.task-name-label').textContent(),'Task name');assert.equal(await form.locator('.editor-top-actions button').count(),2);assert.equal(await form.locator('.editor-top-actions [data-lucide=x]').count(),1);
   await form.locator('[name=title]').fill('Keep exact later date');
   for(const [date,bucket] of [['2026-11-16','asap'],['2026-11-17','asap'],['2026-11-20','week'],['2026-11-25','week'],['2026-11-26','later'],['2027-03-01','later']]){
    await form.locator('[name=date]').fill(date);await form.locator('[name=date]').dispatchEvent('change');assert.equal(await form.locator('[data-timing][aria-pressed=true]').getAttribute('data-timing'),bucket);
@@ -13,7 +13,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   }
   await form.locator('.modal-footer [type=submit]').click();await page.locator('#dialog').waitFor({state:'hidden'});await page.locator('#composer [data-view=later]').click();
   const row=page.locator('.task-row').filter({hasText:'Keep exact later date'});await row.locator('[data-edit]').click();const editor=page.locator('#edit-form');assert.equal(await editor.locator('[name=date]').inputValue(),'2027-03-01');assert.equal(await editor.locator('[data-timing][aria-pressed=true]').getAttribute('data-timing'),'later');
-  assert(await editor.locator('[name=title]').evaluate(node=>node===document.activeElement));await editor.locator('[name=waiting]').check();
+  assert(await editor.locator('[name=title]').evaluate(node=>node!==document.activeElement));await editor.locator('[name=waiting]').check();
   for(const [days,bucket] of [['3','week'],['7','week'],['14','later'],['90','later']]){
    await editor.locator('[data-followup="'+days+'"]').click();assert.equal(await editor.locator('[data-timing][aria-pressed=true]').getAttribute('data-timing'),bucket);const date=await editor.locator('[name=followUp]').inputValue();await editor.locator('[data-timing="'+bucket+'"]').click();assert(await editor.locator('[name=waiting]').isChecked());assert.equal(await editor.locator('[name=followUp]').inputValue(),date);
   }
