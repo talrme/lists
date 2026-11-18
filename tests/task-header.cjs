@@ -7,7 +7,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   await ui.options(page);const form=page.locator('#composer');
   assert(await form.locator('[name=title]').evaluate(node=>node!==document.activeElement));assert(await page.locator('#dialog>.modal-header').isHidden());assert.equal(await form.locator('.task-name-label').textContent(),'Task name');assert.equal(await form.locator('.editor-top-actions button').count(),2);assert.equal(await form.locator('.editor-top-actions [data-lucide=x]').count(),1);
   await form.locator('[name=title]').fill('Keep exact later date');
-  for(const [date,bucket] of [['2026-11-16','asap'],['2026-11-17','asap'],['2026-11-20','week'],['2026-11-25','week'],['2026-11-26','later'],['2027-03-01','later']]){
+  for(const [date,bucket] of [['2026-11-16','asap'],['2026-11-17','asap'],['2026-11-20','week'],['2026-11-24','week'],['2026-11-26','later'],['2027-03-01','later']]){
    await form.locator('[name=date]').fill(date);await form.locator('[name=date]').dispatchEvent('change');assert.equal(await form.locator('[data-timing][aria-pressed=true]').getAttribute('data-timing'),bucket);
    await form.locator('[data-timing="'+bucket+'"]').click();assert.equal(await form.locator('[name=date]').inputValue(),date,'Matching bucket preserves exact date');
   }

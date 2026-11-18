@@ -21,7 +21,27 @@ export function createNotices({host,write,epoch,readOnly,errorText,motion}){
     try{await write(action.id,action.patch,action.rev);dismiss(entry);if(action.epoch===epoch())show('Undone');}
     catch(error){dismiss(entry);if(action.epoch===epoch())show(errorText(error));}
    };node.append(button);}
-  const close=document.createElement('button');close.className='notice-close';close.type='button';close.setAttribute('aria-label','Dismiss notification');close.innerHTML='<i data-lucide="x" aria-hidden="true"></i>';close.onclick=()=>dismiss(entry);node.append(close);
+  let swipe=null;
+  node.style.touchAction='pan-y';
+  node.addEventListener('pointerdown',event=>{
+   if(event.pointerType!=='touch'||entry.pending||event.target.closest('button'))return;
+   swipe={id:event.pointerId,x:event.clientX,y:event.clientY,dx:0,active:false};pause('swipe');
+  });
+  node.addEventListener('pointermove',event=>{
+   if(!swipe||event.pointerId!==swipe.id)return;
+   const dx=event.clientX-swipe.x,dy=event.clientY-swipe.y;
+   if(!swipe.active&&Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){swipe=null;resume('swipe');return;}
+   if(!swipe.active&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.3){swipe.active=true;node.setPointerCapture(event.pointerId);}
+   if(swipe.active){swipe.dx=dx;node.style.transform=`translateX(${dx}px)`;node.style.opacity=String(Math.max(.3,1-Math.abs(dx)/node.clientWidth));}
+  });
+  const finishSwipe=async event=>{
+   if(!swipe||event.pointerId!==swipe.id)return;
+   const {dx,active}=swipe;swipe=null;
+   if(active&&event.type!=='pointercancel'&&Math.abs(dx)>=Math.min(80,node.clientWidth*.3)){
+    const animation=motion.animate('reorder',node,[{transform:`translateX(${dx}px)`,opacity:node.style.opacity},{transform:`translateX(${Math.sign(dx)*node.clientWidth}px)`,opacity:0}],{duration:160});await animation?.finished.catch(()=>{});dismiss(entry);
+   }else{node.style.removeProperty('transform');node.style.removeProperty('opacity');resume('swipe');}
+  };
+  node.addEventListener('pointerup',event=>void finishSwipe(event));node.addEventListener('pointercancel',event=>void finishSwipe(event));
   node.onpointerenter=event=>{if(event.pointerType!=='touch')pause('hover');};node.onpointerleave=()=>resume('hover');node.onfocusin=()=>pause('focus');node.onfocusout=()=>{if(!node.contains(document.activeElement))resume('focus');};
   entries.push(entry);host.hidden=false;host.inert=false;host.append(node);window.lucide?.createIcons();arrange(before);motion.animate('reorder',node,[{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:180});resume('initial');
  }

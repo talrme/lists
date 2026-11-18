@@ -19,7 +19,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   const row=page.locator('.task-row').filter({hasText:'Flexible date example'});assert(await row.locator('.task-meta').isVisible());await row.locator('[data-edit]').click();
   assert(await page.evaluate(()=>!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)));assert.equal(await page.locator('#edit-form [name=date]').inputValue(),chosen);
   await page.locator('#edit-form .cancel-editor').last().click();
-  await ui.extended(page,10);await ui.menuAction(page,'settings');await ui.section(page,'list-settings');await page.locator('#days-shown').fill('3');await page.locator('#days-shown').dispatchEvent('change');await page.getByRole('button',{name:'Done',exact:true}).click();assert.equal(await page.locator('.day-heading:visible').count(),3);
+  await ui.extended(page,10);await ui.menuAction(page,'settings');await ui.section(page,'list-settings');await ui.days(page,3);await page.getByRole('button',{name:'Done',exact:true}).click();assert.equal(await page.locator('.day-heading:visible').count(),3);
   await ui.scheduleView(page,'later');assert(await page.locator('#back-asap').isHidden());await page.reload();await page.locator('#workspace').waitFor();assert.equal(await page.locator('#composer [data-view=today]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('.day-heading:visible').count(),3);
   await page.evaluate(()=>window.__testSelectUser('sophie'));await page.locator('#workspace').waitFor();await page.locator('#open-menu').click();assert.equal(await page.locator('[data-menu-audience=sophie]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('[data-menu-audience=tal]').getAttribute('aria-pressed'),'false');await page.locator('#close-menu').click();
   let layouts=0;
@@ -29,6 +29,6 @@ const BASE='http://127.0.0.1:5195/lists/';
    if(style===1&&width===390&&['original','night'].includes(palette))await page.screenshot({path:'/private/tmp/lists-menu-later-'+palette+'.png'});
    await page.locator('#close-menu').click();layouts++;
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',layouts,coverage:'Drawer filters/defaults for two users, normal-view reset, no extra reset for Week/Later, flexible exact date save/reopen, edit without keyboard, live extended-day adjustment, ASAP reload with days retained. Synthetic fixtures; zero production writes.'}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',layouts,coverage:'Drawer filters/defaults for two users, normal-view reset, no extra reset for Week/Later, flexible exact date save/reopen, edit without keyboard, live extended-day adjustment, Today reload with days retained. Synthetic fixtures; zero production writes.'}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

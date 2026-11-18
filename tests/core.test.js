@@ -30,15 +30,19 @@ test('Legacy explicit nextWeek mode still means following Monday-Friday',()=>{
  assert.equal(businessDays('2026-11-22',true)[0],'2026-11-23');
  assert.equal(schedule('nextWeek','2026-11-16','',()=>.999),'2026-11-27');
 });
-test('Defer picks Monday-Friday of the following week, unlike Soon',()=>{
- const days=['2026-11-23','2026-11-24','2026-11-25','2026-11-26','2026-11-27'];
- for(let offset=0;offset<7;offset++)for(let index=0;index<5;index++)assert.equal(schedule('defer',addDays('2026-11-16',offset),'',()=>index/5),days[index]);
- assert.equal(schedule('defer','2026-11-23','',()=>0),'2026-11-30');
- assert.equal(schedule('defer','2026-12-31','',()=>0),'2027-01-04');
- assert.equal(schedule('defer','2026-12-31','',()=>.999),'2027-01-08');
+test('Defer picks the next five weekdays excluding today; creation routes to Today or Week, and all punts appear in Week',()=>{
+ for(let offset=0;offset<21;offset++)for(let index=0;index<5;index++){
+  const day=addDays('2026-11-16',offset),date=schedule('defer',day,'',()=>index/5),created=schedule('week',day,'',()=>index/5);
+  assert.equal(date,businessDays(addDays(day,1))[index]);assert(date>day);
+  assert(inView(task({dueDate:date}),'upcoming',day));assert.equal(inView(task({dueDate:created}),'upcoming',day),created>day);
+  assert(!inView(task({dueDate:date}),'later',day));
+ }
+ assert.equal(schedule('defer','2026-11-23','',()=>0),'2026-11-24');
+ assert.equal(schedule('defer','2026-12-31','',()=>0),'2027-01-01');
+ assert.equal(schedule('defer','2026-12-31','',()=>.999),'2027-01-07');
  assert.equal(schedule('week','2026-11-16','',()=>0),'2026-11-16');
 });
-test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
+test('Scheduling chooses once; Today and exact dates remain date-only',()=>{
  assert.equal(schedule('week','2026-11-16','',()=>0),'2026-11-16');
  assert.equal(schedule('week','2026-11-16','',()=>.999),'2026-11-20');
  assert.equal(schedule('asap','2026-11-16'),'2026-11-16');assert.equal(schedule('later','2026-11-16'),null);
@@ -47,7 +51,7 @@ test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
 const task=overrides=>({id:'test',category:'todo',ownerUid:'tal',assigneeUid:null,visibility:'private',completed:false,waiting:false,followUp:null,dueDate:null,...overrides});
 test('Manual due and follow-up dates share exactly one timing bucket',()=>{
  const day='2026-11-17';
- for(const [date,expected] of [[null,'later'],['2026-11-16','asap'],[day,'asap'],['2026-11-20','week'],['2026-11-25','week'],['2026-11-26','later']]){
+ for(const [date,expected] of [[null,'later'],['2026-11-16','asap'],[day,'asap'],['2026-11-20','week'],['2026-11-24','week'],['2026-11-25','later']]){
   assert.equal(dateTiming(date,day),expected);
   for(const waiting of [false,true]){
    const entry=task({waiting,dueDate:waiting?null:date,followUp:waiting?date:null});
@@ -55,19 +59,19 @@ test('Manual due and follow-up dates share exactly one timing bucket',()=>{
   }
  }
 });
-test('Date buckets move at the six-future-business-day horizon; Waiting overlaps',()=>{
- assert.equal(weekHorizon('2026-11-20'),'2026-11-30');
- assert.equal(weekHorizon('2026-11-21'),'2026-11-30');
- assert.equal(weekHorizon('2026-12-31'),'2027-01-08');
+test('Week excludes today and covers five future weekdays; Waiting overlaps',()=>{
+ assert.equal(weekHorizon('2026-11-20'),'2026-11-27');
+ assert.equal(weekHorizon('2026-11-21'),'2026-11-27');
+ assert.equal(weekHorizon('2026-12-31'),'2027-01-07');
  for(const waiting of [true,false])for(const date of [null,'2026-11-19','2026-11-20','2026-11-23','2026-11-30','2026-12-01']){
   const item=task({waiting,dueDate:waiting?null:date,followUp:waiting?date:null});
   assert.equal(inView(item,'today','2026-11-20'),!!date&&date<='2026-11-20');
-  assert.equal(inView(item,'upcoming','2026-11-20'),!!date&&date>'2026-11-20'&&date<='2026-11-30');
-  assert.equal(inView(item,'later','2026-11-20'),!date||date>'2026-11-30');
+  assert.equal(inView(item,'upcoming','2026-11-20'),!!date&&date>'2026-11-20'&&date<='2026-11-27');
+  assert.equal(inView(item,'later','2026-11-20'),!date||date>'2026-11-27');
   assert.equal(inView(item,'waiting','2026-11-20'),waiting);
  }
  assert(inView(task({dueDate:'2026-12-01'}),'later','2026-11-20'));
- assert(inView(task({dueDate:'2026-12-01'}),'upcoming','2026-11-23'));
+ assert(inView(task({dueDate:'2026-12-01'}),'upcoming','2026-11-24'));
  assert(inView(task({dueDate:'2026-12-01'}),'today','2026-12-01'));
 });
 test('Multi-day view buckets overdue, follow-ups and the daily nudge without duplicating them',()=>{
@@ -99,6 +103,7 @@ test('Ordinary due tasks roll over; later nudges do not acquire a due date',()=>
  assert(isToday(task({dueDate:'2026-11-15'}),'2026-11-16'));
  assert(!isToday(task({dueDate:'2026-11-17'}),'2026-11-16'));
  assert(isToday(task({}),'2026-11-16',['test']));assert(!isToday(task({}),'2026-11-17',[]));
+ assert(!isToday(task({dueDate:'2026-11-18'}),'2026-11-16',['test']),'Punting the daily Later pick must remove its Today projection');
  assert(!isToday(task({completed:true}),'2026-11-16',['test']));
 });
 test('One personal candidate pool includes private, assigned shared, and unassigned shared only',()=>{

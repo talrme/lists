@@ -43,7 +43,7 @@ export function schedule(mode, day, exact = '', random = Math.random) {
   if (!validDay(day)) throw new Error('Choose a valid day.');
   if (mode === 'later') return null;
   if (mode === 'asap') return day;
-  if (mode === 'defer') return choose(businessDays(day,true),random);
+  if (mode === 'defer') return choose(businessDays(addDays(day,1)),random);
   if (mode === 'week' || mode === 'nextWeek') return choose(businessDays(day,mode === 'nextWeek'),random);
   if (mode === 'date' && validDay(exact)) return exact;
   throw new Error('Choose a date.');
@@ -64,7 +64,7 @@ export function candidateTasks(tasks, uid, email, day=dayKey()) {
 export function isToday(task, day, picks = []) {
   if (task.completed) return false;
   if (task.waiting) return !!task.followUp && task.followUp<=day;
-  return !!task.dueDate && task.dueDate<=day || picks.includes(task.id);
+  return !!task.dueDate && task.dueDate<=day || dateTiming(task.dueDate,day)==='later' && picks.includes(task.id);
 }
 export function inView(task, view, day, picks=[]) {
   if (view==='done') return task.completed;
@@ -80,9 +80,7 @@ export function dateTiming(date,day){
   return date<=day?'asap':date<=weekHorizon(day)?'week':'later';
 }
 export function weekHorizon(day) {
-  let date=day,count=0;
-  while(count<6){date=addDays(date,1);const weekday=new Date(date+'T12:00:00Z').getUTCDay();if(weekday>0&&weekday<6)count++;}
-  return date;
+  return businessDays(addDays(day,1)).at(-1);
 }
 export function shortDate(day) {
   if (!day) return '';

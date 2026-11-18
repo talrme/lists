@@ -5,7 +5,7 @@ const BASE='http://127.0.0.1:5195/lists/';
  try{
   const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
   const launch=async()=>{await page.locator('#open-menu').click();await page.locator('[data-menu-action=guide]').click();await page.locator('.quick-guide').waitFor();};
-  await launch();const text=await page.locator('.quick-guide').innerText();assert(text.split(/\s+/).length<280);for(const phrase of ['six business days','five weekdays','Swipe right','swipe left','Undo','follow-up date','reconnect'])assert(text.includes(phrase));assert.equal(await page.locator('.guide-gestures svg').count(),2);
+  await launch();const text=await page.locator('.quick-guide').innerText();assert(text.split(/\s+/).length<280);for(const phrase of ['five future business days','five weekdays','Swipe right','swipe left','Undo','follow-up date','reconnect'])assert(text.includes(phrase));assert.equal(await page.locator('.guide-gestures svg').count(),2);
   await page.getByRole('button',{name:'Got it',exact:true}).click();assert(await page.locator('#dialog').isHidden());
   for(const dismissal of ['escape','x','outside']){await launch();if(dismissal==='escape')await page.keyboard.press('Escape');else if(dismissal==='x')await page.locator('#dialog [data-close]').first().click();else await page.mouse.click(2,2);assert(await page.locator('#dialog').isHidden());}
   let layouts=0;

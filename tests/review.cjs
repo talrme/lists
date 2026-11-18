@@ -5,7 +5,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
  try{
   for(let design=1;design<=10;design++){
    const context=await browser.newContext({viewport:{width:320,height:740},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
-   await ui.mockBackend(page,BASE);await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();await ui.editorMode(page,'inline');
+   await ui.mockBackend(page,BASE);await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();await ui.quickActions(page,true);await ui.editorMode(page,'inline');
    await ui.options(page);await page.locator('#composer [data-sharing=shared]').click();assert.equal(await page.locator('#new-person').inputValue(),'tal');assert.equal(await page.locator('#composer [data-assignee=tal]').getAttribute('aria-pressed'),'true');
    await page.locator('#composer [data-assignee=shared]').click();assert.equal(await page.locator('#new-person').inputValue(),'shared');await page.locator('#composer [data-sharing=private]').click();
    assert(await page.locator('#new-date').isVisible());assert.equal(await page.locator('#new-date').inputValue(),'');await page.locator('#new-date').fill('2027-01-03');await page.locator('#new-date').dispatchEvent('change');assert.equal(await page.locator('#new-when').inputValue(),'date');await page.locator('#composer [data-timing=week]').click();assert.equal(await page.locator('#new-date').inputValue(),'');

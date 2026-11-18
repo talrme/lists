@@ -32,9 +32,12 @@ async function menuAction(page,action){
 async function editorMode(page,mode){
   await menuAction(page,'settings');await section(page,'list-settings');await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
 }
-async function extended(page,days){
- await menuAction(page,'settings');await section(page,'list-settings');await page.locator('#days-shown').fill(String(days));await page.locator('#days-shown').dispatchEvent('change');await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#open-menu').click();await page.locator('[data-menu-days=extended]').click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
+async function days(page,count){await page.locator('#days-shown').evaluate((node,count)=>{node.scrollTop=(count-1)*36;node.dispatchEvent(new Event('scroll'));},count);await page.waitForFunction(count=>document.querySelector('#days-shown').getAttribute('aria-activedescendant')==='days-option-'+count,count);}
+async function quickActions(page,on=true){await menuAction(page,'settings');await section(page,'list-settings');await page.locator('[data-preference=quickWeek]').setChecked(on);await page.getByRole('button',{name:'Done',exact:true}).click();}
+async function extended(page,count){
+ await menuAction(page,'settings');await section(page,'list-settings');await days(page,count);await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#open-menu').click();await page.locator('[data-menu-days=extended]').click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
 }
+async function dismissNotice(page,notice){const box=await notice.boundingBox(),cdp=await page.context().newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+20,y:box.y+box.height/2}]});for(let dx=20;dx<=160;dx+=20)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:box.x+20+dx,y:box.y+box.height/2}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();await notice.waitFor({state:'detached'});}
 async function move(page,row){await row.locator('[data-edit]').press('Alt+m');}
 async function mockBackend(page,base){
   await page.addInitScript(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.register=async()=>null;});
@@ -45,9 +48,9 @@ async function mockBackend(page,base){
     export async function connectFirebase(config,events){
       const store=sandboxStore(events.tasks,events.status);
       const select=async uid=>{events.account({uid,email:uid+'@test.invalid',emailVerified:false,displayName:uid==='tal'?'Tal':'Sophie',providerData:[]});events.preview?.(null);events.households([{id:'home',title:'Test household'}]);events.space({id:'home',title:'Test household'});events.members({tal:'Tal',sophie:'Sophie'});await store.ready();events.ready();};
-      window.__testSelectUser=select;setTimeout(()=>void select('tal'),0);
+      window.__testSync=events.sync;window.__testSelectUser=select;setTimeout(()=>void select('tal'),0);
       return {...store,logout:async()=>events.account(null)};
     }
   `}));
 }
-module.exports={section,options,assign,add,scope,scheduleView,editorMode,extended,menuAction,move,mockBackend};
+module.exports={dismissNotice,days,quickActions,section,options,assign,add,scope,scheduleView,editorMode,extended,menuAction,move,mockBackend};

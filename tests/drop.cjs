@@ -4,7 +4,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  try{
   const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true});await ui.mockBackend(page,BASE);
   await page.route('**/tests/fixtures/store.js',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(require.resolve('./fixtures/store.js'),'utf8').replace('async write(id,patch,expectedRev){',"async write(id,patch,expectedRev){if('sortOrder' in patch&&expectedRev)await new Promise(resolve=>setTimeout(resolve,450));")}));
-  await page.goto(BASE+'');await page.locator('#workspace').waitFor();await page.waitForTimeout(500);
+  await page.goto(BASE+'');await page.locator('#workspace').waitFor();await ui.quickActions(page,true);await page.waitForTimeout(500);
   const rows=page.locator('.day-tasks>.task-row'),id=await rows.first().getAttribute('data-task'),start=await rows.first().locator('.task-content').boundingBox(),target=await rows.nth(1).boundingBox();
   await page.mouse.move(start.x+start.width/2,start.y+start.height/2);await page.mouse.down();await page.waitForTimeout(270);await page.mouse.move(start.x+start.width/2,start.y+start.height/2+10,{steps:3});await page.waitForTimeout(100);await page.mouse.move(target.x+target.width/2,target.y+target.height-3,{steps:18});await page.waitForTimeout(200);await page.mouse.up();
   await page.waitForTimeout(30);

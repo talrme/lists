@@ -15,7 +15,7 @@ async function settings(page){await ui.menuAction(page,'settings');await page.lo
    });
    await ui.mockBackend(page,BASE);
    await page.route('**/tests/fixtures/store.js',route=>route.fulfill({contentType:'text/javascript',body:readFileSync(require.resolve('./fixtures/store.js'),'utf8').replace('async write(id,patch,expectedRev){',"async write(id,patch,expectedRev){ if(window.__failWrite)throw new Error('Test save failed'); if(window.__delayWrite)await new Promise(resolve=>setTimeout(resolve,500));")}));
-   await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
+   await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();await ui.quickActions(page,true);
    await settings(page);await level(page,3);assert.equal(await page.locator('#animation-level-name').innerText(),'All out');
    await page.locator('.custom-effects>summary').click();assert.equal(await page.locator('[data-effect]:checked').count(),8);
    for(const width of [320,390,1280])for(const palette of ['original','garden','cherry','night']){
@@ -27,14 +27,14 @@ async function settings(page){await ui.menuAction(page,'settings');await page.lo
    await ui.add(page,'Motion task '+design);const row=page.locator('.task-row').filter({hasText:'Motion task '+design});
    assert(await page.evaluate(async()=>{for(let i=0;i<20;i++){await new Promise(requestAnimationFrame);if(document.documentElement.scrollWidth>innerWidth+1)return false;}return true;}),'Task bounce must not create horizontal scrolling');
    assert((await page.evaluate(()=>window.__effects)).some(name=>String(name).includes('task-row')));
-   await page.evaluate(()=>{window.__failWrite=true;});await row.locator('[data-complete]').click();await page.getByText('Test save failed',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__bursts),0);
+   await page.evaluate(()=>{window.__flights=0;window.__failWrite=true;});await row.locator('[data-complete]').click();await page.getByText('Test save failed',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__bursts),0);
    await page.evaluate(()=>{window.__failWrite=false;window.__delayWrite=true;});await row.locator('[data-complete]').click();assert.equal(await page.evaluate(()=>window.__bursts),0);
    await page.waitForFunction(()=>window.__bursts===1&&window.__flights===1);assert.equal(await page.locator('.motion-confetti b').count(),64);
    if(design===1)await page.screenshot({path:'/private/tmp/lists-animations-confetti.png',timeout:5000});
    await page.waitForFunction(()=>!document.querySelector('.motion-confetti,.motion-traveler'));console.log('Completion cleanup '+design);
    await ui.scheduleView(page,'done');await row.locator('[data-complete]').click();await page.locator('[data-view=today]').click();await row.locator('[data-quick=week]').click();await page.waitForFunction(()=>window.__flights===2);
    await settings(page);await page.locator('.custom-effects>summary').click();await page.locator('[data-effect=confetti]').uncheck();assert.equal(await page.locator('#animation-level-name').innerText(),'Custom');
-   await page.reload();await page.locator('#workspace').waitFor();await settings(page);assert.equal(await page.locator('#animation-level-name').innerText(),'Custom');assert(!await page.locator('[data-effect=confetti]').isChecked());
+   await page.reload();await page.locator('#workspace').waitFor();await ui.quickActions(page,true);await settings(page);assert.equal(await page.locator('#animation-level-name').innerText(),'Custom');assert(!await page.locator('[data-effect=confetti]').isChecked());
    await level(page,3);await page.getByRole('button',{name:'Done',exact:true}).click();await page.emulateMedia({reducedMotion:'reduce'});
    await ui.add(page,'Reduced motion '+design);await page.locator('.task-row').filter({hasText:'Reduced motion '+design}).locator('[data-complete]').click();await page.waitForTimeout(650);
    assert.equal(await page.evaluate(()=>window.__bursts),0);assert.equal(await page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length),0);

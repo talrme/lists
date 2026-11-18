@@ -1,5 +1,17 @@
 # Verification — November 17, 2026
 
+## Today/Week Phone Polish (Latest)
+
+Today/Week overlap was explicitly rejected; tests now enforce mutually exclusive base views, with creation landing today displayed only Today. Every punt date is strictly future and inside Week. Daily Later pick loses its Today projection if punted into Week.
+
+phone-polish passed responsive Quick Action auto defaults, Today/Week visible labels, search autofocus/hidden duplicate title, Appearance-first ordering, 1-10 wheel keyboard and scroll, Later-right-swipe -> Today with Undo, no notice X, trusted touch dismissal without changing completion, immediate flight before a simulated1200ms server response, and no progress bar for ordinary saves. Production80, phone-ux30 and feedback120 layouts passed. Leaf/settings light/dark screenshots inspected. Found/fixed a disconnected wheel callback changing5to1 after closing Settings. Backend persistence semantics unchanged; no real data writes.
+
+Final checks passed core30, menu-later60, guide60, trusted-touch scroll/swipe/drag, week-punt, creation-search, real-SDK demo-emulator privacy/daily/offline suite, offline shell including day-wheel, and automatic safe-update lifecycle. No additional Firestore rules changes in this update. Physical Android launcher/IME remains a manual device check.
+
+## Rolling Week/Punt Correction
+
+Core30 passed, including all5possible outcomes across21calendar dates for both creation and punt: creation includes eligible today; punt excludes today; every generated date fits Week and no punt lands in Later. Week now intentionally overlaps ASAP for today dates while overdue remains ASAP. Year-boundary weekday behavior verified. week-punt browser test forces earliest creation/latest punt, checks stored dates and Week/notLater, promote and Undo. Production80 and task-header60 passed with updated overlap/horizon expectations. No production data writes, existing-date migration or new rules changes.
+
 ## Leaf, Daily Recovery, Search And Resume (November 18)
 
 creation-search passed synthetic empty-null receipt -> first Later pick, refresh stability, completed-pick consumption without replacement, immediate Later/Week add without view change, Enter in Later, leaf preserves title and opens without keyboard, fuzzy search/edit of completed task, To-do settings first/open, inline help, resume-ASAP and draft protection. Responsive phone/desktop screenshots include accent-colored leaf. Core/search suites30 passed. Production80, menu-later60 and phone-ux30 passed.
