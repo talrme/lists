@@ -7,11 +7,11 @@ const BASE='http://127.0.0.1:5195/lists/';
   const menu=page.locator('#navigation-drawer'),open=()=>page.locator('#open-menu').click();
   assert(await page.locator('#mode-status').isHidden());assert(await page.locator('#connection').isHidden());assert(await page.locator('#back-asap').isHidden());
   await open();await menu.waitFor();assert((await page.locator('#drawer-account').textContent()).includes('Tal'));assert(await menu.evaluate(node=>node.getAnimations().some(animation=>animation.effect.getKeyframes().some(frame=>String(frame.transform).includes('-100%')))));
-  await menu.locator('[data-menu-days="5"]').click();await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.day-heading:visible').count(),5);assert(await page.locator('#back-asap').isVisible());await page.locator('#back-asap').click();assert.equal(await page.locator('.day-heading:visible').count(),0);
-  for(const view of ['waiting','done','upcoming','later']){
+  await menu.locator('[data-menu-days=extended]').click();await menu.waitFor({state:'hidden'});assert.equal(await page.locator('.day-heading:visible').count(),5);assert(await page.locator('#back-asap').isVisible());await page.locator('#back-asap').click();assert.equal(await page.locator('.day-heading:visible').count(),0);
+  for(const view of ['waiting','done']){
    await open();await menu.locator('[data-menu-view="'+view+'"]').click();await menu.waitFor({state:'hidden'});assert(await page.locator('#back-asap').isVisible());await page.locator('#back-asap').click();assert.equal(await page.locator('#view-title').textContent(),'ASAP');assert(await page.locator('#back-asap').isHidden());
   }
-  await open();await menu.locator('[data-menu-action=days-settings]').click();await page.locator('#days-shown').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),'Settings');assert(await page.locator('#list-settings').evaluate(node=>node.open));assert(await page.locator('#days-shown').evaluate(node=>node===document.activeElement));await page.getByRole('button',{name:'Done',exact:true}).click();
+  await open();await menu.locator('[data-menu-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator('#days-shown').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),'Settings');assert.equal(await page.locator('#days-shown').inputValue(),'5');await page.getByRole('button',{name:'Done',exact:true}).click();
   for(const action of ['settings','share']){
    await open();await menu.locator('[data-menu-action="'+action+'"]').click();await page.locator('#dialog').waitFor();assert.equal(await page.locator('#dialog-title').textContent(),action==='settings'?'Settings':'Save / Share');await page.locator('#dialog [data-close]').first().click();
   }
@@ -24,6 +24,6 @@ const BASE='http://127.0.0.1:5195/lists/';
     await page.locator('#close-menu').click();await menu.waitFor({state:'hidden'});
    }
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',layouts,coverage:'Sliding drawer, click-off/Escape/X dismissal, current account, grouped shortcuts, five-day/day-settings focus, top ASAP return, Settings/Share routes, five styles and phone/desktop palettes. Fixtures only.'}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',layouts,coverage:'Sliding drawer, click-off/Escape/X dismissal, current account, simplified shortcuts, extended-day setting, list-heading ASAP return, Settings/Share routes, five styles and phone/desktop palettes. Fixtures only.'}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

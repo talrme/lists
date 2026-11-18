@@ -12,8 +12,13 @@ async function add(page,title,{when='asap',person='private',description}={}){
   const error=await page.locator('#compose-error').textContent();if(error)throw Error(error);
 }
 async function scope(page,value,person='all'){
-  await page.locator('[data-action=views]').click();await page.locator(`[data-scope=${value}]`).click();
-  if(value==='shared')await page.locator(`[data-person="${person}"]`).click();
+  if(await page.locator('#edit-form').count())await page.locator('#edit-form').waitFor({state:'detached'});
+  await page.locator('[data-action=settings]').click();await page.locator('#task-visibility>summary').click();
+  const inputs=page.locator('[data-audience]'),self=await inputs.nth(1).getAttribute('data-audience');
+  for(const input of await inputs.all()){
+   const key=await input.getAttribute('data-audience');const checked=value==='all'||value==='mine'&&['private',self,'unassigned'].includes(key)||value==='shared'&&key!=='private'&&(person==='all'||person===key);
+   await input.setChecked(checked);
+  }
   await page.getByRole('button',{name:'Done',exact:true}).click();
 }
 async function scheduleView(page,view){
@@ -21,6 +26,9 @@ async function scheduleView(page,view){
 }
 async function editorMode(page,mode){
   await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator(`[data-editor-mode=${mode}]`).click();await page.getByRole('button',{name:'Done',exact:true}).click();
+}
+async function extended(page,days){
+ await page.locator('[data-action=settings]').click();await page.locator('#list-settings>summary').click();await page.locator('#days-shown').fill(String(days));await page.locator('#days-shown').dispatchEvent('change');await page.getByRole('button',{name:'Done',exact:true}).click();await page.locator('#open-menu').click();await page.locator('[data-menu-days=extended]').click();await page.locator('#navigation-drawer').waitFor({state:'hidden'});
 }
 async function move(page,row){await row.locator('[data-edit]').press('Alt+m');}
 async function mockBackend(page,base){
@@ -37,4 +45,4 @@ async function mockBackend(page,base){
     }
   `}));
 }
-module.exports={options,assign,add,scope,scheduleView,editorMode,move,mockBackend};
+module.exports={options,assign,add,scope,scheduleView,editorMode,extended,move,mockBackend};

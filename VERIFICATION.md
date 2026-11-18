@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Compact Phone Navigation and Keyboard Handling
+
+Phone UX passed 30 style/width/light-dark layouts: compact input beside hamburger, Back to ASAP view placement, simplified drawer with bottom account, configurable extended-day shortcut independent of the active view, trusted CDP left-swipe dismissal, keyboard-free More, keyboard-dismiss cancellation guard, small-viewport scrolling with sticky actions, preserved drafts and persisted account-specific owner filters. Production regression passed 80 layouts; drawer passed 60; modal/draft regression passed 120. Trusted task swipe/scroll and cross-day header stability passed. Light/dark phone screenshots inspected.
+
+Pure suites passed 32 tests, including private-task isolation, independent owner filters, pending email assignments and invite-to-member preference normalization. Actual Firestore SDK/local demo emulator passed cross-device and offline replay, household/privacy/admin/Playground checks with zero production writes. New default filters intentionally hide unassigned shared tasks until selected; emulator scenarios opt in explicitly when exercising those tasks. Real service-worker update and offline-shell suites also passed. No auth/rules/backend changes. Physical Android IME/back-button behavior still needs user confirmation; viewport and cancellation tests simulate that environment rather than controlling a real phone.
+
 ## Task Header and Timing Selection
 
 Focused name-first Add/Edit forms passed 60 selected-style/phone-desktop/palette cases: two top actions, no redundant banner/X, sticky editable name, and bottom actions. Tested exact dates at overdue/today/near/six-business-day boundary/beyond boundary, matching-pill date preservation, waiting presets/custom dates, and save/reopen. Pure suites passed 29 tests. Existing modal/draft, scheduling and real SDK/local emulator privacy/offline replay regressions passed with zero production writes. Phone light/night screenshots inspected; physical keyboards remain a manual check.

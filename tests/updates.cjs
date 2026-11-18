@@ -27,7 +27,7 @@ const ROOT=path.resolve(__dirname,'..'),BASE='http://127.0.0.1:5195/lists/';
     res.setHeader('Content-Type','text/html');return res.end(`<html><head><title>Version ${version}</title></head><body><script type="module">import {setupUpdates} from './shared/updates.js';window.reason='';setupUpdates({canReload:async()=>window.reason});</script></body></html>`);
    }
    res.setHeader('Content-Type','text/javascript');
-   if(pathname==='/lists/sw.js')return res.end(fs.readFileSync(path.join(ROOT,'sw.js'),'utf8').replace("lists-shell-production-7",'lists-update-test-'+version).replace(/^const URLS=.*$/m,"const URLS=['index.html','shared/updates.js'].map(path=>new URL(path,BASE).href);"));
+   if(pathname==='/lists/sw.js')return res.end(fs.readFileSync(path.join(ROOT,'sw.js'),'utf8').replace(/const CACHE='[^']+';/,`const CACHE='lists-update-test-${version}';`).replace(/^const URLS=.*$/m,"const URLS=['index.html','shared/updates.js'].map(path=>new URL(path,BASE).href);"));
    if(pathname==='/lists/shared/updates.js')return res.end(fs.readFileSync(path.join(ROOT,'shared/updates.js')));
    res.writeHead(404).end();
   });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));

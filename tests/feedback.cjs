@@ -11,7 +11,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    for(let i=0;i<6;i++)await ui.add(page,'Notice task '+i);
    while(await page.locator('.notice-close').count())await page.locator('.notice-close').first().click();
    await row('Notice task 0').locator('[data-complete]').click();await row('Notice task 1').locator('[data-quick]').click();await row('Notice task 2').locator('[data-complete]').click();
-   assert.equal(await page.locator('.toast-undo').count(),3);assert((await notice('Notice task 0').innerText()).includes('Task completed'));assert((await notice('Notice task 1').innerText()).includes('Punted to next week'));
+   assert.equal(await page.locator('.toast-undo').count(),3);assert((await notice('Notice task 0').innerText()).includes('Task completed'));assert((await notice('Notice task 1').innerText()).includes('Punted to ~ Week'));
    await notice('Notice task 0').locator('.toast-undo').click();await row('Notice task 0').waitFor();assert.equal(await row('Notice task 1').count(),0);assert.equal(await row('Notice task 2').count(),0);
    await notice('Notice task 1').locator('.notice-close').click();assert.equal(await row('Notice task 1').count(),0,'Dismiss is not Undo');await notice('Notice task 2').locator('.toast-undo').click();await row('Notice task 2').waitFor();
    while(await page.locator('.notice-close').count())await page.locator('.notice-close').first().click();
