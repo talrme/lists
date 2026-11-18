@@ -57,9 +57,13 @@ export function inView(task, view, day, picks=[]) {
   if (task.completed) return false;
   if (view==='today') return isToday(task,day,picks);
   const date=task.waiting?task.followUp:task.dueDate;
-  if (view==='upcoming') return !!date && date>day && date<=weekHorizon(day);
+  if (view==='upcoming') return dateTiming(date,day)==='week';
   if (view==='waiting') return task.waiting;
-  return !date || date>weekHorizon(day);
+  return dateTiming(date,day)==='later';
+}
+export function dateTiming(date,day){
+  if(!date)return 'later';
+  return date<=day?'asap':date<=weekHorizon(day)?'week':'later';
 }
 export function weekHorizon(day) {
   let date=day,count=0;

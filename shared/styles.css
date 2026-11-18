@@ -157,6 +157,16 @@ html:has(.navigation-drawer[open]){overflow:hidden}
 .task-dragging .day-tasks:has(.task-row):after{display:none}
 @keyframes drawer-dim-in{from{background:#0000}to{background:#0006}}
 @keyframes drawer-dim-out{from{background:#0006}to{background:#0000}}
+#dialog:has(.task-editor-heading)>.modal-header{display:none}
+.task-editor-heading{position:sticky;top:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'label actions' 'name name';align-items:center;column-gap:8px;padding:0 0 10px;margin-bottom:10px;background:var(--surface)}
+.task-name-label{grid-area:label;font-size:11px;color:var(--muted);font-weight:400}
+.task-editor-heading>.editor-top-actions{grid-area:actions;position:static;margin:0;padding:0;gap:12px;border:0}
+.task-editor-heading>.editor-top-actions button{font-size:12px;min-height:40px;white-space:nowrap}
+dialog .task-editor-heading>input.edit-title,dialog .task-editor-heading>input#new-title{grid-area:name;display:block;width:100%;min-width:0;font:inherit;font-size:20px;font-weight:650;line-height:1.4;min-height:48px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--ink);padding:4px 0 9px;margin:0}
+.task-editor-heading>input::placeholder{color:var(--muted);font-weight:400}
+.modal-composer>.task-editor-heading{order:0}
+.modal-composer>.compose-line{display:none}
+dialog .task-editor-heading>input:focus-visible{outline:none;border-bottom:2px solid var(--accent)}
 .sync-progress{position:fixed;inset:0 0 auto;height:3px;z-index:30;overflow:hidden;pointer-events:none;background:var(--soft)}
 .sync-progress:after{content:"";display:block;width:35%;height:100%;background:var(--accent);animation:sync-sweep 1.2s ease-in-out infinite}
 html[data-syncing] .connection:before{content:"";display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:6px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sync-spin .8s linear infinite}

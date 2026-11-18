@@ -1,5 +1,9 @@
 # Verification — November 17, 2026
 
+## Task Header and Timing Selection
+
+Focused name-first Add/Edit forms passed 60 selected-style/phone-desktop/palette cases: two top actions, no redundant banner/X, sticky editable name, and bottom actions. Tested exact dates at overdue/today/near/six-business-day boundary/beyond boundary, matching-pill date preservation, waiting presets/custom dates, and save/reopen. Pure suites passed 29 tests. Existing modal/draft, scheduling and real SDK/local emulator privacy/offline replay regressions passed with zero production writes. Phone light/night screenshots inspected; physical keyboards remain a manual check.
+
 ## Navigation Drawer and Stable Day Headers
 
 Drawer checks passed 60 style/width/palette cases: opening/animated dismissal by backdrop, X and Escape; signed-in name; grouped views; five-day mode; top ASAP return; Settings/Share routes; gear opening Settings with the day-count field focused. Light/night phone screenshots inspected. Production layout/editor checks passed 80 cases. Day-drag tests sampled all three header positions throughout pointer movement and verified no shift, saved destination dates and released temporary sizing in Clear Day and Block Party. Trusted touch, delayed drop/punt, offline shell and local real-SDK Firestore/privacy/offline-queue checks passed. No production records were modified. Physical phones/Google OAuth remain manual checks.

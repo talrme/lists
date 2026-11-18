@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,creationOrder,unassigned,assignedTo,weekHorizon} from '../shared/core.js';
+import {dayKey,validDay,addDays,businessDays,schedule,taskDraft,candidateTasks,isToday,inView,seededTasks,taskDay,taskOrder,insertionOrder,creationOrder,unassigned,assignedTo,weekHorizon,dateTiming} from '../shared/core.js';
 import {householdPeople} from '../shared/households.js';
 
 test('Invited people remain assignable before their first visit without duplicate profiles',()=>{
@@ -45,6 +45,16 @@ test('Scheduling chooses once; ASAP and exact dates remain date-only',()=>{
  assert.throws(()=>schedule('date','2026-11-16','not-a-date'));
 });
 const task=overrides=>({id:'test',category:'todo',ownerUid:'tal',assigneeUid:null,visibility:'private',completed:false,waiting:false,followUp:null,dueDate:null,...overrides});
+test('Manual due and follow-up dates share exactly one timing bucket',()=>{
+ const day='2026-11-17';
+ for(const [date,expected] of [[null,'later'],['2026-11-16','asap'],[day,'asap'],['2026-11-20','week'],['2026-11-25','week'],['2026-11-26','later']]){
+  assert.equal(dateTiming(date,day),expected);
+  for(const waiting of [false,true]){
+   const entry=task({waiting,dueDate:waiting?null:date,followUp:waiting?date:null});
+   assert.equal(['today','upcoming','later'].filter(view=>inView(entry,view,day)).length,1);
+  }
+ }
+});
 test('Date buckets move at the six-future-business-day horizon; Waiting overlaps',()=>{
  assert.equal(weekHorizon('2026-11-20'),'2026-11-30');
  assert.equal(weekHorizon('2026-11-21'),'2026-11-30');

@@ -1,8 +1,8 @@
 import {config} from '../config.js?v=lists-95c4f';
-import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,creationOrder,assignedTo,unassigned} from './core.js?v=grouping2';
+import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,creationOrder,assignedTo,unassigned} from './core.js?v=timing3';
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=production1';
-import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=editor3';
+import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=editor4';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=4';
 import {taskGestures} from './gestures.js?v=6';
 import {createNotices} from './notices.js?v=1';
@@ -44,10 +44,15 @@ composerFields=bindFields($('#composer'),{uid:null,members,profiles,today,onTimi
 $('#composer').addEventListener('click',event=>{if(event.target.closest('.cancel-new-task')){cancelNewTask();if(composerHome)close();}});
 let composerHome=null;
 function restoreComposer(){
-  if(!composerHome)return;const form=$('#composer');composerHome.replaceWith(form);composerHome=null;form.classList.remove('modal-composer');composerFields.setExpanded(false);if(category==='todo')composerFields.showView(view);
+  if(!composerHome)return;const form=$('#composer'),heading=form.querySelector('.task-editor-heading');if(heading){form.querySelector('.compose-line').prepend(form.elements.title);form.elements.title.setAttribute('aria-label',category==='todo'?'New task':'New item');form.elements.title.placeholder=category==='todo'?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';heading.remove();}composerHome.replaceWith(form);composerHome=null;form.classList.remove('modal-composer');composerFields.setExpanded(false);if(category==='todo')composerFields.showView(view);
 }
 function openComposer(){
-  const form=$('#composer');composerHome=document.createElement('div');composerHome.hidden=true;form.before(composerHome);if(!form.querySelector('.editor-top-actions'))form.insertAdjacentHTML('afterbegin',editorActions({composer:true,top:true}));open('Add task',form);form.classList.add('modal-composer');
+  const form=$('#composer');composerHome=document.createElement('div');composerHome.hidden=true;form.before(composerHome);if(!form.querySelector('.editor-top-actions'))form.insertAdjacentHTML('afterbegin',editorActions({composer:true,top:true}));taskHeading(form);open('Add task',form);form.classList.add('modal-composer');
+}
+function taskHeading(form){
+ if(form.querySelector('.task-editor-heading'))return;
+ const heading=document.createElement('div'),label=document.createElement('label');heading.className='task-editor-heading';label.htmlFor=form.elements.title.id;label.className='task-name-label';label.textContent='Task name';
+ form.elements.title.setAttribute('aria-label','Task name');form.elements.title.placeholder='Task name';heading.append(label,form.querySelector('.editor-top-actions'),form.elements.title);form.prepend(heading);
 }
 const shortcuts=document.createElement('div');shortcuts.className='list-shortcuts';shortcuts.innerHTML=`<button data-action="active-items" hidden>${icon('list-todo')} Active</button><button data-view="waiting" title="Waiting tasks">${icon('message-circle-more')} Waiting</button><button data-view="done" title="Completed tasks">${icon('check-check')} Completed</button>`;$('#empty-state').after(shortcuts);
 dayControls.className='day-controls';dayControls.innerHTML='<button type="button" data-days="more">Show 5 more days</button><button type="button" data-days="today">Today only</button>';shortcuts.before(dayControls);
@@ -95,7 +100,7 @@ function render(){
   updateNavigation();
   const positions=skipDropAnimation?new Map():motion.snapshot();skipDropAnimation=false;
   const todo=category==='todo';dayControls.hidden=!todo||view!=='today';$('[data-days=today]').hidden=prefs.daysShown===1;$('[data-days=more]').hidden=prefs.daysShown>=14;$('.list-shortcuts [data-view=waiting]').hidden=!todo;$('.list-shortcuts [data-action=active-items]').hidden=!['waiting','done'].includes(view);$('.simple-completed').hidden=true;$('.simple-completed').textContent=view==='done'?'Open items':'Completed';
-  $('#new-title').placeholder=todo?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';
+  $('#new-title').placeholder=composerHome?'Task name':todo?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';
   $('#new-title').setAttribute('aria-label',todo?'New task':'New item');$('#composer .schedule-line').classList.toggle('no-timing',!todo);
   $('#composer .timing-track').hidden=!todo;$('#composer .exact-date-row').classList.toggle('category-hidden',!todo);$('#composer .waiting-toggle').classList.toggle('category-hidden',!todo);
   const captions={today:'ASAP',upcoming:'~ Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',!todo||['today','upcoming','later'].includes(view));
@@ -137,7 +142,7 @@ async function dailyPick(){
   try{const id=await store.pick(day,uid);if(picking===token&&token===`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`){picks=id?[id]:[];pickedDay=token;render();}}catch(error){if(picking===token)status(errorText(error));}finally{if(picking===token)picking=false;}
 }
 function onTasks(value){tasks=value;render();if(ready)void dailyPick();}
-function open(title,body){if(composerHome&&body!==$('#composer'))restoreComposer();$('#dialog-title').textContent=title;$('#dialog-body').replaceChildren();if(typeof body==='string')$('#dialog-body').innerHTML=body;else $('#dialog-body').append(body);$('#dialog').classList.remove('settings-modal');icons();if(!$('#dialog').open){$('#dialog').showModal();motion.dialog($('#dialog'));}$('#dialog').scrollTop=0;}
+function open(title,body){if(composerHome&&body!==$('#composer'))restoreComposer();$('#dialog-title').textContent=title;$('#dialog-body').replaceChildren();if(typeof body==='string')$('#dialog-body').innerHTML=body;else $('#dialog-body').append(body);$('#dialog').classList.remove('settings-modal');icons();if(!$('#dialog').open){$('#dialog').showModal();motion.dialog($('#dialog'));}$('#dialog').scrollTop=0;if(typeof body!=='string'&&body.querySelector('.task-editor-heading'))body.elements.title.focus({preventScroll:true});}
 function close(){restoreComposer();$('#dialog').close();$('#dialog-body').replaceChildren();}
 $('#dialog').addEventListener('cancel',event=>{event.preventDefault();close();});
 $('#dialog').addEventListener('close',()=>{if(!$('#dialog').open){restoreComposer();$('#dialog-body').replaceChildren();}});
@@ -282,7 +287,7 @@ async function taskEditor(task,{modal=false,existing=null}={}){
     form.querySelector('#remove-task').addEventListener('click',async()=>{if(!await confirmAction('Remove this task?',task.title))return;try{await store.remove(task.id,task.rev);if(inlineEditor?.form===form){inlineEditor=null;form.remove();render();}else close();notify('Removed');}catch(error){form.querySelector('.inline-error').textContent=errorText(error);}});
   }
   const inModal=modal||listPrefs().editor==='modal';form.querySelector('.popout-editor').hidden=inModal;form.classList.toggle('modal-task-editor',inModal);if(inModal&&!form.querySelector('.editor-top-actions'))form.insertAdjacentHTML('afterbegin',editorActions({top:true}));
-  if(inModal)open('Edit task',form);else{inlineEditor={id:task.id,rev:task.rev,form,controller:form._controller,initial:form._initial};render();motion.enter([form]);form.scrollIntoView({block:'nearest',behavior:motion.enabled('navigation')?'smooth':'instant'});}icons();
+  if(inModal){taskHeading(form);open('Edit task',form);}else{inlineEditor={id:task.id,rev:task.rev,form,controller:form._controller,initial:form._initial};render();motion.enter([form]);form.scrollIntoView({block:'nearest',behavior:motion.enabled('navigation')?'smooth':'instant'});}icons();
 }
 function viewMarkup(){
   return `<fieldset class="view-options"><legend>Show</legend><div class="choice-track view-choice-track" role="group" aria-label="List view"><span class="choice-indicator" aria-hidden="true"></span>${[['mine','For me'],['shared','Shared'],['all','All tasks']].map(([id,label])=>`<button data-scope="${id}" aria-pressed="${scope===id}">${label}</button>`).join('')}</div><p class="view-explanation"></p></fieldset><div class="view-people" ${scope==='shared'?'':'hidden'}><span class="view-label">Assigned to</span><div class="view-person-choices" role="group" aria-label="Filter by person"></div></div>`;
@@ -383,7 +388,7 @@ async function start(){
     });
   }catch(error){gate('Could not connect to Google sign-in. Check your connection and try again.',`<button class="primary" onclick="location.reload()">Try again</button>`);status(errorText(error));}
 }
-function checkDay(){const current=dayKey(Date.now(),config.timeZone);if(today!==current){today=current;composerFields.setDay(current);inlineEditor?.controller.setDay?.(current);pickedDay='';picks=[];render();void dailyPick();}}
+function checkDay(){const current=dayKey(Date.now(),config.timeZone);if(today!==current){today=current;composerFields.setDay(current);$('#edit-form')?._controller?.setDay(current);pickedDay='';picks=[];render();void dailyPick();}}
 gestures=taskGestures({canSwipe:()=>ready&&prefs.swipeDefer&&category==='todo'&&!preview,canMove:()=>ready&&!preview,findTask:id=>tasks.find(task=>task.id===id),onDefer:deferTask,onMove:moveTask,onIdle:()=>{skipDropAnimation=true;render();},motion,context:()=>spaceEpoch,swipeLabel:()=>view==='upcoming'?'Move to ASAP':'Punt to next week',swipeDirection:()=>view==='upcoming'?'left':'right'});
 let midnightTimer;
 function watchDay(){clearTimeout(midnightTimer);checkDay();if(!document.hidden)midnightTimer=setTimeout(watchDay,60000);}
