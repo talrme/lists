@@ -18,6 +18,8 @@ Styles, palettes and animation preferences are saved on the device. The old desi
 
 ## Navigation
 
+Installed apps check for updates on opening, returning to the app, or reconnecting (at most once per minute, without polling). A small **Update available -> Reload** bar applies a downloaded update when requested. Drafts, open dialogs and pending edits block reload; other tabs are never forcibly reloaded. Existing older installations may need a one-time close of the installed app and all Lists browser tabs to receive this update handling. Do not clear storage with unsynced edits.
+
 **Menu -> Quick guide** offers a one-minute introduction with illustrated timing and swipe examples, sharing, follow-ups, the daily Later pick and offline behavior. Close with Got it, X, Escape or a click outside.
 
 The top-left menu slides out with grouped list views, Today only / Next 5 days, Waiting, Completed, View options, Settings and Save / Share. Its header shows the signed-in account (or Not signed in). Click outside, X or Escape to close it. The gear beside Next 5 days opens the matching day-count setting in Settings; View retains the same control. Existing footer shortcuts remain available.

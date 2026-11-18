@@ -7,6 +7,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=6';
 import {createNotices} from './notices.js?v=1';
 import {guideMarkup} from './guide.js?v=1';
+import {setupUpdates} from './updates.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
 
 const $=selector=>document.querySelector(selector),icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
@@ -397,4 +398,12 @@ gestures=taskGestures({canSwipe:()=>ready&&prefs.swipeDefer&&category==='todo'&&
 let midnightTimer;
 function watchDay(){clearTimeout(midnightTimer);checkDay();if(!document.hidden)midnightTimer=setTimeout(watchDay,60000);}
 document.addEventListener('visibilitychange',watchDay);window.addEventListener('online',()=>{if(ready)void dailyPick();});watchDay();void start();
-if('serviceWorker' in navigator)navigator.serviceWorker.register(new URL('../sw.js',import.meta.url),{scope:new URL('../',import.meta.url).pathname}).catch(()=>{});
+void setupUpdates({canReload:async()=>{
+ const reason=()=>!navigator.onLine?'Reconnect before updating.':
+  busy.size||picking||editorTransition||document.querySelector('[data-saving]')?'Wait for the current change to finish.':
+  $('#new-title').value.trim()||$('#new-description').value.trim()||inlineEditor||document.querySelector('dialog[open]')?'Finish or cancel your draft and close any open dialog first.':
+  syncState?.pending||syncState?.syncing||syncState?.error||signedInAccount&&!ready?'Wait for your changes to sync before updating.':'';
+ const blocked=reason();if(blocked)return blocked;
+ const pending=await store?.pendingChanges?.();
+ return reason()||(pending?.length?'Wait for your changes to sync before updating.':'');
+}});

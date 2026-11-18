@@ -1,5 +1,7 @@
 # Lists project instructions
 
+Installed-app updates: read AI_README Installed App Updates. Preserve explicit Reload with draft/pending guards; no forced reload of other tabs. Check on foreground/reconnect without polling. Keep updates.js precached and run updates/offline-shell tests when changing workers or update handling.
+
 Keep the in-app one-minute Quick guide (shared/guide.js, menu entry in shared/app.js) accurate whenever creation, scheduling, sharing, gestures, daily suggestions or offline behavior changes. Keep it brief with theme-aware illustrations. Run tests/guide.cjs for guide/navigation changes. Never auto-open it or include real user data in examples.
 
 NEWEST: Task Name Header section in AI_README overrides generic task modal headings. Same input moves into sticky name-first heading with muted label, check Save and X Cancel; hide redundant generic banner/X only for task forms. Restore composer input/home label before removing temporary heading. Exact due/follow-up dates highlight core.dateTiming's bucket; matching timing selection preserves exact date. Internal when=date must remain for exact saves. Follow-up edits/presets resync immediately. Test task-header.cjs plus pure/modal/emulator/offline checks.

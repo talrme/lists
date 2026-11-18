@@ -1,5 +1,9 @@
 # Lists: AI Handoff
 
+## Installed App Updates
+
+shared/updates.js registers the worker with updateViaCache:none, watches installing/waiting workers and checks on foreground/pageshow/online (60-second throttle, no interval). Explicit Reload sends ACTIVATE_UPDATE to the waiting worker; only the requesting tab reloads on controllerchange. app.js checks drafts, dialogs, saves, pending local operations and sync errors before allowing reload, including rechecking after the durable pendingChanges read. Never unconditionally skipWaiting or auto-reload a typing user. Worker production-7 precaches this module. Run tests/updates.cjs and offline-shell.cjs. Old installed versions need one bootstrap close of all app/browser clients. No storage clearing, auth changes or private data caching.
+
 ## One-Minute Quick Guide
 
 Menu -> Quick guide opens shared/guide.js in the normal dialog (Got it/X/Escape/backdrop). Theme-aware HTML illustrations stay legible across styles and palettes without screenshot maintenance. Update the guide whenever user-facing scheduling, gestures, sharing, daily picks or offline behavior changes; keep the reading time around one minute and run tests/guide.cjs. It is available before sign-in, contains no personal data, never auto-opens, and is part of the offline shell. Worker version is now lists-shell-production-6.
