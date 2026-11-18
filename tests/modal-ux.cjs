@@ -17,7 +17,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   await ui.add(page,'Modal task',{description:'A useful short description, not a mysterious ellipsis'});let row=page.locator('.task-row').filter({hasText:'Modal task'});await row.locator('.task-excerpt').waitFor();assert.equal(await row.locator('.task-meta').count(),0);
   await row.locator('[data-edit]').click();await page.locator('#dialog #edit-form').waitFor();assert(await page.locator('#edit-form').evaluate(form=>form.firstElementChild.classList.contains('task-editor-heading')));
   await page.locator('#edit-form [name=waiting]').check();await page.locator('#edit-form [data-followup="90"]').click();await page.locator('#edit-form [type=submit]').last().click();await page.locator('#edit-form').waitFor({state:'detached'});
-  await page.locator('#composer [data-view=later]').click();await row.waitFor();await row.locator('.waiting-badge').waitFor();await page.locator('.list-shortcuts [data-view=waiting]').click();await row.waitFor();
+  await page.locator('#composer [data-view=later]').click();await row.waitFor();await row.locator('.waiting-badge').waitFor();await ui.scheduleView(page,'waiting');await row.waitFor();
   await row.locator('[data-edit]').click();
   for(const width of [320,390,1280])for(const palette of ['original','garden','cherry','night']){
    await page.setViewportSize({width,height:844});await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);await page.waitForTimeout(30);
@@ -29,7 +29,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   }
   await page.setViewportSize({width:390,height:420});await page.waitForFunction(()=>document.querySelector('#dialog').getBoundingClientRect().bottom<=420);await page.locator('#edit-form [name=description]').focus();await page.locator('#dialog').evaluate(node=>node.scrollTop=node.scrollHeight);const keyboardSave=await page.locator('#edit-form [type=submit]').last().boundingBox();assert(keyboardSave.y>=0&&keyboardSave.y+keyboardSave.height<420,'Save remains available in a keyboard-sized viewport');await page.setViewportSize({width:390,height:844});
   await page.locator('#edit-form .cancel-editor').last().click();await ui.extended(page,2);
-  await page.locator('[data-action=settings]').click();assert.equal(await page.locator('.view-options').count(),0);assert.equal(await page.locator('#days-shown').count(),1);await page.getByRole('button',{name:'Done',exact:true}).click();
+  await ui.menuAction(page,'settings');assert.equal(await page.locator('.view-options').count(),0);assert.equal(await page.locator('#days-shown').count(),1);await page.getByRole('button',{name:'Done',exact:true}).click();
   assert.deepEqual(errors,[]);await context.close();console.log('Modal UX '+design+' passed');
  }console.log(JSON.stringify({result:'PASS',designs:10,layouts,coverage:'Draft-preserving arrow/Escape, explicit Cancel clears, modal default, sticky top actions, description excerpts, Waiting/date overlap, visibility and extended-day Settings. Fixture backend; emulated mobile.'}));}finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

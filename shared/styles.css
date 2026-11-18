@@ -116,8 +116,10 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .style-4{height:20px;border-block:1px solid var(--ink);background:repeating-linear-gradient(0deg,transparent 0 6px,var(--muted) 6px 7px);border-radius:0}
 .style-8{border-left:3px solid var(--accent);border-radius:0}
 .style-9{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
-.day-controls{display:flex;justify-content:center;gap:20px;margin:14px 0 0}
-.day-controls button{min-height:40px;color:var(--accent);font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.day-controls{display:flex;justify-content:flex-start;margin:10px 0 0}
+.day-controls button{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:10px 14px;border-radius:6px;background:color-mix(in srgb,var(--soft) 55%,transparent);color:var(--muted);font-size:12px;text-align:left}
+.day-controls button span{flex:1}.day-controls button svg{width:17px;height:17px}
+.day-controls button:hover{background:var(--soft);color:var(--ink)}
 .editor-top-actions{display:flex;justify-content:flex-end;align-items:center;gap:14px;position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line);padding:0 0 4px;margin-bottom:8px}
 .editor-top-actions button{display:inline-flex;align-items:center;gap:4px;font-size:12px}
 .editor-top-actions button+button{color:var(--muted)}
@@ -152,8 +154,7 @@ html[data-fx-navigation] .navigation-drawer[data-closing]::backdrop{animation:dr
 .drawer-option>button:first-child{min-width:0;flex:1}
 .drawer-option>.icon-button{flex:none;color:var(--muted)}
 html:has(.navigation-drawer[open]){overflow:hidden}
-.task-dragging .day-tasks{overflow-y:auto;overflow-x:hidden;scrollbar-width:none;grid-auto-rows:max-content;align-content:start}
-.task-dragging .day-tasks::-webkit-scrollbar{display:none}
+.task-dragging .day-tasks{overflow:visible;grid-auto-rows:max-content;align-content:start}
 .task-dragging .day-tasks:has(.task-row):after{display:none}
 @keyframes drawer-dim-in{from{background:#0000}to{background:#0006}}
 @keyframes drawer-dim-out{from{background:#0006}to{background:#0000}}

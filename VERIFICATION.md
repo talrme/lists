@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Day Expansion, Weekend Groups and Drag Reflow
+
+The ASAP footer now contains one left-aligned Show N days / Today only toggle, with no Settings/Share/Waiting/Completed shortcuts. Verified a five-day Tuesday window includes the full Saturday-Sunday Weekend and excludes Monday. Calendar grouping tests cover Sunday starts, Saturday endpoints, single-day mode, month/year transitions and DST. All 35 pure checks passed.
+
+Clear Day and Block Party drag tests passed with populated destinations: target grows while held, the following heading moves down, no nested clipping/overflow, date persists after drop, intra-weekend sorting keeps Sunday, explicit calendar Saturday is honored, and cross-group entry uses Saturday. Trusted touch scroll/swipe/drag and delayed-save no-snap-back tests passed. Production passed 80 responsive style/palette layouts; phone/keyboard workflows passed 30 layouts. Light/dark screenshots inspected. Actual SDK/local emulator privacy and cross-device/offline regressions passed with zero production writes. Updated offline shell and service-worker update lifecycle passed. No rules or backend changes.
+
 ## Compact Phone Navigation and Keyboard Handling
 
 Phone UX passed 30 style/width/light-dark layouts: compact input beside hamburger, Back to ASAP view placement, simplified drawer with bottom account, configurable extended-day shortcut independent of the active view, trusted CDP left-swipe dismissal, keyboard-free More, keyboard-dismiss cancellation guard, small-viewport scrolling with sticky actions, preserved drafts and persisted account-specific owner filters. Production regression passed 80 layouts; drawer passed 60; modal/draft regression passed 120. Trusted task swipe/scroll and cross-day header stability passed. Light/dark phone screenshots inspected.

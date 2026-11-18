@@ -1,7 +1,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{readFileSync}=require('node:fs'),ui=require('./ui.cjs');
 const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
 async function level(page,value){await page.locator('#animation-level').evaluate((node,value)=>{node.value=value;node.dispatchEvent(new Event('input',{bubbles:true}));},value);}
-async function settings(page){await page.locator('[data-action=settings]').click();await page.locator('#animation-settings>summary').click();}
+async function settings(page){await ui.menuAction(page,'settings');await page.locator('#animation-settings>summary').click();}
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});let layouts=0;
  try{

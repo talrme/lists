@@ -16,7 +16,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
    assert.equal(data.display,'standalone');assert.equal(data.scope,new URL('./',page.url()).href);assert(new URL(data.id).searchParams.get('household')==='home');assert(new URL(data.start_url).searchParams.get('household')==='home');
    const sizes=await page.evaluate(async icons=>Promise.all(icons.map(icon=>new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image.naturalWidth+'x'+image.naturalHeight);image.onerror=reject;image.src=icon.src;}))),data.icons);
    assert.deepEqual(sizes,['192x192','512x512']);
-   await page.locator('[data-action=share]').click();const link=await page.locator('#share-link').inputValue();
+   await ui.menuAction(page,'share');const link=await page.locator('#share-link').inputValue();
    assert.equal(link,`https://talrme.github.io/lists/?household=home`);
    await page.waitForFunction(()=>document.querySelector('#qr img')?.naturalWidth>0);
    await page.locator('#copy-link').click();assert.equal(await page.evaluate(()=>window.__copied),link);
@@ -27,8 +27,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
     if(design===1&&[390,1280].includes(width)&&['original','night'].includes(palette))await page.screenshot({path:`/private/tmp/lists-share-${width}-${palette}.png`});
    }
    await page.getByRole('button',{name:'Close',exact:true}).click();assert(!await page.locator('#dialog').isVisible());
-   await page.locator('[data-action=share]').click();await page.keyboard.press('Escape');assert(!await page.locator('#dialog').isVisible());
-   await page.locator('[data-action=share]').click();await page.mouse.click(2,2);assert(!await page.locator('#dialog').isVisible());
+   await ui.menuAction(page,'share');await page.keyboard.press('Escape');assert(!await page.locator('#dialog').isVisible());
+   await ui.menuAction(page,'share');await page.mouse.click(2,2);assert(!await page.locator('#dialog').isVisible());
    assert.deepEqual(errors,[]);await context.close();
   }
   console.log(JSON.stringify({result:'PASS',designs:10,shareLayouts:layouts,coverage:'Absolute standalone manifests without parse warnings, Apple metadata, real icon dimensions, QR image, household links, Copy, X/Escape/backdrop. Test-only backend; physical installation not automated.'}));

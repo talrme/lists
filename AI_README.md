@@ -1,5 +1,13 @@
 # Lists: AI Handoff
 
+## Expand/Collapse, Weekends And Natural Drag Reflow (Newest)
+
+The footer utilities and Waiting/Completed/Active shortcuts are removed from the DOM. Use the drawer for Settings, Share, Waiting and Completed; the top list-heading Back to ASAP view remains. Bottom ASAP control is a single left-aligned soft row, Show N days OR Today only, setting active daysShown to extendedDays (default5) OR1. It no longer adds N repeatedly. Category navigation and actionable connection status remain.
+
+shared/day-groups.js returns contiguous start/end descriptors for a calendar-day window. Expanded Sat/Sun combine as Weekend with dates; a window ending Saturday extends to Sunday (potentially one extra calendar day). Single-day ASAP stays strictly today. Sunday-start expanded windows use Sunday alone for the remaining weekend, never yesterday; past due dates still roll into today. Both render and currentTasks use the same final endpoint so Sunday data isn't omitted. Rows map to group start; existing sections are only moved if their order changes, preserving focused inline drafts. groupDay canonicalizes the old date before drag comparison: same-weekend sorting leaves Sunday dates unchanged, while entering Weekend uses Saturday or current Sunday. Follow-up moves retain Waiting semantics.
+
+gestures.js no longer holds day heights or scrolls within clipped day containers. Sortable animates source/destination rows; onMove snapshots headings/other-day rows and uses one requestAnimationFrame with batched layout reads and motion.reorder FLIP to animate natural reflow. Drop/save guards and quiet ordering unchanged. shared/gestures.js?v=7; shell production-9 includes day-groups.js. No Firestore/rules changes or new traffic. Historical tests/day-drag.cjs forwards to day-layout.cjs, which now asserts full-day growth and following-heading movement, replacing the former frozen-header expectation. Tests/ui helpers open real drawer routes after footer removal.
+
 ## Phone Navigation And Keyboard UX (Newest)
 
 - Hamburger is reparented beside the home input when ready (gate retains its header menu). quick-entry keeps the hamburger outside the movable composer. Name/input node and draft are preserved when moving into/out of modal. Back to ASAP view is in list-heading below composer, not the top banner.

@@ -17,7 +17,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   }
   await open();await page.mouse.click(380,450);await menu.waitFor({state:'hidden'});assert.equal(await page.locator('#open-menu').getAttribute('aria-expanded'),'false');await open();await page.keyboard.press('Escape');await menu.waitFor({state:'hidden'});
   for(const style of [1,7,4,8,9]){
-   await page.locator('[data-action=settings]').click();await page.locator('[data-style="'+style+'"]').click();await page.getByRole('button',{name:'Done',exact:true}).click();
+   await ui.menuAction(page,'settings');await page.locator('[data-style="'+style+'"]').click();await page.getByRole('button',{name:'Done',exact:true}).click();
    for(const width of [320,390,1280])for(const palette of ['original','garden','cherry','night']){
     await page.setViewportSize({width,height:844});await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);await open();await page.waitForTimeout(280);const box=await menu.boundingBox();assert(Math.abs(box.x)<1);assert(box.width<=width);assert(await menu.evaluate(node=>node.scrollWidth<=node.clientWidth+1));layouts++;
     if(style===1&&width===390&&['original','night'].includes(palette))await page.screenshot({path:'/private/tmp/lists-drawer-'+palette+'.png'});

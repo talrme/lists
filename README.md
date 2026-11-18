@@ -37,8 +37,8 @@ Routine household/All synced footer text is hidden; the sync progress line and a
 - ASAP shows due/overdue tasks plus today's stable From Later suggestion. ~ Week covers the next six future business days; Later holds undated and farther-out tasks. Manual dates and follow-up dates automatically highlight the matching timing segment (ASAP if due, ~ Week within six future business days, otherwise Later). Clicking that already-matching segment keeps the exact date; choosing ~ Week without a date still auto-schedules. Calendar: America/Los_Angeles; weekends excluded, not public holidays.
 - Adding with ~ Week chooses one of the next five weekdays, including weekday today. Punting chooses a weekday in the following Monday-Friday. In ~ Week, swipe LEFT or use the priority icon to bring the task into ASAP instead. ASAP/Later swipe RIGHT to punt; the opposite direction does nothing.
 - Waiting is a response-bubble flag across date lists. Follow-up date controls where it appears; quick actions retain that flag. Description snippets appear under names, without date clutter.
-- At the bottom, Show N more days expands ASAP (up to 14 days); Today only collapses it. N comes from the extended-view setting. Waiting and Completed filters sit below the list; Active returns to normal tasks. Completed includes all due dates within the current category and selected task-owner filters.
-- Hold a row for 150ms to drag. Day-section heights are held during the drag so headers do not shift when you cross between days; they resize after dropping. Overflowing destination rows can scroll temporarily inside their day. Ordinary scrolling remains scrolling. Reorder/date-drag saves are quiet; completion and punt actions have stacked Undo notices. The flying, spinning task tile respects animation preferences/reduced motion.
+- At the bottom, one left-aligned row toggles between Show N days and Today only. N comes from the extended-view setting (2-14, default 5). Expanded views combine Saturday/Sunday into Weekend; a Saturday ending includes Sunday too. Sunday starts never include yesterday. Settings, Save / Share, Waiting and Completed live in the menu, not below the list.
+- Hold a row for 150ms to drag. Days grow and shrink naturally, with surrounding rows and headings sliding into place; there is no clipped scrolling box inside a full day. Moving into Weekend uses Saturday, or Sunday if Saturday has passed. Reordering within Weekend preserves the existing date. Ordinary scrolling remains scrolling. Reorder/date-drag saves are quiet; completion and punt actions have stacked Undo notices. Animations respect preferences/reduced motion.
 - Task order is currently stored on each task, so it syncs across devices **and across household members for shared items**. Per-person ordering would require a separate account-level record. Existing behavior was retained.
 - Keyboard users can focus a task and press Alt+M for the accessible Move menu; no move icon is shown in the task modal.
 
@@ -77,6 +77,7 @@ node tests/phone-ux.cjs
 node --test tests/visibility.test.js
 node tests/drawer.cjs
 node tests/day-drag.cjs
+node --test tests/day-groups.test.js
 node tests/touch.cjs
 node tests/drop.cjs
 node tests/share.cjs
