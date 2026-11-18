@@ -3,7 +3,7 @@ import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,ins
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=production1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=editor3';
-import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=3';
+import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=4';
 import {taskGestures} from './gestures.js?v=4';
 import {createNotices} from './notices.js?v=1';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';

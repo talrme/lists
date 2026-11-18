@@ -17,7 +17,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   assert(samples.every(sample=>!sample.animations.includes('lists-reorder')),'No second FLIP animation after drop');
   assert(Math.max(...samples.map(s=>s.top))-Math.min(...samples.map(s=>s.top))<3,'Dropped tile stays visually in place');
   assert.equal(await page.locator('#toast .toast-notice').count(),0);
-  const task=page.locator('[data-task="'+id+'"]').first(),title=await task.locator('.task-name').innerText();await task.locator('[data-quick]').click();await page.locator('.punt-traveler').waitFor();assert.equal(await page.locator('.punt-traveler').textContent(),title);assert((await page.locator('.punt-traveler').boundingBox()).width>150);await page.waitForTimeout(800);assert.equal(await page.locator('.punt-traveler').count(),0);
+  const task=page.locator('[data-task="'+id+'"]').first(),title=await task.locator('.task-name').innerText();await task.locator('[data-quick]').click();await page.locator('.punt-traveler').waitFor();assert.equal(await page.locator('.punt-traveler').textContent(),title);assert((await page.locator('.punt-traveler').boundingBox()).width>150);assert.equal(await page.locator('.punt-traveler').evaluate(node=>node.getAnimations()[0].effect.getTiming().duration),1000);await page.locator('.punt-traveler').waitFor({state:'detached'});
   console.log('PASS: animated drag drop stays in place through a delayed save, with no second FLIP or snap back. Fixture only.');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
