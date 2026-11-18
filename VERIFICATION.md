@@ -1,5 +1,9 @@
 # Verification — November 17, 2026
 
+## Automatic Safe Updates (November 18)
+
+Actual service-worker lifecycle tests passed automatic idle activation and reload, no first-install reload loop, a second tab keeping its draft after another tab activates the worker, automatic catch-up after that draft clears, pending-change deferral, activity-triggered release detection, immediate manual fallback, and offline reopening of the updated shell. Real app/synthetic backend checks passed draft/dialog/offline guards and preserving the full Undo opportunity before automatic activation. No production writes or Firebase polling. Idle is4s; deferred local-only checks retry every2s while visible/online. Production responsive regression passed80 layouts and full offline-shell checks passed. Weekday-layout tests now use an explicit test clock so merged-weekend counts do not depend on the execution date.
+
 ## Day Expansion, Weekend Groups and Drag Reflow
 
 The ASAP footer now contains one left-aligned Show N days / Today only toggle, with no Settings/Share/Waiting/Completed shortcuts. Verified a five-day Tuesday window includes the full Saturday-Sunday Weekend and excludes Monday. Calendar grouping tests cover Sunday starts, Saturday endpoints, single-day mode, month/year transitions and DST. All 35 pure checks passed.

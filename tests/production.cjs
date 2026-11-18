@@ -3,7 +3,7 @@ const BASE='http://127.0.0.1:5195/lists/';
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',args:['--disable-gpu']});let layouts=0;
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
+  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);await page.clock.install({time:new Date('2026-11-17T20:00:00Z')});await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
   assert.equal(await page.locator('body').getAttribute('data-design'),'1');assert.equal(await page.locator('.utilities a').count(),0);
   assert.equal(await page.locator('.list-shortcuts,.utilities').count(),0);
   await page.locator('[data-days=more]').click();assert.equal(await page.locator('.day-heading:visible').count(),5);await page.locator('[data-days=today]').click();assert.equal(await page.locator('.day-heading:visible').count(),0);

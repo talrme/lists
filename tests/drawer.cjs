@@ -3,7 +3,7 @@ const BASE='http://127.0.0.1:5195/lists/';
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',args:['--disable-gpu']});let layouts=0;
  try{
-  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
+  const page=await browser.newPage({viewport:{width:390,height:844},hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);await page.clock.install({time:new Date('2026-11-17T20:00:00Z')});await ui.mockBackend(page,BASE);await page.goto(BASE);await page.locator('#workspace').waitFor();
   const menu=page.locator('#navigation-drawer'),open=()=>page.locator('#open-menu').click();
   assert(await page.locator('#mode-status').isHidden());assert(await page.locator('#connection').isHidden());assert(await page.locator('#back-asap').isHidden());
   await open();await menu.waitFor();assert((await page.locator('#drawer-account').textContent()).includes('Tal'));assert(await menu.evaluate(node=>node.getAnimations().some(animation=>animation.effect.getKeyframes().some(frame=>String(frame.transform).includes('-100%')))));
