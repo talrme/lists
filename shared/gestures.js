@@ -1,6 +1,10 @@
 export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context,swipeLabel,swipeDirection}){
  const host=document.querySelector('#task-list'),sortables=new Map();let active=false,dragging=false,chosen=false,swipe=null,suppressUntil=0;
- const idle=()=>{active=false;document.body.classList.remove('task-dragging');onIdle();};
+ const heldHeights=new Map();
+ function holdDays(){
+  host.querySelectorAll('.day-tasks').forEach(node=>{const height=node.getBoundingClientRect().height;heldHeights.set(node,[node.style.height,node.style.minHeight,node.style.maxHeight]);Object.assign(node.style,{height:height+'px',minHeight:height+'px',maxHeight:height+'px'});});
+ }
+ const idle=()=>{active=false;document.body.classList.remove('task-dragging');for(const [node,[height,minHeight,maxHeight]] of heldHeights)Object.assign(node.style,{height,minHeight,maxHeight});heldHeights.clear();onIdle();};
  function sync(){
   for(const [node,sortable] of sortables)if(!node.isConnected){sortable.destroy();sortables.delete(node);}
   host.querySelectorAll('.day-tasks').forEach(node=>{
@@ -9,7 +13,7 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
     delay:150,delayOnTouchOnly:false,touchStartThreshold:6,
     animation:motion.enabled('reorder')?180:0,forceFallback:true,fallbackOnBody:true,fallbackTolerance:4,
     ghostClass:'task-drag-placeholder',chosenClass:'task-drag-chosen',fallbackClass:'task-drag-float',scrollSensitivity:70,scrollSpeed:12,
-    onChoose(){chosen=true;swipe=null;active=true;sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
+    onChoose(){chosen=true;swipe=null;active=true;holdDays();sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
     onUnchoose(){if(!chosen)return;chosen=false;suppressUntil=performance.now()+350;if(!dragging)idle();},
     onStart(event){dragging=true;active=true;event.item._movingTask=findTask(event.item.dataset.task);event.item._movingEpoch=context();document.body.classList.add('task-dragging');},
     async onEnd(event){

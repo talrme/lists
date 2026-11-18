@@ -16,6 +16,12 @@ Clear Day (former staging 1) is the default. Under **Settings -> Appearance**, c
 
 Styles, palettes and animation preferences are saved on the device. The old design chooser and staging folders are removed. Sharing and installation use the main URL with the selected household. Old bookmarks redirect to the main site; an old offline installation may need one connected visit and all old tabs closed to update its worker.
 
+## Navigation
+
+The top-left menu slides out with grouped list views, Today only / Next 5 days, Waiting, Completed, View options, Settings and Save / Share. Its header shows the signed-in account (or Not signed in). Click outside, X or Escape to close it. The gear beside Next 5 days opens the matching day-count setting in Settings; View retains the same control. Existing footer shortcuts remain available.
+
+A top-right ASAP shortcut returns any alternate To-do view or multi-day view to ASAP with today only. Routine household/All synced footer text is hidden; the sync progress line and actionable offline/pending/error status remain.
+
 ## Tasks
 
 - Start directly with the add field. With a title entered, ASAP or ~ Week adds immediately. Later only selects timing; + and Enter also add.
@@ -24,7 +30,7 @@ Styles, palettes and animation preferences are saved on the device. The old desi
 - Adding with ~ Week chooses one of the next five weekdays, including weekday today. Punting chooses a weekday in the following Monday-Friday. In ~ Week, swipe LEFT or use the priority icon to bring the task into ASAP instead. ASAP/Later swipe RIGHT to punt; the opposite direction does nothing.
 - Waiting is a response-bubble flag across date lists. Follow-up date controls where it appears; quick actions retain that flag. Description snippets appear under names, without date clutter.
 - At the bottom, Show 5 more days expands ASAP (up to 14 days); Today only collapses it. View also has the day count. Waiting and Completed filters sit below the list; Active returns to normal tasks. Completed includes all due dates within the current category and selected people filter.
-- Hold a row for 150ms to drag. Ordinary scrolling remains scrolling. Reorder/date-drag saves are quiet; completion and punt actions have stacked Undo notices. The flying, spinning task tile respects animation preferences/reduced motion.
+- Hold a row for 150ms to drag. Day-section heights are held during the drag so headers do not shift when you cross between days; they resize after dropping. Overflowing destination rows can scroll temporarily inside their day. Ordinary scrolling remains scrolling. Reorder/date-drag saves are quiet; completion and punt actions have stacked Undo notices. The flying, spinning task tile respects animation preferences/reduced motion.
 - Task order is currently stored on each task, so it syncs across devices **and across household members for shared items**. Per-person ordering would require a separate account-level record. Existing behavior was retained.
 - Keyboard users can focus a task and press Alt+M for the accessible Move menu; no move icon is shown in the task modal.
 
@@ -59,6 +65,8 @@ node tools/build.mjs
 node tools/serve.cjs
 node --test tests/core.test.js tests/device-store.test.js tests/admin-core.test.js tests/motion.test.js
 node tests/production.cjs
+node tests/drawer.cjs
+node tests/day-drag.cjs
 node tests/touch.cjs
 node tests/drop.cjs
 node tests/share.cjs

@@ -132,6 +132,31 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .waiting-label svg{width:16px;height:16px;color:var(--muted)}
 .punt-traveler{background:var(--surface);color:var(--ink);box-shadow:0 8px 24px #0003;border:1px solid var(--line);border-radius:7px;font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:12px;z-index:12}
 body .modal-composer{padding:0!important;border:0!important;box-shadow:none!important;margin:0;border-radius:0;background:transparent}
+.navigation-bar{display:flex;align-items:center;justify-content:space-between;min-height:44px;margin:-5px 0 4px}
+.navigation-bar>.icon-button{color:var(--muted)}
+.back-asap{display:inline-flex;align-items:center;gap:5px;font-weight:650}
+.back-asap svg{width:16px;height:16px}
+dialog.navigation-drawer{position:fixed;inset:0 auto 0 0;width:min(320px,88vw);height:100dvh;max-width:none;max-height:none;margin:0;padding:18px 12px max(20px,env(safe-area-inset-bottom));border:0;border-radius:0;background:var(--surface);color:var(--ink);overflow-y:auto;box-shadow:8px 0 28px #0002;text-align:left}
+.navigation-drawer::backdrop{background:#0006;backdrop-filter:none}
+html[data-fx-navigation] .navigation-drawer::backdrop{animation:drawer-dim-in .25s ease both}
+html[data-fx-navigation] .navigation-drawer[data-closing]::backdrop{animation:drawer-dim-out .21s ease both}
+.drawer-heading{display:flex;justify-content:space-between;align-items:center;padding:0 6px 16px 12px}
+.drawer-heading strong{display:block;font-size:20px}
+.drawer-heading span{display:block;font-size:11px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+.drawer-group{padding:10px 0;border-top:1px solid var(--line)}
+.drawer-group>button,.drawer-option>button:first-child{display:flex;align-items:center;gap:13px;min-height:46px;width:100%;padding:10px 13px;text-align:left;font-size:13px;border-radius:6px}
+.drawer-group svg{width:18px;height:18px;color:var(--muted);flex-shrink:0}
+.drawer-group [aria-current=true]{background:var(--soft);color:var(--accent);font-weight:650}
+.drawer-group button:hover{background:var(--soft)}
+.drawer-option{display:flex;align-items:center}
+.drawer-option>button:first-child{min-width:0;flex:1}
+.drawer-option>.icon-button{flex:none;color:var(--muted)}
+html:has(.navigation-drawer[open]){overflow:hidden}
+.task-dragging .day-tasks{overflow-y:auto;overflow-x:hidden;scrollbar-width:none;grid-auto-rows:max-content;align-content:start}
+.task-dragging .day-tasks::-webkit-scrollbar{display:none}
+.task-dragging .day-tasks:has(.task-row):after{display:none}
+@keyframes drawer-dim-in{from{background:#0000}to{background:#0006}}
+@keyframes drawer-dim-out{from{background:#0006}to{background:#0000}}
 .sync-progress{position:fixed;inset:0 0 auto;height:3px;z-index:30;overflow:hidden;pointer-events:none;background:var(--soft)}
 .sync-progress:after{content:"";display:block;width:35%;height:100%;background:var(--accent);animation:sync-sweep 1.2s ease-in-out infinite}
 html[data-syncing] .connection:before{content:"";display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:6px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sync-spin .8s linear infinite}

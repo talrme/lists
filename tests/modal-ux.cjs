@@ -29,7 +29,7 @@ const BASE='http://127.0.0.1:5195/lists/';
   }
   await page.setViewportSize({width:390,height:420});await page.locator('#edit-form [name=description]').focus();await page.locator('#dialog').evaluate(node=>node.scrollTop=node.scrollHeight);const keyboardSave=await page.locator('#edit-form [type=submit]').last().boundingBox();assert(keyboardSave.y>=0&&keyboardSave.y+keyboardSave.height<420,'Save remains available in a keyboard-sized viewport');await page.setViewportSize({width:390,height:844});
   await page.locator('#edit-form .cancel-editor').last().click();await page.locator('[data-action=views]').click();await page.locator('#days-shown').fill('2');await page.getByRole('button',{name:'Done',exact:true}).click();
-  await page.locator('[data-action=settings]').click();assert.equal(await page.locator('.view-options').count(),0);assert.equal(await page.locator('#days-shown').count(),0);await page.getByRole('button',{name:'Done',exact:true}).click();
+  await page.locator('[data-action=settings]').click();assert.equal(await page.locator('.view-options').count(),0);assert.equal(await page.locator('#days-shown').count(),1);await page.getByRole('button',{name:'Done',exact:true}).click();
   assert.deepEqual(errors,[]);await context.close();console.log('Modal UX '+design+' passed');
  }console.log(JSON.stringify({result:'PASS',designs:10,layouts,coverage:'Draft-preserving arrow/Escape, explicit Cancel clears, modal default, sticky top actions, description excerpts, Waiting/date overlap, View/Settings separation. Fixture backend; emulated mobile.'}));}finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

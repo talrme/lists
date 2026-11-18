@@ -6,8 +6,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/';
   for(let design=1;design<=10;design++){
    const number=String(design).padStart(2,'0'),context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push({design,error:e.message}));
    await ui.mockBackend(page,BASE);await page.goto(new URL(``,BASE).href);await page.locator('#workspace').waitFor();
-   assert.equal(await page.locator('.topbar,.page-heading,.scope-strip').count(),0);assert((await page.locator('#new-title').boundingBox()).y<30);
-   assert((await page.locator('#mode-status').innerText()).includes('Test household'));assert((await page.locator('#mode-status').boundingBox()).y>(await page.locator('.utilities').boundingBox()).y);
+   assert.equal(await page.locator('.topbar,.page-heading,.scope-strip').count(),0);assert((await page.locator('#new-title').boundingBox()).y<90);
+   assert((await page.locator('#mode-status').innerText()).includes('Test household'));assert(await page.locator('#mode-status').isHidden());
    assert.equal(await page.getByText('Order a new bike helmet',{exact:true}).count(),0);assert.equal(await page.locator('[data-quick=waiting]').count(),0);
    const title='Test task '+number;await ui.add(page,title,{description:'**Bring these**\n- Apples\n- [ ] Bananas'});
    let row=page.locator('.task-row').filter({hasText:title});await row.locator('.task-excerpt').waitFor();await ui.editorMode(page,'inline');await row.locator('[data-edit]').click();

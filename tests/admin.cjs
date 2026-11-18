@@ -20,7 +20,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.resolve(__dirname,'../shared/firebase.js'),'utf8').replace('  return {\n    async login','  return window.__testStore={\n    async login')}));
   await page.goto(new URL(`?mode=live&household=${household}`,BASE).href);return {page,context};
  }
- async function settings(page){await page.getByRole('button',{name:'Settings',exact:true}).first().click();}
+ async function settings(page){if(await page.locator('#edit-form').count())await page.locator('#edit-form').waitFor({state:'detached'});await page.locator('#open-menu').click();await page.locator('#navigation-drawer [data-menu-action=settings]').click();await page.locator('#dialog-title').filter({hasText:'Settings'}).waitFor();}
  async function admin(page){await settings(page);await page.locator('#settings-admin>summary').click();await page.locator('.admin-households>summary').click();await page.locator('#admin-household-list[aria-busy=false]').waitFor({state:'attached'});}
  async function add(page,title,assigned='private'){await ui.add(page,title,{person:assigned});}
  async function testing(page){await settings(page);await page.locator('#settings-admin>summary').click();await page.locator('#settings-testing>summary').click();await page.locator('#playground-form').waitFor();}
@@ -103,7 +103,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.reload();await tal.locator('#workspace').waitFor();await tal.getByText('Created without service',{exact:true}).waitFor();assert.equal(await merge(tal).count(),0);assert((await tal.locator('#connection').textContent()).includes('pending'));
   await tal.screenshot({path:'/private/tmp/lists-offline-phone.png'});
   await tal.evaluate(()=>{window.__syncSeen=false;new MutationObserver(()=>{if(document.documentElement.hasAttribute('data-syncing'))window.__syncSeen=true;}).observe(document.documentElement,{attributes:true,attributeFilter:['data-syncing']});});
-  await tal.context().setOffline(false);await tal.getByText('All synced',{exact:true}).waitFor();
+  await tal.context().setOffline(false);await tal.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');
   assert(await tal.evaluate(()=>window.__syncSeen),'Sync progress must be visible during reconnect');
   await ui.scheduleView(sophie,'done');await merge(sophie).waitFor();await merge(sophie).locator('[data-edit]').click();assert.equal(await sophie.locator('#edit-form [name=title]').inputValue(),'Offline title wins','Same field uses last uploaded change');assert.equal(await sophie.locator('#edit-form [name=description]').inputValue(),'Edited on the other phone','Offline completion must preserve another device notes edits');await sophie.locator('#edit-form .cancel-editor').last().click();
   assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),0);

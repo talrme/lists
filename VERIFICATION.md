@@ -1,5 +1,9 @@
 # Verification — November 17, 2026
 
+## Navigation Drawer and Stable Day Headers
+
+Drawer checks passed 60 style/width/palette cases: opening/animated dismissal by backdrop, X and Escape; signed-in name; grouped views; five-day mode; top ASAP return; Settings/Share routes; gear opening Settings with the day-count field focused. Light/night phone screenshots inspected. Production layout/editor checks passed 80 cases. Day-drag tests sampled all three header positions throughout pointer movement and verified no shift, saved destination dates and released temporary sizing in Clear Day and Block Party. Trusted touch, delayed drop/punt, offline shell and local real-SDK Firestore/privacy/offline-queue checks passed. No production records were modified. Physical phones/Google OAuth remain manual checks.
+
 ## Production Promotion
 
 Directional swipe update: trusted CDP touch passed left-swipe from ~ Week to ASAP, opposite-direction rejection without editing/mutation, partial-left cancel cleanup, and existing right-Punt/scroll/drag workflows. The exposed-side label screenshot was inspected. Animation-enabled delayed-drop and one-second punt cleanup checks passed unchanged.
