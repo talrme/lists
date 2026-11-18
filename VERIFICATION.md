@@ -2,6 +2,8 @@
 
 ## Production Promotion
 
+Directional swipe update: trusted CDP touch passed left-swipe from ~ Week to ASAP, opposite-direction rejection without editing/mutation, partial-left cancel cleanup, and existing right-Punt/scroll/drag workflows. The exposed-side label screenshot was inspected. Animation-enabled delayed-drop and one-second punt cleanup checks passed unchanged.
+
 Staging 1 is promoted to the root, with styles 1/7/4/8/9 selectable under Appearance and no staging folders/gallery. tests/production.cjs passed all five styles across 80 width/palette combinations, including portrait, landscape, desktop and night. Tested bottom-only Waiting/Completed/Active controls, 5-more-days/Today-only, top and bottom modal Save, no move icon, response-bubble waiting indicator, contextual ~ Week -> ASAP action/Undo, canonical household share URLs and root installation icons. Phone screenshots of both modal forms and the five styles were inspected.
 
 Trusted CDP touch tests passed with a 150ms hold, including a 190ms intentional hold, regular scrolling, free-travel right swipe, drag across days and Undo. Animation-enabled tests confirmed the dropped tile stays put through a delayed save, no reorder notice, and the task-sized punt tile animates then cleans up. Repeated root planning, sharing, preserved-draft and failed-save regression workflows passed. Pure suites: 28 passed.

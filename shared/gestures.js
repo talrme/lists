@@ -1,4 +1,4 @@
-export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context,swipeLabel}){
+export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context,swipeLabel,swipeDirection}){
  const host=document.querySelector('#task-list'),sortables=new Map();let active=false,dragging=false,chosen=false,swipe=null,suppressUntil=0;
  const idle=()=>{active=false;document.body.classList.remove('task-dragging');onIdle();};
  function sync(){
@@ -31,19 +31,20 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
   if(active||!canSwipe()||event.button!==0||event.target.closest('.task-check,.defer-task,.task-edit-form'))return;
   const row=event.target.closest('.task-row'),task=findTask(row?.dataset.task);if(!row||row.classList.contains('is-editing')||!task||task.completed)return;
   row.dataset.swipeLabel=swipeLabel();
-  swipe={row,summary:row.querySelector('.task-summary'),pointer:event.pointerId,x:event.clientX,y:event.clientY,distance:0,locked:false,task,epoch:context()};
+  row.dataset.swipeDirection=swipeDirection();
+  swipe={row,summary:row.querySelector('.task-summary'),pointer:event.pointerId,x:event.clientX,y:event.clientY,distance:0,direction:row.dataset.swipeDirection==='left'?-1:1,locked:false,task,epoch:context()};
  });
  host.addEventListener('pointermove',event=>{
   if(!swipe||event.pointerId!==swipe.pointer)return;
   const dx=event.clientX-swipe.x,dy=event.clientY-swipe.y;
-  if(!swipe.locked){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){swipe=null;return;}if(dx<10||Math.abs(dx)<Math.abs(dy)*1.4)return;swipe.locked=true;active=true;swipe.summary.setPointerCapture(event.pointerId);swipe.row.classList.add('is-swiping');}
-  event.preventDefault();swipe.distance=Math.max(0,dx);swipe.summary.style.transform=`translateX(${swipe.distance}px)`;swipe.row.classList.toggle('swipe-ready',swipe.distance>=threshold());
+  if(!swipe.locked){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){swipe=null;return;}if(Math.abs(dx)<10||Math.abs(dx)<Math.abs(dy)*1.4)return;if(dx*swipe.direction<0){swipe=null;suppressUntil=performance.now()+350;return;}swipe.locked=true;active=true;swipe.summary.setPointerCapture(event.pointerId);swipe.row.classList.add('is-swiping');}
+  event.preventDefault();swipe.distance=Math.max(0,dx*swipe.direction);swipe.summary.style.transform=`translateX(${swipe.distance*swipe.direction}px)`;swipe.row.classList.toggle('swipe-ready',swipe.distance>=threshold());
  },{passive:false});
  host.addEventListener('pointerup',async event=>{
   if(!swipe||event.pointerId!==swipe.pointer)return;
   if(!swipe.locked){swipe=null;return;}
   suppressUntil=performance.now()+350;const task=swipe.task,commit=swipe.distance>=threshold()&&swipe.epoch===context(),summary=swipe.summary;
-  const animation=motion.animate('reorder',summary,[{transform:`translateX(${swipe.distance}px)`},{transform:`translateX(${commit?Math.max(swipe.distance,swipe.row.clientWidth):0}px)`}],{duration:180,fill:'forwards'});
+  const animation=motion.animate('reorder',summary,[{transform:`translateX(${swipe.distance*swipe.direction}px)`},{transform:`translateX(${commit?Math.max(swipe.distance,swipe.row.clientWidth)*swipe.direction:0}px)`}],{duration:180,fill:'forwards'});
   try{if(commit)await onDefer(task);if(animation)await animation.finished.catch(()=>{});}finally{animation?.cancel();resetSwipe();suppressUntil=performance.now()+350;}
  });
  host.addEventListener('pointercancel',resetSwipe);
