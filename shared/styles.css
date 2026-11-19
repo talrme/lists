@@ -229,8 +229,7 @@ html:has(#dialog[open]){overflow:hidden}
  .list-heading{flex-wrap:wrap}.list-heading .back-asap{max-width:100%}
 }
 .app-update{position:fixed;z-index:100;top:env(safe-area-inset-top,0px);left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 14px;padding:10px 16px;background:var(--surface);color:var(--ink);box-shadow:0 3px 18px #0003;border-radius:0 0 8px 8px;font-size:13px}
-.app-update[hidden]{display:none}.app-update button{font-weight:700;color:var(--ink);text-decoration:underline;text-underline-offset:3px;min-height:36px}
-.app-update small:not(:empty){flex-basis:100%;font-size:12px;text-align:center;color:var(--muted)}
+.app-update{pointer-events:none}.app-update[hidden]{display:none}
 .quick-guide{font-size:14px;line-height:1.55;overflow-wrap:anywhere}
 .quick-guide .guide-intro{color:var(--muted);margin:0 0 16px}
 .quick-guide section{padding:14px 0;border-top:1px solid var(--line)}

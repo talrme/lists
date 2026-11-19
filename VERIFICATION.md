@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Quiet Automatic Updates (Newest)
+
+Rewritten update suite passed actual worker activation with one automatic flow/no buttons, silence while drafts/dialogs/offline/Undo block, four-second app idle guard, activity-delayed activation, first-install no-reload behavior, per-tab draft protection and later catch-up, expiring post-reload confirmation, stalled activation timeout/backoff and late controller changes preserving drafts. Updated shell reopens offline. Tests use synthetic app data/local HTTP worker fixtures only, zero production writes. No weakened save/draft safeguards or added Firebase polling. Older installed code needs to receive this update before the old Reload prompt disappears.
+
+Production80 responsive layouts and actual offline-shell checks passed after shell20 bump. Phone guide remains under280words and describes no Reload button. Passive Updating Lists... status inspected in light/dark layouts at320/390/1280px.
+
 ## Instant Completion And Optional Completed Search
 
 instant-completion passed60 phone/desktop style/palette layouts, press-only check without mutation, immediate row exit/confetti before1000ms persistence, two pending completions, Undo after ack, save rejection rollback, remote deletion without resurrection, active-only search default, optional completed section/checkmarks after active results, and per-opening reset. Production80 layouts passed. Light/dark search screenshots inspected at settled palette colors. Test fixtures only, no production writes. Backend/rules unchanged.

@@ -1,5 +1,13 @@
 # Lists: AI Handoff
 
+## Quiet Single-Path Automatic Updates (Newest)
+
+User found the combined Reload prompt + automatic reload confusing. Explained old sequence: downloaded worker immediately showed Update ready/Reload, while automatic4s-idle checks and draft/sync/Undo guards could postpone activation/reload. New policy removes the question and manual button entirely. shared/updates.js?v=4 waits silently while downloading or blocked. Only after safe idle does a passive role=status show Updating Lists..., request activation, recheck safety/activity on controllerchange, and reload once. A namespaced sessionStorage timestamp (not task/auth data) gives Lists updated for2.5s after reload, consumed once with30sTTL. First install has no reload/confirmation loop. Storage failure merely omits confirmation.
+
+Same full canReload guards and durable pending checks remain. Hidden/offline pages do not reload; every tab protects its own drafts even after another tab activates the worker. Returning grants fresh4s idle grace. Pending safety retry2s is local only, and network check remains throttled60s on startup/foreground/activity. No Firebase polling. If activation produces no controllerchange after8s, hide the transient status and retry after30s; late controllerchange still cannot discard drafts. Exceptions stay quiet/back off; old app remains usable. No server/auth/rules changes. Older installed JS can still show its former prompt once until this new updater itself is installed; communicate this transition explicitly.
+
+updates.cjs uses actual service workers plus synthetic app fixtures: silent draft/dialog/offline/Undo waits, no Reload buttons, one automatic reload, success/expiry, continuous-activity deferral, foreground checks, multi-tab safe catch-up, first-install behavior, stalled activation backoff, late-controller draft protection and offline updated-shell reopen. App40/css29/shell20, guide4. This overrides every older manual fallback/Update ready note below.
+
 ## Approved Double-Chevron Details Icon
 
 User approved publishing the rounded double-chevron replacement for the leaf. It uses Lucide chevrons-right with4px rounded currentColor strokes; existing details action/classes retained. App39/css28/shell19. Twelve phone/desktop/palette checks and draft-preservation check passed. Future references to the leaf describe the former icon; the details button is now double-chevrons.
