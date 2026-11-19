@@ -21,7 +21,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 - Search defaults active-only; opt-in completed results follow active with checked status. No extra search database reads.
 - Compact phone layout; Appearance first, list settings second/open; 1-10 day wheel/default5. No footer utilities or duplicate View modal. Quick Action icons default hidden on phones/shown larger.
 - Keep native scrolling, 150ms drag, natural day reflow, quiet reorder saves, no snap-back, no nested day clipping. Notices have no X; touch swipe dismisses without Undo.
-- Updates are automatic only, silent until safe idle. Passive software-version status, one guarded refresh, brief confirmation. Never force a draft/pending-save reload or restore a competing Reload prompt.
+- Updates are automatic and immediate when downloaded, unless an actual unfinished edit/gesture or save needs protection. No idle countdown or Undo/empty-focus wait. Passive software-version status, one guarded refresh, brief confirmation. Never force a draft/pending-save reload or restore a competing Reload prompt.
 - Respect device-local settings/reduced motion, theme contrast and X/Escape/backdrop dismissal. Search focuses input; add/edit do not automatically open keyboard.
 
 ## Verification and Publishing

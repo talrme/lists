@@ -6,8 +6,8 @@ import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorAct
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
 import {taskGestures} from './gestures.js?v=7';
 import {createNotices} from './notices.js?v=2';
-import {guideMarkup} from './guide.js?v=4';
-import {setupUpdates} from './updates.js?v=5';
+import {guideMarkup} from './guide.js?v=5';
+import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
 import {dayWheel,bindDayWheel} from './day-wheel.js?v=1';
@@ -498,10 +498,8 @@ document.addEventListener('visibilitychange',watchDay);window.addEventListener('
 void setupUpdates({canReload:async()=>{
  const reason=()=>!navigator.onLine?'Reconnect before updating.':
   busy.size||picking||editorTransition||gestures?.isActive()||document.querySelector('[data-saving]')?'Finishing your current action before updating.':
-  document.querySelector('.toast-undo')?'Keeping Undo available for a few seconds. The update will follow automatically.':
-  $('#new-title').value.trim()||$('#new-description').value.trim()||!$('#new-options').hidden||inlineEditor||document.querySelector('dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable=true]')?'Finish or cancel your draft and close any open dialog first.':
-  preview?'Exit preview before updating.':
-  syncState?.pending||syncState?.syncing||syncState?.error||signedInAccount&&!ready?'Wait for your changes to sync before updating.':'';
+  $('#new-title').value.trim()||$('#new-description').value.trim()||$('#composer').elements.date.value||$('#composer').elements.followUp.value||$('#composer').elements.waiting.checked||$('#composer').elements.person.value!=='private'||!$('#new-options').hidden||inlineEditor||[...document.querySelectorAll('dialog[open] form:not([method="dialog"])')].some(form=>form.getClientRects().length)?'Finish or cancel your draft before updating.':
+  syncState?.pending||syncState?.syncing&&!syncState?.connecting?'Wait for your changes to sync before updating.':'';
  const blocked=reason();if(blocked)return blocked;
  const pending=await store?.pendingChanges?.();
  return reason()||(pending?.length?'Wait for your changes to sync before updating.':'');

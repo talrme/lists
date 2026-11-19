@@ -1,9 +1,9 @@
-export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activationTimeoutMs=8000}){
+export async function setupUpdates({canReload,retryMs=250,activationTimeoutMs=8000}){
  if(!('serviceWorker' in navigator))return;
  const bar=document.createElement('aside');bar.className='app-update';bar.hidden=true;bar.setAttribute('role','status');bar.setAttribute('aria-label','App update');document.body.append(bar);
  const confirmationKey='lists-updated:'+new URL('../',import.meta.url).pathname;
  let registration,reloading=false,requested=false,checking=false,applying=false,lastCheck=0,autoTimer=0,activationTimer=0,feedbackTimer=0;
- let controlled=!!navigator.serviceWorker.controller,stale=false,lastActivity=performance.now(),requestedActivity=0;
+ let controlled=!!navigator.serviceWorker.controller,stale=false,editVersion=0;
  const available=()=>controlled&&(stale||!!registration?.waiting);
  function feedback(text,duration=0){
   clearTimeout(feedbackTimer);bar.textContent=text;bar.hidden=!text;
@@ -12,11 +12,11 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
  const queue=(delay=0)=>{
   clearTimeout(autoTimer);autoTimer=0;
   if(!available()||document.hidden||!navigator.onLine||requested||reloading)return;
-  autoTimer=setTimeout(()=>{autoTimer=0;void apply();},Math.max(delay,idleMs-(performance.now()-lastActivity),0));
+  autoTimer=setTimeout(()=>{autoTimer=0;void apply();},Math.max(delay,0));
  };
- async function safe(activity){
-  const reason=await canReload();
-  return !reason&&navigator.onLine&&!document.hidden&&activity===lastActivity&&performance.now()-lastActivity>=idleMs;
+ async function safe(){
+  const version=editVersion,reason=await canReload();
+  return !reason&&navigator.onLine&&!document.hidden&&version===editVersion;
  }
  function reload(){
   reloading=true;clearTimeout(autoTimer);clearTimeout(activationTimer);feedback('Updating to latest software version...');
@@ -25,11 +25,11 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
  }
  async function apply(){
   if(applying||requested||reloading||!available())return;
-  applying=true;const activity=lastActivity;
+  applying=true;
   try{
-   if(!await safe(activity))return;
+   if(!await safe())return;
    if(registration?.waiting){
-    requested=true;requestedActivity=activity;feedback('Updating to latest software version...');
+    requested=true;feedback('Updating to latest software version...');
     // A stalled activation must not leave a permanent update banner or a hot retry loop.
     activationTimer=setTimeout(()=>{if(requested){requested=false;feedback('');queue(30000);}},activationTimeoutMs);
     registration.waiting.postMessage({type:'ACTIVATE_UPDATE'});
@@ -43,18 +43,19 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
   stale=true;
   if(requested){
    requested=false;clearTimeout(activationTimer);
-   try{if(await safe(requestedActivity)){reload();return;}}catch{/* Try again only after this tab is safe. */}
+   try{if(await safe()){reload();return;}}catch{/* Try again only after this tab is safe. */}
    feedback('');
   }
   queue();
  });
- const activity=()=>{lastActivity=performance.now();queue();void check();};
- for(const name of ['pointerdown','pointerup','keydown','input','change','focusin','focusout','scroll'])document.addEventListener(name,activity,{capture:true,passive:true});
+ const activity=()=>{queue();void check();};
+ for(const name of ['pointerup','click','focusout','close'])document.addEventListener(name,activity,{capture:true,passive:true});
+ for(const name of ['beforeinput','input','change','submit'])document.addEventListener(name,()=>{editVersion++;activity();},{capture:true,passive:true});
  const check=async()=>{
   if(!registration||document.hidden||!navigator.onLine||checking||Date.now()-lastCheck<60000)return;
   checking=true;lastCheck=Date.now();try{await registration.update();queue();}catch{/* Keep using the current app when checking is unavailable. */}finally{checking=false;}
  };
- const resume=()=>{if(document.hidden){clearTimeout(autoTimer);autoTimer=0;}else{lastActivity=performance.now();void check();queue();}};
+ const resume=()=>{if(document.hidden){clearTimeout(autoTimer);autoTimer=0;}else{void check();queue();}};
  try{
   const applied=Number(sessionStorage.getItem(confirmationKey));sessionStorage.removeItem(confirmationKey);
   if(applied>0&&Date.now()-applied>=0&&Date.now()-applied<30000)feedback('Software updated',2500);

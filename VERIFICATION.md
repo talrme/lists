@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Immediate Updates Without Idle Wait
+
+Removed the four-second idle policy and Undo/empty-focus/read-only-view blockers. Downloaded updates apply immediately; unfinished composer/details/admin forms, active task gestures/transitions and genuine pending writes remain protected. State-change events retry immediately, with a local250ms fallback for background-save completion. No added Firebase polling.
+
+Actual worker suite passed immediate application under1500ms after a pending save clears, despite an Undo notice and focused empty input; continued ordinary interaction does not postpone updates. Draft/details/offline guards, active-input activation race, per-tab pending work, confirmation expiry, stalled activation/backoff and offline updated-shell reopening passed. Production80 layouts and actual offline-shell checks passed. Synthetic data/local worker fixtures only; no production writes or database rules changes.
+
 ## Software-Version Wording and Documentation Cleanup
 
 Status now explicitly says Updating to latest software version..., followed by Software updated. Real-worker update suite and offline-shell checks passed. Added a check that clicks/types while activation status is visible, then delivers controllerchange: input remains usable and the newly typed draft prevents reload. Long status fits320/390/1280px in light/dark; screenshots inspected. No change to update scheduling, privacy, rules, or persistence.

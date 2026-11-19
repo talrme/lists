@@ -54,9 +54,9 @@ Appearance is first; the current list's settings are second and expanded. Choose
 
 ## Software Updates
 
-New software downloads silently in the background; the app remains usable. There is no Reload question or button. Once you have paused for about four seconds and drafts, dialogs, saves, and Undo are clear, **Updating to latest software version...** briefly appears and the page refreshes once. **Software updated** confirms success for 2.5 seconds.
+New software downloads silently in the background; the app remains usable. There is no Reload question or button. As soon as the update is downloaded and there is no unfinished edit or save, **Updating to latest software version...** briefly appears and the page refreshes once. **Software updated** confirms success for 2.5 seconds.
 
-The final refresh restarts the interface to run the new code; downloading new files alone cannot replace code that is already running. Update status does not lock the controls. Activity or unsaved work makes the updater wait quietly. Each tab checks its own safety. A stalled activation backs off rather than leaving a permanent banner. Older installed copies can show their previous update UI once while receiving this behavior.
+The final refresh restarts the interface to run the new code; downloading new files alone cannot replace code that is already running. Update status does not lock the controls. Unfinished edits and saves make the updater wait quietly, then it applies as soon as they clear. There is no idle countdown, and Undo notices, empty focused fields, or read-only dialogs do not add a wait. A refresh ends any remaining Undo opportunity. Each tab checks its own safety. A stalled activation backs off rather than leaving a permanent banner. Older installed copies can show their previous update UI once while receiving this behavior.
 
 Update checks are throttled to once per minute on startup, returning, reconnecting, or interaction. Deferred safety checks are local, not Firebase polling. Updates do not clear lists, local settings, or sign-in.
 
