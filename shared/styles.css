@@ -192,7 +192,7 @@ dialog.navigation-drawer[open]{display:flex;flex-direction:column;touch-action:p
 .visibility-option input{width:20px;height:20px;accent-color:var(--accent);flex-shrink:0}
 .drawer-task-filters{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 8px;padding:14px 3px;overflow-x:auto;touch-action:pan-y;border-top:1px solid var(--line)}
 .drawer-filter-label{flex-basis:100%;font-size:11px;color:var(--muted);padding-left:5px}
-.leaf-options{color:var(--accent);border-radius:50%}.leaf-options svg{width:30px;height:30px;fill:currentColor;stroke:none}
+.leaf-options{color:var(--accent);border-radius:50%}.leaf-options svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .leaf-options:hover{background:var(--soft)}
 .task-check{position:relative}.complete-preview{position:absolute;inset:0;display:grid;place-items:center;opacity:0;color:var(--accent);pointer-events:none}
 .task-check:active:not(:disabled):not(.checked)>svg{opacity:0}.task-check:active:not(:disabled) .complete-preview{opacity:1}

@@ -1,5 +1,9 @@
 # Lists: AI Handoff
 
+## Approved Double-Chevron Details Icon
+
+User approved publishing the rounded double-chevron replacement for the leaf. It uses Lucide chevrons-right with4px rounded currentColor strokes; existing details action/classes retained. App39/css28/shell19. Twelve phone/desktop/palette checks and draft-preservation check passed. Future references to the leaf describe the former icon; the details button is now double-chevrons.
+
 ## Instant Completion And Search Status (Newest)
 
 Completion no longer waits for server confirmation to animate. task-check includes a hidden Lucide check preview, shown only while :active on an enabled incomplete button. Release/normal click calls completeTask: save original task/rev and workspace epoch, add per-ID pendingCompletions UI overlay plus busy guard, render completed/reopened state immediately, burst/travel on completion immediately, then await store.write. Source task array remains authoritative; displayTasks overlays only completed. Per-ID operations allow rapid independent completions. Render uses completed-ID set to animate exit without repeated full-list scans; neighboring FLIP cancels prior lists-reorder animations after snapshot before retargeting, so rapid completions glide from current visual positions.
