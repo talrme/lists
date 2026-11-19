@@ -7,7 +7,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=7';
 import {createNotices} from './notices.js?v=2';
 import {guideMarkup} from './guide.js?v=4';
-import {setupUpdates} from './updates.js?v=4';
+import {setupUpdates} from './updates.js?v=5';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
 import {dayWheel,bindDayWheel} from './day-wheel.js?v=1';

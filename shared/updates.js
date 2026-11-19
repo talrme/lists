@@ -19,7 +19,7 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
   return !reason&&navigator.onLine&&!document.hidden&&activity===lastActivity&&performance.now()-lastActivity>=idleMs;
  }
  function reload(){
-  reloading=true;clearTimeout(autoTimer);clearTimeout(activationTimer);feedback('Updating Lists...');
+  reloading=true;clearTimeout(autoTimer);clearTimeout(activationTimer);feedback('Updating to latest software version...');
   try{sessionStorage.setItem(confirmationKey,String(Date.now()));}catch{/* Updates still work without a confirmation message. */}
   location.reload();
  }
@@ -29,7 +29,7 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
   try{
    if(!await safe(activity))return;
    if(registration?.waiting){
-    requested=true;requestedActivity=activity;feedback('Updating Lists...');
+    requested=true;requestedActivity=activity;feedback('Updating to latest software version...');
     // A stalled activation must not leave a permanent update banner or a hot retry loop.
     activationTimer=setTimeout(()=>{if(requested){requested=false;feedback('');queue(30000);}},activationTimeoutMs);
     registration.waiting.postMessage({type:'ACTIVATE_UPDATE'});
@@ -57,7 +57,7 @@ export async function setupUpdates({canReload,idleMs=4000,retryMs=2000,activatio
  const resume=()=>{if(document.hidden){clearTimeout(autoTimer);autoTimer=0;}else{lastActivity=performance.now();void check();queue();}};
  try{
   const applied=Number(sessionStorage.getItem(confirmationKey));sessionStorage.removeItem(confirmationKey);
-  if(applied>0&&Date.now()-applied>=0&&Date.now()-applied<30000)feedback('Lists updated',2500);
+  if(applied>0&&Date.now()-applied>=0&&Date.now()-applied<30000)feedback('Software updated',2500);
  }catch{/* Confirmation is optional when browser storage is unavailable. */}
  try{
   registration=await navigator.serviceWorker.register(new URL('../sw.js',import.meta.url),{scope:new URL('../',import.meta.url).pathname,updateViaCache:'none'});

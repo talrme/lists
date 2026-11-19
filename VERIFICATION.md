@@ -1,5 +1,11 @@
 # Verification — November 17, 2026
 
+## Software-Version Wording and Documentation Cleanup
+
+Status now explicitly says Updating to latest software version..., followed by Software updated. Real-worker update suite and offline-shell checks passed. Added a check that clicks/types while activation status is visible, then delivers controllerchange: input remains usable and the newly typed draft prevents reload. Long status fits320/390/1280px in light/dark; screenshots inspected. No change to update scheduling, privacy, rules, or persistence.
+
+README, AI_README and AGENTS consolidated into current user guidance, technical contract and short maintenance rules; contradictory historical staging/leaf/scheduling/manual-reload instructions removed. Git and this verification history retain prior context. Real phone OS behavior still requires device checks.
+
 ## Quiet Automatic Updates (Newest)
 
 Rewritten update suite passed actual worker activation with one automatic flow/no buttons, silence while drafts/dialogs/offline/Undo block, four-second app idle guard, activity-delayed activation, first-install no-reload behavior, per-tab draft protection and later catch-up, expiring post-reload confirmation, stalled activation timeout/backoff and late controller changes preserving drafts. Updated shell reopens offline. Tests use synthetic app data/local HTTP worker fixtures only, zero production writes. No weakened save/draft safeguards or added Firebase polling. Older installed code needs to receive this update before the old Reload prompt disappears.

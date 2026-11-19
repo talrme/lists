@@ -7,16 +7,16 @@ const ROOT=path.resolve(__dirname,'..'),BASE='http://127.0.0.1:5195/lists/';
   const page=await browser.newPage({viewport:{width:390,height:844}});await ui.mockBackend(page,BASE);
   await page.addInitScript(()=>{
    Object.defineProperty(navigator.serviceWorker,'controller',{value:{},configurable:true});
-   const registration=new EventTarget();registration.waiting={postMessage(){window.__activated=true;}};registration.update=async()=>{};
+   const registration=new EventTarget();window.__updateRegistration=registration;registration.waiting={postMessage(){window.__activated=true;}};registration.update=async()=>{};
    navigator.serviceWorker.register=async()=>registration;
   });
   await page.goto(BASE);await page.locator('#workspace').waitFor();await page.locator('#new-title').fill('Unsaved test draft');const bar=page.locator('.app-update');await bar.waitFor({state:'attached'});
   await page.waitForTimeout(4300);assert(!await page.evaluate(()=>window.__activated));assert(await bar.isHidden());assert.equal(await bar.locator('button').count(),0);assert.equal(await page.locator('#new-title').inputValue(),'Unsaved test draft');
   await page.locator('#new-title').fill('');await ui.menuAction(page,'settings');await page.waitForTimeout(4300);assert(await page.locator('#dialog').isVisible());assert(await bar.isHidden());assert(!await page.evaluate(()=>window.__activated));await page.keyboard.press('Escape');
   await page.evaluate(()=>Object.defineProperty(navigator,'onLine',{configurable:true,value:false}));await page.waitForTimeout(4300);assert(await bar.isHidden());assert(!await page.evaluate(()=>window.__activated));
-  await page.evaluate(()=>{Object.defineProperty(navigator,'onLine',{configurable:true,value:true});dispatchEvent(new Event('online'));});await page.locator('.task-row [data-complete]').first().click();await page.locator('.toast-undo').waitFor();await page.waitForTimeout(4300);assert(!await page.evaluate(()=>window.__activated),'Keep the Undo opportunity before auto-updating');assert(await bar.isHidden());await page.waitForFunction(()=>window.__activated,{},{timeout:10000});assert.equal(await bar.innerText(),'Updating Lists...');assert.equal(await bar.locator('button').count(),0);
+  await page.evaluate(()=>{Object.defineProperty(navigator,'onLine',{configurable:true,value:true});dispatchEvent(new Event('online'));});await page.locator('.task-row [data-complete]').first().click();await page.locator('.toast-undo').waitFor();await page.waitForTimeout(4300);assert(!await page.evaluate(()=>window.__activated),'Keep the Undo opportunity before auto-updating');assert(await bar.isHidden());await page.waitForFunction(()=>window.__activated,{},{timeout:10000});assert.equal(await bar.innerText(),'Updating to latest software version...');assert.equal(await bar.locator('button').count(),0);
   for(const width of [320,390,1280])for(const palette of ['original','night']){await page.setViewportSize({width,height:844});await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);await page.waitForTimeout(180);assert(await bar.evaluate(n=>{const r=n.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&n.scrollWidth<=n.clientWidth+1;}));if(width===390)await page.screenshot({path:'/private/tmp/lists-update-'+palette+'.png'});}
-  await page.close();
+  await page.locator('#new-title').click();await page.locator('#new-title').fill('Typed while software activates');assert.equal(await page.locator('#new-title').inputValue(),'Typed while software activates');await page.evaluate(()=>{window.__updateRegistration.waiting=null;navigator.serviceWorker.dispatchEvent(new Event('controllerchange'));});await bar.waitFor({state:'hidden'});assert.equal(await page.locator('#new-title').inputValue(),'Typed while software activates','Activation must not freeze input or reload over a newly typed draft');await page.close();
 
   // Real workers update automatically, while each tab protects its own drafts.
   // Only the precache list is reduced: no auth, API requests or production data.
@@ -36,14 +36,14 @@ const ROOT=path.resolve(__dirname,'..'),BASE='http://127.0.0.1:5195/lists/';
   const second=await context.newPage();await second.goto(url);await second.waitForFunction(()=>!!navigator.serviceWorker.controller);assert.equal(await second.title(),'Version 1');
   await second.evaluate(()=>window.reason='Unsaved draft');await first.evaluate(()=>window.reason='Wait for pending changes.');
   version=2;await first.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});await first.bringToFront();await first.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);assert(await first.locator('.app-update').isHidden());await first.waitForTimeout(450);assert.equal(await first.title(),'Version 1');
-  await first.evaluate(()=>window.reason='');await first.waitForFunction(()=>document.title==='Version 2');await first.locator('.app-update').filter({hasText:'Lists updated'}).waitFor();assert.equal(await second.title(),'Version 1');
+  await first.evaluate(()=>window.reason='');await first.waitForFunction(()=>document.title==='Version 2');await first.locator('.app-update').filter({hasText:'Software updated'}).waitFor();assert.equal(await second.title(),'Version 1');
   await second.bringToFront();await second.waitForTimeout(350);assert.equal(await second.title(),'Version 1','Other tab keeps its unsaved draft even after activation');assert(await second.locator('.app-update').isHidden());
   await second.evaluate(()=>window.reason='');await second.waitForFunction(()=>document.title==='Version 2');
   version=3;await first.bringToFront();await first.evaluate(()=>{const now=Date.now.bind(Date);Date.now=()=>now()+61000;document.dispatchEvent(new Event('pointerdown'));});await first.waitForFunction(()=>document.title==='Version 3');
   // No update question or competing manual flow; activity postpones the single automatic path.
   await first.evaluate(()=>window.reason='Block while checking active use');version=4;await first.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});await first.waitForFunction(async()=>!!(await navigator.serviceWorker.getRegistration()).waiting);assert(await first.locator('.app-update').isHidden());assert.equal(await first.locator('.app-update button').count(),0);
   await first.evaluate(()=>window.reason='');for(let i=0;i<4;i++){await first.evaluate(()=>document.dispatchEvent(new Event('pointerdown')));await first.waitForTimeout(100);assert.equal(await first.title(),'Version 3');}
-  await first.waitForFunction(()=>document.title==='Version 4');await first.locator('.app-update').filter({hasText:'Lists updated'}).waitFor();await first.waitForTimeout(2700);assert(await first.locator('.app-update').isHidden());
+  await first.waitForFunction(()=>document.title==='Version 4');await first.locator('.app-update').filter({hasText:'Software updated'}).waitFor();await first.waitForTimeout(2700);assert(await first.locator('.app-update').isHidden());
 
   const timedContext=await browser.newContext(),timed=await timedContext.newPage();
   await timed.addInitScript(()=>{
