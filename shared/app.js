@@ -1,7 +1,8 @@
 import {config} from '../config.js?v=lists-95c4f';
 import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,creationOrder,assignedTo,unassigned,candidateTasks,dateTiming} from './core.js?v=organizer1';
+import {openAsanaReview} from './asana-review.js?v=1';
 import {isAdministrator} from './households.js?v=sharing2';
-import {adminSection,bindAdmin} from './admin.js?v=production1';
+import {adminSection,bindAdmin} from './admin.js?v=review1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=organizer1';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
 import {taskGestures} from './gestures.js?v=8';
@@ -479,7 +480,7 @@ function settings(){
   document.querySelectorAll('button[data-palette]').forEach(button=>button.onclick=()=>{void saveAccountPreferences({palette:button.dataset.palette});document.querySelectorAll('button[data-palette]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
   $('[data-preference=quickWeek]')?.addEventListener('change',event=>{prefs.quickWeek=event.target.checked;persist();render();});
   document.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=async()=>{if(!await leaveInline())return;saveListPrefs({editor:button.dataset.editorMode});$('.editor-mode .choice-track').style.setProperty('--choice',button.dataset.editorMode==='modal'?1:0);document.querySelectorAll('[data-editor-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
-  $('#sign-out').onclick=async()=>{try{await store.logout();close();}catch(error){const region=$('#sign-out-error');if(region)region.textContent=errorText(error);}};$('#household-select').onchange=event=>switchHousehold(event.target.value);bindAdmin({account:signedInAccount,store,onOpen:switchHousehold,onPreview:profile=>store.viewAs(profile),liveUrl:config.liveUrl,confirmAction});
+  $('#sign-out').onclick=async()=>{try{await store.logout();close();}catch(error){const region=$('#sign-out-error');if(region)region.textContent=errorText(error);}};$('#household-select').onchange=event=>switchHousehold(event.target.value);bindAdmin({account:signedInAccount,store,onOpen:switchHousehold,onPreview:profile=>store.viewAs(profile),liveUrl:config.liveUrl,confirmAction,onAsanaReview:()=>void openAsanaReview({store,open,confirmAction})});
 }
 function addSettingHelp(){
  const help={
@@ -549,7 +550,7 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=organizer1');
+    const {connectFirebase}=await import('./firebase.js?v=review1');
     store=await connectFirebase(config,{
       tasks:onTasks,status,sync:syncStatus,organizer(value){tags=value.tags;applyAccountSettings(value.settings);},
       refreshDaily(){pickedDay='';if(ready)void dailyPick();},

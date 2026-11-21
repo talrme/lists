@@ -19,6 +19,7 @@ Current implementation and maintenance contract, reviewed 2026-11-20. This is no
 | `shared/app.js` | Composer, keyed rendering, dialogs, view/audience state, daily pick orchestration, completion overlays, settings and auth gate. |
 | `shared/core.js` | Pure date keys, business days, schedule selection, list membership, daily pool, task validation and ordering. |
 | `shared/organizer.js`, `shared/tag-field.js` | Account settings/tag directory, canonical merges, durable metadata queue and tag picker. |
+| `shared/asana-review-core.js`, `shared/asana-review.js` | Local-only admin CSV review, recommendations, decisions/Undo/comments and private backup/restore. |
 | `shared/task-fields.js` | Shared create/edit fields, assignment, exact/follow-up dates, description handling and escaped markup. |
 | `shared/firebase.js` | Firebase SDK/auth, scoped listeners, revisioned transactions, households, daily receipts, offline replay and sync state. |
 | `shared/device-store.js` | Account/household/environment IndexedDB records, atomic queue updates and task projections. |
@@ -87,6 +88,16 @@ Up to 20 validated opaque tag IDs per task. The authorized tag directory has sha
 Canonical IDs follow mergedInto with cycle/missing guards; all labels, counts and filters resolve aliases. Merge archives source, requires a nonarchived/unmerged destination of identical scope, cannot unmerge, never rewrites task history. Rename affects active/completed tasks via ID lookup. Archived tags stay in history and tag search, not new suggestions. Manage Tags lists only readable-task counts; no deletions or automatic sweeping of unused labels. Multi-tag search is AND; typed search includes tag names, completed remains opt-in, no extra reads per keystroke. Bulk editing/formal projects are deferred.
 
 Desktop board is default from 1100px, device-local opt-out. Columns Today (wider), Week, Later, optional Someday; Waiting only is an overlapping board filter. Existing single-list views remain for phones, opt-out, extended Today and Waiting/Completed views. Today is one day on board; requesting extended Today temporarily returns to the day-group layout. Deduplicate daily Later projections into Today and use the visual lane for swipe/quick actions. Sortable passes lane + sourceLane; same-lane reorder must not reschedule a projected pick. Cross-column Week uses five future weekdays excluding today; Later clears due date (waiting uses a later follow-up); Someday clears scheduling after confirmation. Shared ordering remains shared, not per-user.
+
+## Local Asana Review
+
+Admin-only Settings route; actual adapter checks verified administrator + not in preview for both load/save. No review/task data sent to Firestore. Device record key is `[uid,household,environment,'asana-review']`, property `asanaReview`, no task operations. Account/space epoch guards reject stale-context access; sign-out's existing clearUser purges it. Never embed a user's CSV, notes or backup JSON in source/fixtures/Git. The UI asks the user to select the local file and warns to download a backup before sign-out/storage clearing. No new rules are needed for this feature.
+
+Pinned official PapaParse handles quoted/multiline/BOM CSV as strings (IDs must never become numbers). Reject malformed/duplicate headers, repeated/missing IDs, >10MB, >20k source rows or >3k open rows. Exclude completed rows with a count; preserve all open source detail. Main tasks have no Parent task. Uniquely named active parents receive child context; ambiguous/missing parent names remain visible separately, never guessed. Inputs/notes/comments are escaped as text, never interpreted as instructions, HTML or formulas.
+
+Normalized-title and conservative token-overlap candidates are suggestions, not auto-merges. Money/paperwork, ideas, older-created and past-source-date filters do not assert urgency, relevance or completion. No automatic date mapping or assignment. Review decisions are keep + proposed destination, skip, defer, or merge into another kept main task. 20 items/page, explicit selections/bulk actions, confirmed Combine, 50 decision Undo snapshots, optional per-row comments. Originals stay intact. Re-deciding a merge primary releases its sources for re-review. Durable local saves serialize actions; failures retain the previous saved review and show errors. Restored JSON is validated and its untrusted Undo history discarded.
+
+Save review file downloads full private JSON including source/decisions/comments but no Undo history. Restore and replacing/removing a review confirm first. Downloading/marking Keep is NOT importing. Actual Lists task writes, source-to-target provenance/idempotency, final mapping and approved import are deferred; do not imply they exist. Review UI is a visible form so software updates protect ongoing review interactions. Test only synthetic fixture/emulator writes; reading the actual user CSV locally to validate counts is allowed, not a production task mutation.
 
 ## Completion, Motion, and Undo
 
@@ -215,6 +226,7 @@ Preview: `http://127.0.0.1:5195/lists/`; `PORT` overrides the port. Browser suit
 | Change | Relevant browser suites |
 | --- | --- |
 | Someday/tags/preferences/board | `organizer.test.js`, `organizer.cjs`, `rules.cjs`; `admin.cjs` includes two independent same-user browsers and offline preference replay. |
+| Asana review | `asana-review.test.js`, `asana-review.cjs`; `admin.cjs` verifies actual adapter persistence and nonadmin/preview denial. No production CSV in fixtures. |
 | General UI/styles | `production.cjs`, `phone-ux.cjs`, `task-header.cjs`, `guide.cjs` |
 | Scheduling/daily/search | `week-punt.cjs`, `menu-later.cjs`, `creation-search.cjs`, `instant-completion.cjs` |
 | Completion/animation/notices | `instant-completion.cjs`, `motion.cjs`, `feedback.cjs` |

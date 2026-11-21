@@ -3,6 +3,7 @@ import {belongsTo,householdDraft,isAdministrator,memberLabel,householdPeople} fr
 import {photoUrl} from './task-fields.js?v=organizer1';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResults} from './device-store.js?v=2';
+import {validateReview} from './asana-review-core.js?v=1';
 import {organizerStore} from './organizer.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
@@ -194,6 +195,19 @@ export async function connectFirebase(config,events) {
     if(navigator.locks)await navigator.locks.request('lists-outbox:'+config.firebase.projectId+key,{ifAvailable:true},lock=>lock?flush():undefined);else await flush();
   }
   return {
+    async loadAsanaReview(){
+      requireAdmin();requireWritable();if(!device)return null;
+      const uid=user.uid,version=spaceVersion,key=JSON.stringify([uid,activeId,activeEnvironment,'asana-review']),saved=await device.read(key);
+      if(uid!==user?.uid||version!==spaceVersion||preview)throw new Error('The active account or household changed.');
+      return saved?.asanaReview||null;
+    },
+    async saveAsanaReview(value){
+      requireAdmin();requireWritable();if(!device)throw new Error('Device storage is unavailable. Review progress cannot be saved safely.');
+      if(value!==null)validateReview(value);
+      const uid=user.uid,version=spaceVersion,key=JSON.stringify([uid,activeId,activeEnvironment,'asana-review']);
+      await device.change(key,old=>({...old,asanaReview:value}));
+      if(uid!==user?.uid||version!==spaceVersion||preview)throw new Error('The active account or household changed. Review saved only in its original local workspace.');
+    },
     async login(){await authSdk.signInWithPopup(auth,new authSdk.GoogleAuthProvider());},
     async pendingChanges(){if(!device||!user||preview)return [];return (await device.recordsForUser(user.uid)).flatMap(saved=>(saved.operations||[]).map(operation=>({id:operation.id,household:operation.kind==='preferences'?'Your account':saved.household?.title||JSON.parse(saved.key)[1],title:operation.kind==='preferences'?'Account settings':operation.kind==='tags'?(operation.items[0]?.patch?.name||'Tag change'):operation.items[0]?.patch?.title||saved.tasks?.find(task=>task.id===operation.items[0]?.id)?.title||'Task change',count:operation.items.length})));},
     async discardPending(id){

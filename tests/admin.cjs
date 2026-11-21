@@ -17,7 +17,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await page.route('https://firestore.googleapis.com/**',route=>route.abort());
   await page.route('https://lh3.googleusercontent.com/lists-test-*',route=>route.fulfill({contentType:'image/png',body:fs.readFileSync(path.resolve(__dirname,'../assets/icon-192.png'))}));
   // Expose the adapter only in this intercepted test module, never in deployed code.
-  await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.resolve(__dirname,'../shared/firebase.js'),'utf8').replace('  return {\n    async login','  return window.__testStore={\n    async login')}));
+  await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.resolve(__dirname,'../shared/firebase.js'),'utf8').replace('  return {\n    async loadAsanaReview','  return window.__testStore={\n    async loadAsanaReview')}));
   await page.goto(new URL(`?mode=live&household=${household}`,BASE).href);return {page,context};
  }
  async function settings(page){if(await page.locator('#edit-form').count())await page.locator('#edit-form').waitFor({state:'detached'});await page.locator('#open-menu').click();await page.locator('#navigation-drawer [data-menu-action=settings]').click();await page.locator('#dialog-title').filter({hasText:'Settings'}).waitFor();}
@@ -39,6 +39,11 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   for(let i=0;i<100;i++){if(emulator.exitCode!==null)throw Error(logs);try{await fetch(`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/ready`);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   const {page:tal}=await openPerson('Tal');await tal.locator('#gate [data-action=settings]').waitFor();await admin(tal);
   await tal.locator('#create-home').click();assert.equal(await tal.locator('#household-form [name=id]').inputValue(),'home');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await tal.locator('#workspace').waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
+  await tal.evaluate(async()=>{
+   const row={id:'123',title:'Synthetic CSV review',section:'Later',parent:'',created:'2026-11-20',modified:'',due:'',notes:'Private review fixture',tags:'',assignee:'',assigneeEmail:'',projects:''};
+   await window.__testStore.saveAsanaReview({version:1,rows:[row],sourceCount:1,completed:0,decisions:{},history:[]});
+   if((await window.__testStore.loadAsanaReview()).rows[0].id!=='123')throw Error('Local review did not persist');
+  });
   const {page:talSecond,context:talSecondContext}=await openPerson('Tal');await talSecond.locator('#workspace').waitFor();
   await tal.evaluate(()=>window.__testStore.savePreferences({style:7,palette:'garden',showSomeday:true}));
   await talSecond.waitForFunction(()=>document.documentElement.dataset.palette==='garden'&&document.body.dataset.design==='7');
@@ -146,12 +151,13 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.locator('#seed-playground').click();await tal.getByText('Added 9 example tasks to Playground only.',{exact:true}).waitFor();
   const playgroundBefore=await readPlayground(),oldRun=playgroundBefore.fields.playgroundRun.stringValue;
   await tal.locator('#open-playground').click();await tal.locator('#playground-banner').waitFor();await tal.getByText('[Test] Only I can see this private task',{exact:true}).waitFor();assert.equal(await tal.getByText('Tal private entry',{exact:true}).count(),0);
+  assert(await sophie.evaluate(async()=>{try{await window.__testStore.loadAsanaReview();return false;}catch(error){return error.message.includes('Only Tal');}}),'Nonadmin cannot read local admin review via adapter');
   const {page:sophiePlay}=await openPerson('Sophie','playground');await sophiePlay.locator('#workspace').waitFor();await sophiePlay.locator('#playground-banner').waitFor();assert.equal(await sophiePlay.getByText('[Test] Only I can see this private task',{exact:true}).count(),0);
   await add(sophiePlay,'[Test] Sophie private');assert.equal(await tal.getByText('[Test] Sophie private',{exact:true}).count(),0);
   await ui.scope(sophiePlay,'mine');
   const together=page=>page.locator('.task-row').filter({hasText:'[Test] Complete this together'});
   await together(sophiePlay).locator('[data-complete]').click();await together(tal).waitFor({state:'detached'});
-  const deniedTesting=await sophiePlay.evaluate(async()=>{const checks=[];for(const action of [()=>window.__testStore.configurePlayground([]),()=>window.__testStore.seedPlayground(),()=>window.__testStore.resetPlayground(1)]){try{await action();checks.push(false);}catch(error){checks.push(error.message.includes('Only Tal'));}}return checks;});assert.deepEqual(deniedTesting,[true,true,true]);
+  const deniedTesting=await sophiePlay.evaluate(async()=>{const checks=[];for(const action of [()=>window.__testStore.configurePlayground([]),()=>window.__testStore.seedPlayground(),()=>window.__testStore.resetPlayground(1),()=>window.__testStore.loadAsanaReview(),()=>window.__testStore.saveAsanaReview(null)]){try{await action();checks.push(false);}catch(error){checks.push(error.message.includes('Only Tal'));}}return checks;});assert.deepEqual(deniedTesting,[true,true,true,true,true]);
   await tal.getByText('[Test] Only I can see this private task',{exact:true}).click();await tal.locator('#edit-form [name=title]').fill('[Test] Edited example');await tal.locator('#edit-form [type=submit],#composer.modal-composer [type=submit]').last().click();
   await testing(tal);await tal.locator('#seed-playground').click();await tal.getByText('Examples already exist. Edited examples were left alone.',{exact:true}).waitFor();
   assert.equal(new URL(await tal.locator('#playground-link').inputValue()).searchParams.get('household'),'playground');
@@ -191,7 +197,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   assert.equal(await tal.locator('#preview-name').innerText(),'Viewing as Alice');
   assert(await tal.locator('#new-title').isDisabled());assert(await tal.locator('[data-complete]').first().isDisabled());assert(!await tal.locator('[data-edit]').first().isDisabled());
   await tal.locator('[data-edit]').first().click();await tal.locator('#dialog-title').filter({hasText:'Task details'}).waitFor();assert.equal(await tal.locator('#dialog-body input,#dialog-body textarea,#dialog-body button[type=submit]').count(),0);await tal.locator('#dialog [data-close]').first().click();
-  const blocked=await tal.evaluate(async()=>{const failures=[];for(const action of [()=>window.__testStore.write('ignored',{title:'No mutation'},1),()=>window.__testStore.remove('ignored',1),()=>window.__testStore.saveHousehold({}),()=>window.__testStore.writeMany([{id:'ignored',rev:1,patch:{sortOrder:1}}]),()=>window.__testStore.configurePlayground([]),()=>window.__testStore.seedPlayground(),()=>window.__testStore.resetPlayground(1)]){try{await action();failures.push(false);}catch(error){failures.push(error.message.includes('read-only'));}}return failures;});assert.deepEqual(blocked,[true,true,true,true,true,true,true]);
+  const blocked=await tal.evaluate(async()=>{const failures=[];for(const action of [()=>window.__testStore.write('ignored',{title:'No mutation'},1),()=>window.__testStore.remove('ignored',1),()=>window.__testStore.saveHousehold({}),()=>window.__testStore.writeMany([{id:'ignored',rev:1,patch:{sortOrder:1}}]),()=>window.__testStore.configurePlayground([]),()=>window.__testStore.seedPlayground(),()=>window.__testStore.resetPlayground(1),()=>window.__testStore.loadAsanaReview(),()=>window.__testStore.saveAsanaReview(null)]){try{await action();failures.push(false);}catch(error){failures.push(error.message.includes('read-only'));}}return failures;});assert.deepEqual(blocked,[true,true,true,true,true,true,true,true,true]);
   assert.equal((await fetch(receipt,{headers:{Authorization:'Bearer owner'}})).status,404,'Preview must not create a missing daily receipt');
   await ui.scope(tal,'shared');assert.equal(await tal.getByText('Alice private entry',{exact:true}).count(),0);await ui.scope(tal,'mine');
   for(const width of [320,390,1280]){await tal.setViewportSize({width,height:844});assert(await tal.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await tal.screenshot({path:`/private/tmp/lists-view-as-${width}.png`});}

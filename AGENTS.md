@@ -10,6 +10,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 - Google sign-in plus invitations/rules enforce membership. Keep private-by-default tasks and authorized admin read-only preview; never add an admin write bypass, fake login mode, hardcoded real UIDs, secrets, or preview disk cache.
 - Offline caches/operations remain account/household/environment scoped. Preserve revision checks, deleted-task non-resurrection, pending sign-out guards and visible saved-locally vs synced states.
 - Only the validated isolated Playground may receive explicit admin test seeds/resets.
+- Asana review is admin-only and browser-local, not an importer. Never commit CSVs, source notes, backup JSON or real-data test fixtures. Retain all originals, confirm review replacement/merge, and require separate explicit approval before adding tasks.
 - Git push does not deploy Firestore rules. Never claim publication or physical-device verification without evidence. Give manual setup instructions one step at a time.
 
 ## Preserve Current Behavior

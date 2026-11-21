@@ -1,5 +1,7 @@
 # Vendored browser libraries
 
+- PapaParse 5.7.0: `papaparse-5.7.0.min.js`, MIT; official tagged source https://github.com/mholt/PapaParse/tree/5.7.0 and PapaParse-LICENSE.txt. Parses local review CSVs; never downloads or uploads user data.
+
 - Marked 18.2.1: `marked-18.2.1.js`, MIT, upstream npm `marked`; license in MARKED-LICENSE.txt. https://marked.js.org/
 - DOMPurify 3.4.18: `purify-3.4.18.min.js`, Apache-2.0 OR MPL-2.0; upstream npm `dompurify`; license in DOMPURIFY-LICENSE.txt. https://github.com/cure53/DOMPurify
 - Lucide: https://lucide.dev/ — icon library, ISC; Lucide-LICENSE.txt.

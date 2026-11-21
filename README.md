@@ -81,6 +81,14 @@ Offline changes upload when Lists is open and connected. Different-field edits m
 
 First login, an unvisited household, and a new daily pick require a connection. Closing the app does not guarantee background uploads; browser storage eviction or clearing can remove unsent work.
 
+## Asana Task Review
+
+Tal can open **Settings -> Admin -> Asana task review -> Review Asana export**, then choose an Asana CSV. This is a review-only stage: it never creates, changes or deletes Lists/Asana tasks. Completed source rows are excluded; open main tasks retain original notes, dates, IDs, assignments, tags and available subtask context. Duplicate detection is a suggestion based on normalized titles/token overlap, not permission to merge automatically. Old tasks and financial/paperwork keywords are review filters, not urgency judgments.
+
+Review 20 main tasks per page. Keep chooses Today/Week/Later/Someday as a proposed destination; Skip excludes an item from the proposed import; the clock defers a decision. Select tasks for bulk Keep/Skip or confirmed Combine. Undo restores the previous decision set. Comments let you explain what should change. A merged source's original details remain preserved in the review file. Parent names without unique matches remain separate instead of being attached by guesswork.
+
+Progress is private **to this browser/device, signed-in administrator, household and environment**, not synced through Firestore. **Save review file** downloads a JSON backup you can restore on another device or attach in the Codex chat for feedback/final import planning. It contains personal task data; treat it like the original CSV. Save a backup before signing out or clearing browser storage; sign-out clears the local review. Replacing/removing a review asks first. The real CSV, review files and notes must never be committed to GitHub. No additional Firebase setup is needed for this local review feature. Actual task importing remains a separate, explicitly approved step.
+
 ## Firebase and Development
 
 Firebase project: `lists-95c4f`. Public web configuration is in `config.js`. **Keep `config.environment = 'staging'`: this legacy database namespace holds real production tasks, not a staging website.** Do not rename, migrate, seed, or clear it during UI work.

@@ -1,5 +1,9 @@
 # Verification — November 20, 2026
 
+## Private Asana Review
+
+45 pure tests passed, including the pinned PapaParse parser's multiline/quoted/BOM handling, string IDs, malformed/duplicate rejection, explicit decisions, non-destructive combining/Undo and review-file validation. Synthetic browser checks passed 16 phone/desktop palette combinations, admin route, duplicate comparison, comments, save/reopen, backup/restore, source-text escaping, nonadmin hiding and zero Lists task mutations. The actual adapter was checked in the local demo-project emulator for admin-only durable review storage and nonadmin/read-only-preview denial; existing household/offline/sync regressions passed. Standard production layouts (80), updater and public offline shell/parser caching also passed. Synthetic phone/night and desktop screenshots were inspected. The user CSV was read locally to verify parser compatibility and aggregate counts only; neither it nor personal row data was added to repository fixtures or uploaded to Firestore. Actual importing remains deliberately unimplemented pending approval of review decisions.
+
 ## Someday, Tags, Account Settings, and Desktop Board
 
 40 pure tests passed, including Someday exclusion from dates/daily receipts, canonical tag aliases and coherent offline scheduling. The actual-rules emulator suite passed 112 authorization/schema checks, including private tag isolation, protected account preferences, scope-safe merges/cycle rejection and Someday daily-pick denial. The real-SDK browser/emulator suite passed existing household/privacy/offline/preview tests plus two independent same-user browser contexts syncing style/color and replaying an offline preference update. No production records were written.
