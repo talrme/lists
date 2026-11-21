@@ -39,6 +39,24 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   for(let i=0;i<100;i++){if(emulator.exitCode!==null)throw Error(logs);try{await fetch(`http://127.0.0.1:${port}/v1/projects/${PROJECT}/databases/(default)/documents/ready`);break;}catch{await new Promise(r=>setTimeout(r,100));}}
   const {page:tal}=await openPerson('Tal');await tal.locator('#gate [data-action=settings]').waitFor();await admin(tal);
   await tal.locator('#create-home').click();assert.equal(await tal.locator('#household-form [name=id]').inputValue(),'home');await tal.locator('#household-form [type=submit]').click();await tal.locator('#household-form').waitFor({state:'hidden'});await tal.locator('#workspace').waitFor();await tal.getByRole('button',{name:'Done',exact:true}).click();
+  const {page:talSecond,context:talSecondContext}=await openPerson('Tal');await talSecond.locator('#workspace').waitFor();
+  await tal.evaluate(()=>window.__testStore.savePreferences({style:7,palette:'garden',showSomeday:true}));
+  await talSecond.waitForFunction(()=>document.documentElement.dataset.palette==='garden'&&document.body.dataset.design==='7');
+  await talSecond.locator('#composer [data-view=someday]').waitFor();
+  await talSecond.evaluate(()=>window.__testStore.savePreferences({palette:'cherry'}));
+  await tal.waitForFunction(()=>document.documentElement.dataset.palette==='cherry');
+  await tal.evaluate(()=>window.__testStore.saveTag('test-personal-tag',{name:'Personal idea',visibility:'private',ownerUid:'test-tal',archived:false,mergedInto:null}));
+  await talSecond.evaluate(()=>window.__testStore.saveTag('test-shared-tag',{name:'Family',visibility:'shared',ownerUid:'test-tal',archived:false,mergedInto:null}));
+  await tal.waitForFunction(async()=>{const pending=await window.__testStore.pendingChanges();return !pending.length;});
+  await talSecondContext.setOffline(true);
+  await talSecond.waitForFunction(()=>document.querySelector('#connection').textContent.includes('Offline'));
+  await talSecond.evaluate(()=>window.__testStore.savePreferences({palette:'night'}));
+  assert((await talSecond.evaluate(()=>window.__testStore.pendingChanges())).length>0,'Offline metadata is durable');
+  await talSecondContext.setOffline(false);
+  await tal.waitForFunction(()=>document.documentElement.dataset.palette==='night');
+  await talSecond.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await tal.evaluate(()=>window.__testStore.savePreferences({style:1,palette:'original',showSomeday:false}));
+  await talSecondContext.close();
   await tal.evaluate(async()=>{
    const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js'),db=sdk.getFirestore(app.getApp('lists'));
    if(await window.__testStore.pick('2099-11-14','test-tal')!==null)throw Error('Empty pool must not select');

@@ -1,4 +1,12 @@
-# Verification — November 17, 2026
+# Verification — November 20, 2026
+
+## Someday, Tags, Account Settings, and Desktop Board
+
+40 pure tests passed, including Someday exclusion from dates/daily receipts, canonical tag aliases and coherent offline scheduling. The actual-rules emulator suite passed 112 authorization/schema checks, including private tag isolation, protected account preferences, scope-safe merges/cycle rejection and Someday daily-pick denial. The real-SDK browser/emulator suite passed existing household/privacy/offline/preview tests plus two independent same-user browser contexts syncing style/color and replaying an offline preference update. No production records were written.
+
+The organizer browser suite passed optional-tab hide/restore/search, per-account settings isolation, personal/household tag creation, rename/merge/archive/restore, sharing-time personal-tag removal, daily projection deduplication/action choice, cross-column dragging and date-clear confirmation, and four palettes at six phone/desktop widths. Desktop/night and phone screenshots were inspected. Production checks passed 80 layouts; completion/search regressions passed 60; the condensed guide passed 60 layouts and its under-280-word limit. Existing delayed-drop, safe updater and production offline-shell checks passed. Metadata modules are included in the updated worker allowlist.
+
+Required manual step: publish the current Firestore rules. Git push/emulator success does not establish live publication. The optional tags visibility/owner index is declared; production may request creation via its generated console link. Actual Google OAuth, physical Android/iPhone keyboard/install behavior and real-account syncing remain manual checks. Existing task paths/history were not migrated or reset.
 
 ## Immediate Updates Without Idle Wait
 

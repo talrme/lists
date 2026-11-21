@@ -14,6 +14,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 
 ## Preserve Current Behavior
 
+- Optional account-synced Someday is separate, never dated/daily-picked, safe to hide; tags use stable IDs with private/shared scope and history-safe rename/merge/archive. Keep metadata queues separate from tasks. Style/palette and audiences now sync per account; touch/animation/layout controls remain local. Desktop board starts at 1100px, deduplicates the daily pick and preserves Waiting as a status.
 - Visible Today/Week/Later. Week is strictly future through five future weekdays; Today and Week do not overlap. Week creation can pick today, then appears only Today. Today punt excludes today. Later-right/Week-left swipe moves to Today.
 - One per-person/day Later pick, stable across devices; completing/punting/removing consumes it without replacement. Empty pools can fill later. Never redraw a nonempty receipt.
 - Nonempty timing taps add without navigation; empty taps browse. Double-chevron opens the preserved composer draft. Modal is default, with stable keyed form nodes and top/bottom actions.
@@ -22,7 +23,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 - Compact phone layout; Appearance first, list settings second/open; 1-10 day wheel/default5. No footer utilities or duplicate View modal. Quick Action icons default hidden on phones/shown larger.
 - Keep native scrolling, 150ms drag, natural day reflow, quiet reorder saves, no snap-back, no nested day clipping. Notices have no X; touch swipe dismisses without Undo.
 - Updates are automatic and immediate when downloaded, unless an actual unfinished edit/gesture or save needs protection. No idle countdown or Undo/empty-focus wait. Passive software-version status, one guarded refresh, brief confirmation. Never force a draft/pending-save reload or restore a competing Reload prompt.
-- Respect device-local settings/reduced motion, theme contrast and X/Escape/backdrop dismissal. Search focuses input; add/edit do not automatically open keyboard.
+- Respect account-synced appearance, device-local interactions/reduced motion, theme contrast and X/Escape/backdrop dismissal. Search focuses input; add/edit do not automatically open keyboard.
 
 ## Verification and Publishing
 

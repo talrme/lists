@@ -1,6 +1,6 @@
 # Lists: AI Handoff
 
-Current implementation and maintenance contract, reviewed 2026-11-18. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
+Current implementation and maintenance contract, reviewed 2026-11-20. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
 
 ## Project and Non-Negotiable Boundaries
 
@@ -18,6 +18,7 @@ Current implementation and maintenance contract, reviewed 2026-11-18. This is no
 | --- | --- |
 | `shared/app.js` | Composer, keyed rendering, dialogs, view/audience state, daily pick orchestration, completion overlays, settings and auth gate. |
 | `shared/core.js` | Pure date keys, business days, schedule selection, list membership, daily pool, task validation and ordering. |
+| `shared/organizer.js`, `shared/tag-field.js` | Account settings/tag directory, canonical merges, durable metadata queue and tag picker. |
 | `shared/task-fields.js` | Shared create/edit fields, assignment, exact/follow-up dates, description handling and escaped markup. |
 | `shared/firebase.js` | Firebase SDK/auth, scoped listeners, revisioned transactions, households, daily receipts, offline replay and sync state. |
 | `shared/device-store.js` | Account/household/environment IndexedDB records, atomic queue updates and task projections. |
@@ -38,10 +39,11 @@ Icons, QR generation and sanitized read-only Markdown use vendored libraries. Us
 
 Use Pacific date-only keys via `dayKey` and `addDays`, never UTC-midnight comparisons or milliseconds-per-day arithmetic. Weekdays exclude Saturday/Sunday, not public holidays.
 
-- Visible labels are **Today**, **Week**, **Later**. Internal `asap`, `today`, `upcoming` and existing element IDs remain for compatibility; do not rename stored modes just to change visible text.
+- Visible labels are **Today**, **Week**, **Later**, plus account-opt-in **Someday / Maybe**. Internal `asap`, `today`, `upcoming` and existing element IDs remain for compatibility; do not rename stored modes just to change visible text.
 - Today: due/overdue effective dates plus the current daily Later projection.
 - Week: effective date strictly after today through `weekHorizon(today)`, the fifth future weekday. Today dates never belong to Week.
 - Later: absent effective date or dates beyond that horizon. Explicit weekend dates inside the window still belong to Week.
+- Optional task `someday:true` is a separate scheduling state: todo only, dueDate/followUp null, waiting false. Exclude it from Today/Week/Later, taskDay and daily pools, even if an old receipt points at it. Completed view/search can still find it. Hiding the personal tab keeps all data and sharing intact; search finds hidden Someday. Explicit moves to Someday confirm clearing dates/waiting. Moving out restores active scheduling, not an old hidden date.
 - Effective date is `followUp` when Waiting, otherwise `dueDate`. Waiting is an overlapping filter, not a fourth scheduling bucket.
 - Creating with Week chooses once from `businessDays(today)`: five weekdays including today when eligible. If today is selected, the task appears only in Today.
 - Punting from Today uses `businessDays(addDays(today,1))`: five weekdays strictly after today. Every generated punt date fits Week. Do not revert to following-calendar-Monday-Friday logic.
@@ -78,6 +80,14 @@ Only today's receipt projects a task into Today. `isToday` applies that projecti
 
 Search uses already authorized task data across categories, ignoring audience DISPLAY filters but not private ownership. Default excludes completed every opening. Opt-in checkbox includes completed after active results, with a Completed heading, checked circles and muted strikethrough. Markers are informational, not completion buttons. Search is case/accent insensitive with substring matching and single-character typo tolerance for terms of at least four characters. All terms must match; query is bounded to 200 characters/12 terms, with at most 100 results. No database query per keystroke. Results open normal edit or read-only admin preview.
 
+## Tags and Desktop Board
+
+Up to 20 validated opaque tag IDs per task. The authorized tag directory has shared and own-private listeners, never a broad partner-private read. Tag labels are NFC/whitespace normalized and case-insensitive for creation suggestions. Private tasks default new tags to Personal, with an explicit Household creation option. Shared drafts strip personal references with a visible explanation. Scope/creator of a tag is immutable. Household members may rename shared tags; no admin write bypass. Personal names never enter partner suggestions.
+
+Canonical IDs follow mergedInto with cycle/missing guards; all labels, counts and filters resolve aliases. Merge archives source, requires a nonarchived/unmerged destination of identical scope, cannot unmerge, never rewrites task history. Rename affects active/completed tasks via ID lookup. Archived tags stay in history and tag search, not new suggestions. Manage Tags lists only readable-task counts; no deletions or automatic sweeping of unused labels. Multi-tag search is AND; typed search includes tag names, completed remains opt-in, no extra reads per keystroke. Bulk editing/formal projects are deferred.
+
+Desktop board is default from 1100px, device-local opt-out. Columns Today (wider), Week, Later, optional Someday; Waiting only is an overlapping board filter. Existing single-list views remain for phones, opt-out, extended Today and Waiting/Completed views. Today is one day on board; requesting extended Today temporarily returns to the day-group layout. Deduplicate daily Later projections into Today and use the visual lane for swipe/quick actions. Sortable passes lane + sourceLane; same-lane reorder must not reschedule a projected pick. Cross-column Week uses five future weekdays excluding today; Later clears due date (waiting uses a later follow-up); Someday clears scheduling after confirmation. Shared ordering remains shared, not per-user.
+
 ## Completion, Motion, and Undo
 
 Completion is optimistic UI, not fake backend success:
@@ -93,7 +103,7 @@ Confetti does not prove server persistence; offline local acknowledgement is dis
 
 Completion exit uses an inert, fixed-position departing node (~220ms), not a duplicate interactive row. FLIP closes gaps; retarget existing `lists-reorder` animations from current visual positions for rapid clicks. Skip layout animation around active editors. Respect Off/reduced-motion and cancel effects when hidden.
 
-Eight local effects: confetti, travel, arrival, reorder, navigation, dialogs, taps, ambient. Off/Light/Medium/All out presets; individual choices select Custom. Medium is default. Migrate old off/gentle/playful preferences; do not override explicit Off. Particle limits are 28 Medium/64 All out; entrance stagger is capped at 16 rows. Animations never drive backend synchronization.
+Eight device-local effects: confetti, travel, arrival, reorder, navigation, dialogs, taps, ambient. Off/Light/Medium/All out presets; individual choices select Custom. Medium is default. Migrate old off/gentle/playful preferences; do not override explicit Off. Particle limits are 28 Medium/64 All out; entrance stagger is capped at 16 rows. Animations never drive backend synchronization.
 
 Notices: at most four, newest at bottom; six seconds with Undo, 3.5 seconds otherwise. No X. Horizontal touch swipe dismisses only that notice; vertical scrolling and Undo buttons remain independent. Short swipes restore it. Hover/focus pause only its timer. Same-task actions invalidate that task's older Undo, not unrelated notices. Undo captures ID, expected revision, patch and workspace epoch; never overwrite newer edits or cross account/household boundaries.
 
@@ -101,11 +111,11 @@ Notices: at most four, newest at bottom; six seconds with Undo, 3.5 seconds othe
 
 Drawer: Search; Today only/Next N days/Waiting/Completed; Settings/Save-Share; compact View tasks in filters; Quick guide; account/sign-out at bottom. Left swipe, backdrop, X and Escape close it smoothly; vertical scrolling stays native. Filter row sits above Quick guide, uses checklist for Private and bracketed member/Unassigned circles under Shared. Tapping filters leaves the drawer open.
 
-Audience choices are device/account/category scoped under `prefs.lists[category].audiences[uid]`. Defaults are own private + own assigned shared. Other owners and unassigned shared are opt-in, except eligible daily projection. Pending email keys normalize to registered UIDs without undoing explicit choices. Independent privacy checks always apply.
+Audience choices are account-synced per category in `listUsers/UID/preferences/main.audiences`, mirrored into `prefs.lists[category].audiences[uid]` for rendering. Defaults are own private + own assigned shared. Other owners and unassigned shared are opt-in, except eligible daily projection. Pending email keys normalize to registered UIDs without undoing explicit choices. Independent privacy checks always apply.
 
 Back to my Today tasks appears for Waiting/Completed, active extended Today, or nondefault audience; not solely Week/Later. It restores single-day Today plus own private/shared. Cold launch and safe foreground resume return to Today while retaining saved days/audience; never discard an open dialog, draft, drag or save. Foreground reset requests can be deferred until safe.
 
-Appearance first/open; current-list settings second/open; then animation, audience, offline, account, scheduling and admin groups. Settings apply immediately locally; help buttons expand descriptions and must not intercept normal section-toggle clicks.
+Appearance first/open; current-list settings second/open; then animation, audience, offline, account, scheduling and admin groups. Style, palette, showSomeday and audience settings apply immediately and queue to the account settings document; cache by UID, never copy another account's settings. Animation, gestures, editor, days and desktopBoard remain device-local; help buttons expand descriptions and must not intercept normal section-toggle clicks.
 
 - Styles: 1 Clear Day, 7 Daybook, 4 The Edit, 8 Metro, 9 Block Party. Palettes: Original, Garden, Cherry, Night.
 - `quickWeek=null` means responsive auto: hide Quick Action below 768px, show above. Explicit boolean overrides. One-time migration preserves old false and resets implicit old true to auto.
@@ -135,7 +145,13 @@ listSpaces/HOUSEHOLD/members/UID
 listSpaces/HOUSEHOLD/environments/staging/tasks/TASK
   title, description?, category, ownerUid, visibility,
   assigneeUid, assigneeEmail?, dueDate, waiting, followUp,
-  completed, sortOrder?, rev, createdAt, updatedAt
+  completed, sortOrder?, someday?, tagIds?, rev, createdAt, updatedAt
+
+listUsers/UID/preferences/main
+  style?, palette?, showSomeday?, audiences?, updatedAt
+
+listSpaces/HOUSEHOLD/environments/staging/tags/TAG_ID
+  name, visibility, ownerUid, archived, mergedInto, updatedAt
 
 listSpaces/HOUSEHOLD/environments/staging/daily/YYYY-MM-DD/picks/UID
   taskId, createdAt
@@ -169,6 +185,8 @@ Use navigator.locks where available to serialize cross-tab flushes and Broadcast
 
 Foreground/online resume SDK networking and queued uploads. Sign-out blocks until current-account pending operations finish, then purges that account's cache. Review/discard pending operations does not delete server tasks. Admin setup requires online access. Background/closed-app uploads, first-time offline login, unvisited households, and browser storage retention are not guaranteed.
 
+Metadata uses the same IndexedDB database but separate keys `[uid,'preferences']` and `[uid,household,environment,'tags']`, each with values and its own FIFO operations. Never pass metadata operations to task projection/replay. Organizer's per-account navigator lock serializes uploads across tabs, captures scope/generation, and uses merged partial setDoc writes. Own account preference document and authorized tags have listeners. Metadata queues participate in pending inspection/discard, sign-out protection, software-update guards and sync display. Preview reads are not cached and never write. Transient pending failures alone retry after 20 seconds; there is no periodic metadata polling. Rule errors retain queued changes with publication instructions. Task schedule replay treats someday/dueDate/waiting/followUp coherently.
+
 The worker caches only allowlisted public shell files and exact app/auth/Firestore SDK modules; query strings are normalized only for those URLs. Never cache auth/Firestore API responses or private task data. Legacy staging bookmarks redirect to root, preserving household. Share links/manifests preserve household and existing install identity; do not accidentally change manifest IDs and create duplicate installed apps.
 
 ## Automatic Software Updates
@@ -196,6 +214,7 @@ Preview: `http://127.0.0.1:5195/lists/`; `PORT` overrides the port. Browser suit
 
 | Change | Relevant browser suites |
 | --- | --- |
+| Someday/tags/preferences/board | `organizer.test.js`, `organizer.cjs`, `rules.cjs`; `admin.cjs` includes two independent same-user browsers and offline preference replay. |
 | General UI/styles | `production.cjs`, `phone-ux.cjs`, `task-header.cjs`, `guide.cjs` |
 | Scheduling/daily/search | `week-punt.cjs`, `menu-later.cjs`, `creation-search.cjs`, `instant-completion.cjs` |
 | Completion/animation/notices | `instant-completion.cjs`, `motion.cjs`, `feedback.cjs` |

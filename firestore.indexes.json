@@ -1,6 +1,7 @@
 {
   "indexes": [
-    {"collectionGroup":"tasks","queryScope":"COLLECTION","fields":[{"fieldPath":"visibility","order":"ASCENDING"},{"fieldPath":"ownerUid","order":"ASCENDING"}]}
+    {"collectionGroup":"tasks","queryScope":"COLLECTION","fields":[{"fieldPath":"visibility","order":"ASCENDING"},{"fieldPath":"ownerUid","order":"ASCENDING"}]},
+    {"collectionGroup":"tags","queryScope":"COLLECTION","fields":[{"fieldPath":"visibility","order":"ASCENDING"},{"fieldPath":"ownerUid","order":"ASCENDING"}]}
   ],
   "fieldOverrides": []
 }

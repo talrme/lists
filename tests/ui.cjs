@@ -47,9 +47,10 @@ async function mockBackend(page,base){
     import {sandboxStore} from ${JSON.stringify(fixture)};
     export async function connectFirebase(config,events){
       const store=sandboxStore(events.tasks,events.status);
-      const select=async uid=>{events.account({uid,email:uid+'@test.invalid',emailVerified:false,displayName:uid==='tal'?'Tal':'Sophie',providerData:[]});events.preview?.(null);events.households([{id:'home',title:'Test household'}]);events.space({id:'home',title:'Test household'});events.members({tal:'Tal',sophie:'Sophie'});await store.ready();events.ready();};
+      let activeUid='tal';const metadataKey=()=> 'lists-test-metadata-'+activeUid;const metadata=()=>JSON.parse(localStorage.getItem(metadataKey())||'{"settings":{},"tags":[]}');const publish=()=>events.organizer?.(metadata());
+      const select=async uid=>{activeUid=uid;events.account({uid,email:uid+'@test.invalid',emailVerified:false,displayName:uid==='tal'?'Tal':'Sophie',providerData:[]});events.preview?.(null);events.households([{id:'home',title:'Test household'}]);events.space({id:'home',title:'Test household'});events.members({tal:'Tal',sophie:'Sophie'});publish();await store.ready();events.ready();};
       window.__testSync=events.sync;window.__testSelectUser=select;setTimeout(()=>void select('tal'),0);
-      return {...store,logout:async()=>events.account(null)};
+      return {...store,async savePreferences(patch){const value=metadata();value.settings={...value.settings,...patch};localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},async saveTag(id,patch){const value=metadata(),old=value.tags.find(tag=>tag.id===id);value.tags=old?value.tags.map(tag=>tag.id===id?{...tag,...patch}:tag):[...value.tags,{id,...patch}];localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},logout:async()=>events.account(null)};
     }
   `}));
 }

@@ -1,4 +1,4 @@
-import {addDays,shortDate,dateTiming,laterDate} from './core.js?v=timing3';
+import {addDays,shortDate,dateTiming,laterDate} from './core.js?v=organizer1';
 
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
@@ -27,10 +27,10 @@ export function descriptionHtml(value){
   return template.innerHTML;
 }
 export function fieldsMarkup({task={},today,composer=false,allowPrivate=true}){
-  const prefix=composer?'new':'edit',mode=task.dueDate?(task.dueDate<=today?'asap':'date'):'later',when=composer?'asap':mode;
+  const prefix=composer?'new':'edit',mode=task.someday?'someday':task.dueDate?(task.dueDate<=today?'asap':'date'):'later',when=composer?'asap':mode;
   task={...task,assigneeUid:task.assigneeUid||(task.assigneeEmail?'email:'+task.assigneeEmail:null)};
   return `${composer?'':`<label class="sr-only" for="edit-title">Task</label><input class="edit-title" id="edit-title" name="title" aria-label="Task" maxlength="200" required value="${esc(task.title)}">`}
-    <div class="schedule-line">${composer?`<button class="icon-button options-toggle" type="button" aria-label="More task options" aria-expanded="false" aria-controls="new-options">${icon('chevron-down')}</button>`:''}<div class="choice-track timing-track" role="group" aria-label="${composer?'Task schedule':'When'}"><span class="choice-indicator" aria-hidden="true"></span>${[['asap','Today','today'],['week','Week','upcoming'],['later','Later','later']].map(([id,label,view])=>`<button type="button" data-timing="${id}" ${composer?`data-view="${view}"`:''} aria-pressed="${when===id}" ${id==='week'?'title="Next five weekdays; upcoming dated tasks"':''}>${label}</button>`).join('')}</div><input type="hidden" name="when" id="${prefix}-when" value="${when}"></div>
+    <div class="schedule-line">${composer?`<button class="icon-button options-toggle" type="button" aria-label="More task options" aria-expanded="false" aria-controls="new-options">${icon('chevron-down')}</button>`:''}<div class="choice-track timing-track" role="group" aria-label="${composer?'Task schedule':'When'}"><span class="choice-indicator" aria-hidden="true"></span>${[['asap','Today','today'],['week','Week','upcoming'],['later','Later','later'],['someday','Someday / Maybe','someday']].map(([id,label,view])=>`<button type="button" data-timing="${id}" ${composer?`data-view="${view}"`:''} aria-pressed="${when===id}" ${id==='week'?'title="Next five weekdays; upcoming dated tasks"':''}>${label}</button>`).join('')}</div><input type="hidden" name="when" id="${prefix}-when" value="${when}"></div>
     <div class="task-options" id="${prefix}-options" ${composer?'hidden':''}>
       <div class="description-field"><label for="${prefix}-description">Description</label><textarea name="description" id="${prefix}-description" rows="3" maxlength="10000" aria-label="Description">${esc(task.description)}</textarea></div>
       <div class="sharing-line"><span>Task list</span><div class="choice-track sharing-track" role="group" aria-label="Task list"><span class="choice-indicator" aria-hidden="true"></span><button type="button" data-sharing="private" ${allowPrivate?'':'disabled'} aria-pressed="${task.visibility!=='shared'}">Private</button><button type="button" data-sharing="shared" aria-pressed="${task.visibility==='shared'}">Shared</button></div></div><input type="hidden" name="person" id="${prefix}-person" value="${esc(task.visibility==='shared'?task.assigneeUid||'shared':'private')}"><div class="ownership-field" data-private="${task.visibility!=='shared'}"><span id="${prefix}-owner-label">Task owner for shared items</span><div class="assignee-choices" role="group" aria-labelledby="${prefix}-owner-label"></div></div>
@@ -51,12 +51,12 @@ export function bindFields(form,{uid,members,profiles,today,onOptionsToggle,onTi
     window.lucide?.createIcons();
   }
   function sync(){
-    const date=form.elements.waiting.checked?form.elements.followUp.value:form.elements.date.value,selected=date?dateTiming(date,today):form.elements.waiting.checked?'later':form.elements.when.value;
-    const active=['asap','week','later'].indexOf(selected);timing.style.setProperty('--choice',Math.max(0,active));timing.toggleAttribute('data-exact',active<0);
+    const someday=form.elements.when.value==='someday',date=form.elements.waiting.checked?form.elements.followUp.value:form.elements.date.value,selected=someday?'someday':date?dateTiming(date,today):form.elements.waiting.checked?'later':form.elements.when.value;
+    const active=['asap','week','later','someday'].indexOf(selected);timing.style.setProperty('--choice',Math.max(0,active));timing.toggleAttribute('data-exact',active<0);
     timing.querySelectorAll('[data-timing]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.timing===selected)));
     const shared=person.value!=='private';sharing.style.setProperty('--choice',shared?1:0);sharing.querySelectorAll('[data-sharing]').forEach(button=>button.setAttribute('aria-pressed',String((button.dataset.sharing==='shared')===shared)));
-    $('.ownership-field').dataset.private=String(!shared);$('.exact-date-row').hidden=form.elements.waiting.checked;
-    $('.waiting-options').hidden=!form.elements.waiting.checked;
+    $('.ownership-field').dataset.private=String(!shared);$('.exact-date-row').hidden=someday||form.elements.waiting.checked;$('.waiting-toggle').hidden=someday;
+    $('.waiting-options').hidden=someday||!form.elements.waiting.checked;
     $('.later-shortcuts').hidden=selected!=='later'||form.elements.waiting.checked;
     form.querySelectorAll('[data-later-date]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.laterDate===laterPreset)));
     if(activeView!==null)showView(activeView);
@@ -86,10 +86,10 @@ export function bindFields(form,{uid,members,profiles,today,onOptionsToggle,onTi
   form.addEventListener('error',event=>{if(event.target.tagName==='IMG'){event.target.hidden=true;if(event.target.nextElementSibling)event.target.nextElementSibling.hidden=false;}},true);
   function setExpanded(expanded){options.hidden=!expanded;const toggle=$('.options-toggle');if(expanded){activeView=null;sync();}if(toggle){toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',expanded?'Collapse task details':'More task options');toggle.title=expanded?'Collapse task details':'More task options';}}
   function setTiming(mode){laterPreset=null;const date=form.elements.waiting.checked?form.elements.followUp.value:form.elements.date.value;if(date&&dateTiming(date,today)===mode){sync();return;}form.elements.when.value=mode;form.elements.date.value='';form.elements.waiting.checked=false;sync();}
-  function showView(view){activeView=view;const active=['today','upcoming','later'].indexOf(view);timing.style.setProperty('--choice',Math.max(0,active));timing.toggleAttribute('data-exact',active<0);timing.querySelectorAll('[data-view]').forEach(button=>{button.toggleAttribute('aria-current',button.dataset.view===view);button.setAttribute('aria-pressed',String(button.dataset.view===view));});}
-  followupSelection(null);sync();return {updatePeople,setExpanded,setTiming,showView,setDay(day){today=day;sync();},reset(when='asap'){laterPreset=null;form.elements.when.value=when;form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';person.value='private';setExpanded(false);followupSelection(null);sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
+  function showView(view){activeView=view;const active=['today','upcoming','later','someday'].indexOf(view);timing.style.setProperty('--choice',Math.max(0,active));timing.toggleAttribute('data-exact',active<0);timing.querySelectorAll('[data-view]').forEach(button=>{button.toggleAttribute('aria-current',button.dataset.view===view);button.setAttribute('aria-pressed',String(button.dataset.view===view));});}
+  followupSelection(null);sync();return {updatePeople,setExpanded,setTiming,showView,setDay(day){today=day;sync();},reset(when='asap'){laterPreset=null;form.elements.when.value=when;form.elements.date.value='';form.elements.followUp.value='';form.elements.waiting.checked=false;form.elements.description.value='';form._tagField?.reset();person.value='private';setExpanded(false);followupSelection(null);sync();},summary(){return form.elements.waiting.checked?`Follow up ${shortDate(form.elements.followUp.value)}`:'';}};
 }
 export function fieldValues(form){
   const person=form.elements.person.value,email=person.startsWith('email:')?person.slice(6):null;
-  return {description:form.elements.description.value,assigneeUid:['private','shared'].includes(person)||email?null:person,assigneeEmail:email,shared:person!=='private',mode:form.elements.waiting.checked?'later':form.elements.when.value,exact:form.elements.date.value,waiting:form.elements.waiting.checked,followUp:form.elements.followUp.value};
+  return {...(form.elements.tagIds?{tagIds:JSON.parse(form.elements.tagIds.value||'[]')}:{}),description:form.elements.description.value,assigneeUid:['private','shared'].includes(person)||email?null:person,assigneeEmail:email,shared:person!=='private',mode:form.elements.waiting.checked?'later':form.elements.when.value,exact:form.elements.date.value,waiting:form.elements.waiting.checked,followUp:form.elements.followUp.value};
 }

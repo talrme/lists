@@ -48,7 +48,12 @@ service cloud.firestore {
     }
     function validTask(task) {
       return task.keys().hasAll(['title','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
-        && task.keys().hasOnly(['title','description','sortOrder','category','ownerUid','assigneeUid','assigneeEmail','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.keys().hasOnly(['title','description','sortOrder','someday','tagIds','category','ownerUid','assigneeUid','assigneeEmail','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.get('someday', false) is bool
+        && (!task.get('someday', false) || (task.category == 'todo' && task.dueDate == null && !task.waiting && task.followUp == null))
+        && task.get('tagIds', []) is list && task.get('tagIds', []).size() <= 20
+        && task.get('tagIds', []).toSet().size() == task.get('tagIds', []).size()
+        && validTagIds(task.get('tagIds', []))
         && task.get('sortOrder', 0) is number && task.get('sortOrder', 0) >= -1000000000000000 && task.get('sortOrder', 0) <= 1000000000000000
         && task.title is string && task.title.size() > 0 && task.title.size() <= 200
         && task.get('description', '') is string && task.get('description', '').size() <= 10000
@@ -62,7 +67,21 @@ service cloud.firestore {
         && (task.waiting ? (task.followUp != null && task.dueDate == null) : task.followUp == null)
         && task.rev is int && task.createdAt is number && task.updatedAt == request.time;
     }
+    function tagId(ids, i) { return ids.size() <= i || (ids[i] is string && ids[i].matches('^[a-zA-Z0-9-]{1,80}$')); }
+    function validTagIds(ids) { return tagId(ids, 0) && tagId(ids, 1) && tagId(ids, 2) && tagId(ids, 3) && tagId(ids, 4) && tagId(ids, 5) && tagId(ids, 6) && tagId(ids, 7) && tagId(ids, 8) && tagId(ids, 9) && tagId(ids, 10) && tagId(ids, 11) && tagId(ids, 12) && tagId(ids, 13) && tagId(ids, 14) && tagId(ids, 15) && tagId(ids, 16) && tagId(ids, 17) && tagId(ids, 18) && tagId(ids, 19); }
     match /listUsers/{uid} {
+      match /preferences/{id} {
+        allow read: if googleAccount() && (request.auth.uid == uid || administrator());
+        allow create, update: if googleAccount() && request.auth.uid == uid && id == 'main'
+          && request.resource.data.keys().hasOnly(['style','palette','showSomeday','audiences','updatedAt'])
+          && request.resource.data.get('style', 1) in [1,7,4,8,9]
+          && request.resource.data.get('palette', 'original') in ['original','garden','cherry','night']
+          && request.resource.data.get('showSomeday', false) is bool
+          && request.resource.data.get('audiences', {}) is map
+          && request.resource.data.get('audiences', {}).keys().hasOnly(['todo','grocery','movies','other'])
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
       allow read: if administrator() || (googleAccount() && request.auth.uid == uid);
       allow create, update: if googleAccount() && request.auth.uid == uid
         && request.resource.data.keys().hasAll(['email','name','updatedAt'])
@@ -98,6 +117,29 @@ service cloud.firestore {
           && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 80;
         allow delete: if false;
       }
+      match /environments/{environment}/tags/{tagId} {
+        function validTag(data) {
+          return data.keys().hasAll(['name','visibility','ownerUid','archived','mergedInto','updatedAt'])
+            && data.keys().hasOnly(['name','visibility','ownerUid','archived','mergedInto','updatedAt'])
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 50
+            && data.visibility in ['private','shared'] && data.ownerUid is string
+            && data.archived is bool && (data.mergedInto == null || (data.mergedInto is string && data.mergedInto != tagId && data.mergedInto.matches('^[a-zA-Z0-9-]{1,80}$')))
+            && data.updatedAt == request.time;
+        }
+        function validMerge(data) {
+          let target = get(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tags/$(data.mergedInto)).data;
+          return target.mergedInto == null && !target.archived && target.visibility == data.visibility
+            && (data.visibility == 'shared' || target.ownerUid == request.auth.uid);
+        }
+        allow read: if administrator() || (member(space) && readable(resource.data));
+        allow create: if member(space) && tagId.matches('^[a-zA-Z0-9-]{1,80}$') && validTag(request.resource.data)
+          && request.resource.data.ownerUid == request.auth.uid && request.resource.data.mergedInto == null;
+        allow update: if member(space) && readable(resource.data) && validTag(request.resource.data)
+          && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.visibility == resource.data.visibility
+          && (request.resource.data.mergedInto == resource.data.mergedInto
+            || (resource.data.mergedInto == null && request.resource.data.archived && validMerge(request.resource.data)));
+        allow delete: if false;
+      }
       match /environments/{environment}/tasks/{taskId} {
         allow get: if administrator() || (member(space) && (!exists(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)) || readable(resource.data)));
         allow list: if administrator() || (member(space) && readable(resource.data));
@@ -113,7 +155,7 @@ service cloud.firestore {
       match /environments/{environment}/daily/{day}/picks/{uid} {
         function eligible(taskId) {
           let task = get(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)).data;
-          return task.category == 'todo' && !task.completed && !task.waiting && (task.dueDate == null || task.dueDate > day)
+          return task.category == 'todo' && !task.get('someday', false) && !task.completed && !task.waiting && (task.dueDate == null || task.dueDate > day)
             && ((task.visibility == 'private' && task.ownerUid == request.auth.uid)
               || (task.visibility == 'shared' && ((task.assigneeUid == null && task.get('assigneeEmail', null) == null)
                 || task.assigneeUid == request.auth.uid || task.get('assigneeEmail', null) == request.auth.token.email)));

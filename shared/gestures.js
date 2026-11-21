@@ -32,7 +32,7 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
      suppressUntil=performance.now()+350;const task=event.item._movingTask,epoch=event.item._movingEpoch;delete event.item._movingTask;delete event.item._movingEpoch;
      // Sortable may leave in-flight neighbor transforms after pointer release.
      host.querySelectorAll('.task-row').forEach(row=>{row.getAnimations().forEach(animation=>animation.cancel());row.style.transition='none';row.style.transform='none';});
-     try{if(task&&epoch===context()&&(event.from!==event.to||event.oldDraggableIndex!==event.newDraggableIndex))await onMove(task,[...event.to.querySelectorAll('.task-row')].map(row=>row.dataset.task),event.to.dataset.day||null);}finally{dragging=false;host.querySelectorAll('.task-row').forEach(row=>{row.style.removeProperty('transition');row.style.removeProperty('transform');});idle();}
+     try{if(task&&epoch===context()&&(event.from!==event.to||event.oldDraggableIndex!==event.newDraggableIndex))await onMove(task,[...event.to.querySelectorAll('.task-row')].map(row=>row.dataset.task),event.to.dataset.day||null,{lane:event.to.dataset.lane||null,sourceLane:event.from.dataset.lane||null});}finally{dragging=false;host.querySelectorAll('.task-row').forEach(row=>{row.style.removeProperty('transition');row.style.removeProperty('transform');});idle();}
     },
    }));
    sortables.get(node).option('disabled',!canMove());sortables.get(node).option('animation',motion.enabled('reorder')?180:0);
@@ -45,9 +45,9 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
  }
  host.addEventListener('pointerdown',event=>{
   if(active||!canSwipe()||event.button!==0||event.target.closest('.task-check,.defer-task,.task-edit-form'))return;
-  const row=event.target.closest('.task-row'),task=findTask(row?.dataset.task);if(!row||row.classList.contains('is-editing')||!task||task.completed)return;
-  row.dataset.swipeLabel=swipeLabel();
-  row.dataset.swipeDirection=swipeDirection();
+  const row=event.target.closest('.task-row'),task=findTask(row?.dataset.task);if(!row||row.classList.contains('is-editing')||!task||task.completed||task.someday)return;
+  row.dataset.swipeLabel=swipeLabel(task);
+  row.dataset.swipeDirection=swipeDirection(task);
   swipe={row,summary:row.querySelector('.task-summary'),pointer:event.pointerId,x:event.clientX,y:event.clientY,distance:0,direction:row.dataset.swipeDirection==='left'?-1:1,locked:false,task,epoch:context()};
  });
  host.addEventListener('pointermove',event=>{

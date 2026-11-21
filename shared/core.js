@@ -41,34 +41,37 @@ export function laterDate(day,period,random=Math.random){
 }
 export function schedule(mode, day, exact = '', random = Math.random) {
   if (!validDay(day)) throw new Error('Choose a valid day.');
-  if (mode === 'later') return null;
+  if (mode === 'later' || mode === 'someday') return null;
   if (mode === 'asap') return day;
   if (mode === 'defer') return choose(businessDays(addDays(day,1)),random);
   if (mode === 'week' || mode === 'nextWeek') return choose(businessDays(day,mode === 'nextWeek'),random);
   if (mode === 'date' && validDay(exact)) return exact;
   throw new Error('Choose a date.');
 }
-export function taskDraft({title, description, category='todo', ownerUid, assigneeUid=null, assigneeEmail=null, shared=false, mode='asap', exact='', day, random}) {
+export function taskDraft({title, description, tagIds, category='todo', ownerUid, assigneeUid=null, assigneeEmail=null, shared=false, mode='asap', exact='', day, random}) {
   title = String(title||'').trim();
   if (!title) throw new Error('Add a task name.');
   if (title.length>200) throw new Error('Keep the name under 200 characters.');
   if (!ownerUid) throw new Error('Sign in first.');
   if(description!==undefined&&(typeof description!=='string'||description.length>10000))throw new Error('Keep the description under 10,000 characters.');
-  return {title, ...(description!==undefined?{description}:{}), ...(assigneeEmail?{assigneeEmail}:{}), category, ownerUid, assigneeUid, visibility:shared||assigneeUid||assigneeEmail?'shared':'private', dueDate:schedule(mode,day,exact,random), waiting:false, followUp:null, completed:false};
+  if(tagIds!==undefined&&(!Array.isArray(tagIds)||tagIds.length>20||tagIds.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9-]{1,80}$/.test(id))))throw new Error('Choose up to 20 valid tags.');
+  return {title, ...(tagIds!==undefined?{tagIds:[...new Set(tagIds)]}:{}), ...(mode==='someday'?{someday:true}:{}), ...(description!==undefined?{description}:{}), ...(assigneeEmail?{assigneeEmail}:{}), category, ownerUid, assigneeUid, visibility:shared||assigneeUid||assigneeEmail?'shared':'private', dueDate:schedule(mode,day,exact,random), waiting:false, followUp:null, completed:false};
 }
 export const unassigned=task=>!task.assigneeUid&&!task.assigneeEmail;
 export const assignedTo=(task,uid,email)=>!!uid&&task.assigneeUid===uid||!!email&&task.assigneeEmail===email;
 export function candidateTasks(tasks, uid, email, day=dayKey()) {
-  return tasks.filter(t => t.category==='todo' && !t.completed && !t.waiting && dateTiming(t.dueDate,day)==='later' && ((t.visibility==='private'&&t.ownerUid===uid)||(t.visibility==='shared'&&(unassigned(t)||assignedTo(t,uid,email))))).sort((a,b)=>a.id.localeCompare(b.id));
+  return tasks.filter(t => t.category==='todo' && !t.someday && !t.completed && !t.waiting && dateTiming(t.dueDate,day)==='later' && ((t.visibility==='private'&&t.ownerUid===uid)||(t.visibility==='shared'&&(unassigned(t)||assignedTo(t,uid,email))))).sort((a,b)=>a.id.localeCompare(b.id));
 }
 export function isToday(task, day, picks = []) {
-  if (task.completed) return false;
+  if (task.completed || task.someday) return false;
   if (task.waiting) return !!task.followUp && task.followUp<=day;
   return !!task.dueDate && task.dueDate<=day || dateTiming(task.dueDate,day)==='later' && picks.includes(task.id);
 }
 export function inView(task, view, day, picks=[]) {
   if (view==='done') return task.completed;
   if (task.completed) return false;
+  if (view==='someday') return !!task.someday;
+  if(task.someday)return false;
   if (view==='today') return isToday(task,day,picks);
   const date=task.waiting?task.followUp:task.dueDate;
   if (view==='upcoming') return dateTiming(date,day)==='week';
@@ -88,7 +91,7 @@ export function shortDate(day) {
 }
 export function taskDay(task,today,picks=[]){
   if(isToday(task,today,picks))return today;
-  if(task.completed)return null;
+  if(task.completed||task.someday)return null;
   return task.waiting?task.followUp:task.dueDate;
 }
 export function taskOrder(a,b){return (a.sortOrder??a.createdAt)-(b.sortOrder??b.createdAt)||a.createdAt-b.createdAt||a.id.localeCompare(b.id);}

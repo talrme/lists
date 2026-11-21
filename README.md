@@ -22,14 +22,15 @@ Calendar dates use America/Los_Angeles. Business days mean Monday-Friday; public
 | --- | --- |
 | Today | Due and overdue tasks, plus your daily From Later pick. |
 | Week | Future dates through the fifth business day after today. |
-| Later | Undated tasks and dates beyond the Week window. |
+| Later | Undated committed tasks and dates beyond the Week window. |
+| Someday / Maybe (optional) | Uncommitted ideas; never scheduled or drawn as a daily suggestion. |
 | Add with Week | Randomly selects one of five weekdays, including today when it is a weekday. If it selects today, the task appears only in Today. |
 | Punt from Today | Randomly selects one of the next five business days, excluding today, so the task goes to Week. |
 | Waiting for a response | Uses its follow-up date to place the task in Today, Week, or Later. It is a flag, not a separate date bucket. |
 
 Today and Week do not overlap in the normal single-day view. Existing saved dates are never automatically rerolled. Later's optional approximate-date shortcuts choose a weekday around two weeks, one month, or two months away and show the chosen date before saving.
 
-**One daily From Later pick:** eligible private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks form one pool. Undated and farther-out dated tasks qualify; completed and Waiting tasks do not. The pick is saved per person, household, and Pacific date, so refreshes and devices agree. An initially empty pool can get its first pick when an eligible task is added.
+**One daily From Later pick:** eligible private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks form one pool. Undated and farther-out dated tasks qualify; completed, Waiting, and Someday tasks do not. The pick is saved per person, household, and Pacific date, so refreshes and devices agree. An initially empty pool can get its first pick when an eligible task is added.
 
 Completing, punting, or deleting the chosen item uses that day's pick; there is no replacement. Punting does not mark the task completed. Tomorrow gets a new draw, which may choose an unfinished item again. The daily pick is a projection into Today, not a permanent date change.
 
@@ -46,9 +47,19 @@ The menu contains Search tasks, Today only, Next N days, Waiting, Completed, Set
 
 Search covers task names and descriptions, with small-typo tolerance and no extra database queries. It excludes completed tasks by default. **Include completed tasks** adds a checked, clearly separated Completed section below active results.
 
+## Someday, Tags, and Desktop Board
+
+Enable **Settings -> To-do settings -> Show Someday / Maybe** to add a fourth list just for your account. Hiding it never deletes or moves its items; search still finds them. Switching an active dated/waiting task to Someday asks before clearing scheduling. Moving an idea back into Today/Week/Later activates it. Existing tasks are not automatically migrated.
+
+Task details support up to 20 tags with autocomplete and in-place creation. New tags on private tasks default to Personal; you may explicitly create a Household tag instead. Shared tasks use household tags only; sharing a private draft removes its personal tags with an explanation before Save. Task privacy is otherwise unchanged.
+
+Tap a tag to find its tasks, or use **Search -> Filter by tags**. Multiple tags match all selected tags. Typed search also matches tag names. Completed items remain opt-in. **Settings -> To-do settings -> Manage tags** supports rename, archive/restore and merge within the same privacy scope. Stable IDs keep completed history current; merging is irreversible. Counts include only tasks you can read. Archived tags remain on historical tasks, but leave suggestions.
+
+At widths of 1100px and above, To-do uses a board with a larger Today column, then Week, Later and optional Someday. A daily From Later task appears once, under Today. Drag across columns to change scheduling; drag within one to reorder. Waiting remains a status, with a **Waiting only** board filter. Disable **Desktop board** for the existing single-list desktop layout. Phones retain single-list navigation and expandable days. Opening an extended Today view temporarily uses the single-list day layout on desktop too.
+
 ## Settings and Installation
 
-Appearance is first; the current list's settings are second and expanded. Choose among Clear Day, Daybook, The Edit, Metro, and Block Party, plus Original, Garden, Cherry, and Night palettes. Device-local animation settings offer presets and individual effects, respecting reduced motion. Small help buttons explain settings.
+Appearance is first; the current list's settings are second and expanded. Choose among Clear Day, Daybook, The Edit, Metro, and Block Party, plus Original, Garden, Cherry, and Night palettes. Color scheme, style, the Someday switch, and per-category task-owner filters now sync to your account across devices, with a local cache for fast reopening. Animations, desktop-board preference, touch controls, editor mode and day-count preferences remain device-local. Device-local animation settings offer presets and individual effects, respecting reduced motion. Small help buttons explain settings.
 
 **Menu -> Save / Share** includes a QR code, copyable household link, and installation instructions. On iPhone, use Safari -> Share -> Add to Home Screen. On Android, use Chrome -> Add to Home screen or Install app. Household links and installed start URLs preserve the selected household.
 
@@ -64,7 +75,7 @@ Update checks are throttled to once per minute on startup, returning, reconnecti
 
 Google sign-in and household invitations control access. Private tasks are not visible to other members, except for the disclosed Tal administrator's read-only preview. Sharing makes tasks visible to household members.
 
-Firestore listeners sync changes across devices without polling. After one online visit, account-scoped IndexedDB stores the last accessible workspace and durable queued edits. The service worker caches public app files, not private task/API responses.
+Firestore listeners sync tasks, account settings and tags across devices without polling. Settings and tags have a separate durable metadata queue; offline changes upload on reconnection, with last uploaded edits winning for the same field. Pending metadata also blocks sign-out and automatic update reloads. Rename/merge conflicts are constrained by rules; rejected edits remain available under Pending changes. After one online visit, account-scoped IndexedDB stores the last accessible workspace and durable queued edits. The service worker caches public app files, not private task/API responses.
 
 Offline changes upload when Lists is open and connected. Different-field edits merge; the last uploaded edit wins for the same field. Remote deletion does not resurrect tasks. Online stale revisions are rejected. Settings -> Offline & sync lets you review pending operations and retry or discard them. Sign-out requires pending edits to finish, then clears that account's saved workspaces.
 
@@ -82,6 +93,8 @@ Tal's collapsed Admin section supports household invitations, read-only View as 
 npm run build
 npm run serve
 npm test
+node tests/organizer.cjs
+node tests/rules.cjs
 node tests/production.cjs
 node tests/instant-completion.cjs
 node tests/updates.cjs
