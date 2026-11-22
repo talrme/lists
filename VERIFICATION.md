@@ -1,4 +1,14 @@
-# Verification — November 21, 2026
+# Verification — November 22, 2026
+
+## Household Groceries
+
+52 pure checks cover existing scheduling/privacy logic plus catalog uniqueness/source labels, aliases/default quantities, explicit duplicate increases, quantity validation, full-quantity purchase snapshots, guarded Undo, stale revisions, offline projections, simultaneous-add/purchase reconciliation, Pacific-day grouping and frequency. The 884 PDF bullet entries were curated into 399 catalog choices plus13 labeled staples, not imported as shopping requests or fabricated history. Source PDF/email metadata/personal-name labels were not published.
+
+Grocery browser checks passed80 style/palette/phone/desktop layouts, alias add, quantity-one hidden steppers, increment/edit, purchase/Undo, custom-item catalog creation, saved-list create/edit/select/add without duplicate increases, store route creation, catalog aisle mapping, unmapped visibility, category/aisle order, cross-tab household display, daily history, dedicated settings, draft dismissal and no initial edit-field focus. Actual320px Night-mode and390px light screenshots were inspected, including edit controls. Production root layouts80, immediate completion/search60, completion-target100, guide60, automatic updater and unsigned-in real service-worker offline-shell checks passed. New grocery modules/CSS/catalog are precached.
+
+Actual local Firestore rules passed131 authorization/schema checks: new household-wide groceries, outsider/anonymous denial, quantities/revisions/type keys, saved lists, stores/catalog overrides, immutable purchase quantities and receipts, and no admin nonmember write bypass. The actual-SDK demo-emulator suite passed two-account grocery quantity sync, offline quantity edit plus cold reload/reconnect, purchase/Undo and incoming saved-list refresh. Simultaneous purchases produced one history item; simultaneous non-increasing adds retained quantity1 and drained both queues. A deliberately held metadata Web Lock verified reconnection waits its turn instead of losing a flush attempt. Existing task offline/private/shared/admin/Playground tests also passed. Historical receipt assertions now wait for authoritative reconnect rather than treating the intentionally immediate cached workspace as network readiness.
+
+No real household data was changed by tests. Existing grocery tasks were left untouched, not migrated or deleted. Owner still needs to publish the new Firestore rules separately; git push and emulator success do not prove live rule deployment. Physical-phone OAuth/keyboards/OS install behavior remain manual checks.
 
 ## Thumb-Friendly Completion
 

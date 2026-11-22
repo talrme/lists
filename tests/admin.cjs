@@ -53,11 +53,16 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.evaluate(()=>window.__testStore.saveTag('test-personal-tag',{name:'Personal idea',visibility:'private',ownerUid:'test-tal',archived:false,mergedInto:null}));
   await talSecond.evaluate(()=>window.__testStore.saveTag('test-shared-tag',{name:'Family',visibility:'shared',ownerUid:'test-tal',archived:false,mergedInto:null}));
   await tal.waitForFunction(async()=>{const pending=await window.__testStore.pendingChanges();return !pending.length;});
+  await talSecond.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await talSecond.evaluate(()=>{window.__metadataLockReady=false;void navigator.locks.request('lists-organizer:test-tal',()=>{window.__metadataLockReady=true;return new Promise(release=>{window.__releaseMetadataLock=release;});});});
+  await talSecond.waitForFunction(()=>window.__metadataLockReady);
   await talSecondContext.setOffline(true);
   await talSecond.waitForFunction(()=>document.querySelector('#connection').textContent.includes('Offline'));
   await talSecond.evaluate(()=>window.__testStore.savePreferences({palette:'night'}));
   assert((await talSecond.evaluate(()=>window.__testStore.pendingChanges())).length>0,'Offline metadata is durable');
   await talSecondContext.setOffline(false);
+  await talSecond.waitForFunction(async()=>(await navigator.locks.query()).pending.some(lock=>lock.name==='lists-organizer:test-tal'));
+  await talSecond.evaluate(()=>window.__releaseMetadataLock());
   await tal.waitForFunction(()=>document.documentElement.dataset.palette==='night');
   await talSecond.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
   await tal.evaluate(()=>window.__testStore.savePreferences({style:1,palette:'original',showSomeday:false}));
@@ -73,6 +78,29 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await ui.scope(tal,'shared','email:sophiegreen2@gmail.com');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
   await ui.add(tal,'Pending later suggestion',{person:'email:sophiegreen2@gmail.com',when:'later'});await ui.scheduleView(tal,'today');
   const {page:sophie}=await openPerson('Sophie');await sophie.locator('#workspace').waitFor();await sophie.getByText('Assigned before first visit',{exact:true}).waitFor();await sophie.getByText('Pending later suggestion',{exact:true}).waitFor();
+  // Real adapter and actual demo-only rules: household grocery sync, durable offline quantities and purchases.
+  await tal.locator('[data-category=grocery]').click();await sophie.locator('[data-category=grocery]').click();
+  await tal.locator('#grocery-name').fill('Synthetic grocery apple');await tal.locator('#grocery-name').press('Enter');
+  const talGrocery=tal.locator('.grocery-row').filter({hasText:'Synthetic grocery apple'}),sophieGrocery=sophie.locator('.grocery-row').filter({hasText:'Synthetic grocery apple'});
+  await sophieGrocery.waitFor();await tal.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await sophieGrocery.locator('[data-grocery-quantity]').click();await sophieGrocery.locator('[data-grocery-delta="1"]').click();
+  await tal.waitForFunction(()=>document.querySelector('#grocery-items [data-grocery-quantity]')?.textContent==='2');
+  const sophieContext=sophie.context();await offlineResources(sophie);await sophieContext.setOffline(true);
+  await sophieGrocery.locator('[data-grocery-delta="1"]').click();await sophie.waitForFunction(()=>document.querySelector('#grocery-items [data-grocery-quantity]')?.textContent==='3');
+  await sophie.reload();await sophie.locator('#workspace').waitFor();await sophie.locator('[data-category=grocery]').click();await sophie.waitForFunction(()=>document.querySelector('#grocery-items [data-grocery-quantity]')?.textContent==='3');
+  await sophieContext.setOffline(false);await tal.waitForFunction(()=>document.querySelector('#grocery-items [data-grocery-quantity]')?.textContent==='3');await sophie.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await talGrocery.locator('[data-complete]').click();await sophieGrocery.waitFor({state:'detached'});await tal.locator('.task-notice .toast-undo').last().click();await sophieGrocery.waitFor();
+  await tal.locator('#grocery-lists').click();await tal.locator('#save-shopping-list').click();await tal.locator('.grocery-form [name=name]').fill('Synthetic shared staples');await tal.locator('.grocery-form [type=submit]').last().click();await tal.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await sophie.locator('#grocery-lists').click();await sophie.getByText('Synthetic shared staples',{exact:true}).waitFor();await sophie.locator('#dialog [data-close]').first().click();
+  const groceryPurchase=page=>page.evaluate(()=>window.__testStore.groceryCommand({action:'purchase',itemId:'item--c-synthetic-grocery-apple',purchaseId:crypto.randomUUID(),storeId:'berkeley-bowl'}));
+  await Promise.all([groceryPurchase(tal),groceryPurchase(sophie)]);
+  for(const page of [tal,sophie])await page.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  assert.equal(await tal.evaluate(async()=>{const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');return (await sdk.getDocs(sdk.collection(sdk.getFirestore(app.getApp('lists')),'listSpaces','home','environments','staging','groceryPurchases'))).docs.filter(doc=>!doc.data().value.undone).length;}),1,'Simultaneous purchases must not duplicate history or block either outbox');
+  const groceryAgain=page=>page.evaluate(()=>window.__testStore.groceryCommand({action:'write',rows:[{kind:'add',id:'item--c-synthetic-grocery-apple',key:'c-synthetic-grocery-apple',increase:false,value:{name:'Synthetic grocery apple',category:'Other',catalogId:'c-synthetic-grocery-apple',quantity:1,unit:'each',notes:'',locations:{}}}]}));
+  await Promise.all([groceryAgain(tal),groceryAgain(sophie)]);
+  for(const page of [tal,sophie])await page.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  await talGrocery.waitFor();assert.match(await talGrocery.locator('[data-grocery-quantity]').getAttribute('aria-label'),/: 1$/,'Concurrent duplicate adds must not silently increase quantities');
+  await tal.locator('[data-category=todo]').click();await sophie.locator('[data-category=todo]').click();
   await settings(sophie);assert.equal(await sophie.locator('#settings-admin').count(),0);await sophie.getByRole('button',{name:'Done',exact:true}).click();
   await tal.locator('#composer [data-assignee=test-sophie]').waitFor({state:'attached'});
   await ui.scope(tal,'shared','test-sophie');await tal.getByText('Assigned before first visit',{exact:true}).waitFor();
@@ -107,7 +135,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   assert(firstPick);assert.equal(concurrentPick,firstPick,'Two browsers must reuse one transactionally saved daily choice');
   const receiptsBefore=await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks');
   assert.equal(receiptsBefore.find(doc=>doc.name.endsWith('/test-tal')).fields.taskId.stringValue,firstPick);
-  await talAgain.reload();await talAgain.locator('#workspace').waitFor();assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Reload must not redraw');
+  await talAgain.reload();await talAgain.locator('#workspace').waitFor();await talAgain.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Reload must not redraw');
   await tal.evaluate(async id=>{
    const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');
    const ref=sdk.doc(sdk.getFirestore(app.getApp('lists')),'listSpaces','home','environments','staging','tasks',id),snap=await sdk.getDoc(ref);
@@ -211,6 +239,6 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
    await tal.locator('#household-form').screenshot({path:`/private/tmp/lists-admin-form-${design}.png`});await tal.getByRole('button',{name:'Close',exact:true}).click();
    await testing(tal);await tal.locator('.testing-guide>summary').click();for(const palette of ['original','night']){await tal.locator(`button[data-palette=${palette}]`).click();assert(await tal.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));}if(design===10){await tal.locator('#playground-actions').scrollIntoViewIfNeeded();await tal.locator('#dialog').screenshot({path:'/private/tmp/lists-playground-night.png'});}await tal.getByRole('button',{name:'Close',exact:true}).click();
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Offline cold reload, durable queued create/edit/complete, automatic reconnect, last-uploaded-field wins, remote-field preservation, deleted-task non-resurrection, rejected queue discard, pending sign-out guard, sync indicator; household creation, shared completion/Undo and order sync, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
- }catch(error){const page=browser.contexts()[0]?.pages()[0];if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'/private/tmp/lists-admin-failure.png',fullPage:true});}console.error(errors);console.error(logs.slice(-3500));throw error;}finally{await browser.close();emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Household groceries, quantity sync, offline cold reload, purchase/Undo, shared saved-list arrival, simultaneous purchases/adds and forced metadata lock contention; Offline cold reload, durable queued create/edit/complete, automatic reconnect, last-uploaded-field wins, remote-field preservation, deleted-task non-resurrection, rejected queue discard, pending sign-out guard, sync indicator; household creation, shared completion/Undo and order sync, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
+ }catch(error){for(const context of browser.contexts())for(const p of context.pages())console.error('STATE',await p.evaluate(async()=>({online:navigator.onLine,connection:document.querySelector('#connection')?.textContent,palette:document.documentElement.dataset.palette,pending:await window.__testStore?.pendingChanges()})).catch(()=>null));const page=browser.contexts()[0]?.pages()[0];if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'/private/tmp/lists-admin-failure.png',fullPage:true});}console.error(errors);console.error(logs.slice(-3500));throw error;}finally{await browser.close();emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

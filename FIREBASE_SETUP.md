@@ -1,5 +1,11 @@
 # Lists: Firebase Setup
 
+## Groceries Update
+
+The dedicated grocery workflow adds membership-protected `groceries`, `groceryPurchases` and `groceryCommands` collections beneath the existing household/environment. No new Firebase project, database, account or composite index is needed. To-do data is not migrated or cleared.
+
+**Owner action required:** open [Firestore Rules](https://console.firebase.google.com/project/lists-95c4f/firestore/databases/-default-/security/rules), replace the editor with this repository's complete `firestore.rules`, then Publish. GitHub pushes do not publish these rules. Until published, grocery reads/sync show an explanatory error; queued edits remain on-device. After publication, reopen Lists or use Settings -> Offline & sync -> Retry sync. Keep the rules private/member-only.
+
 Website: https://talrme.github.io/lists/
 
 Firebase project: `lists-95c4f`

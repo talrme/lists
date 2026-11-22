@@ -2,7 +2,23 @@
 
 [Open Lists](https://talrme.github.io/lists/) | [GitHub](https://github.com/talrme/lists)
 
-Phone-first private and shared lists for Tal and Sophie, with Google sign-in, Firestore syncing, and offline support. To-do is the main experience; Groceries, Movies, and Other lists currently have basic item tracking.
+Phone-first private and shared lists for Tal and Sophie, with Google sign-in, Firestore syncing, and offline support. To-do and household Groceries have dedicated workflows; Movies and Other lists have basic tracking.
+
+## Groceries
+
+Groceries is one household shopping list, without private items or assignments. Add by typing or choosing a categorized suggestion. The starter catalog contains 399 curated options from the supplied grocery export and 13 labeled added staples. It does not prefill the shopping list or invent purchases. Previous generic grocery tasks are untouched, but not used by this new workflow.
+
+At quantity one, tap the small package icon to reveal quantity controls; larger quantities show steppers. Tap the item name to edit quantity, unit, category and notes. Checking Purchased means the **whole listed quantity**. Undo restores it only if it has not changed or been re-added. Adding an already-listed item offers an explicit increase, not a silent duplicate.
+
+**Saved lists** supports creating, editing, archiving, adding/removing items and editing quantities/units. Save the current shopping list as a template, or create one from scratch. Select all/none or individual items before adding. Already-listed items remain unchanged unless you allow quantity increases. Shopping-list edits never change saved-list defaults.
+
+**Menu -> Item catalog** manages names, aliases, default quantities/units, categories, archive status and per-store locations. New typed shopping items join the household catalog automatically. Initial catalog options are public app assets; household edits, new items, saved lists and purchases are protected by household membership.
+
+Initial stores are **Trader Joe's · Emeryville** and **Berkeley Bowl**; no branch or aisle numbers are guessed. Under **Stores & aisles**, add locations in walking order and move them up/down. Assign each item's locations through Item catalog. Choose a store and switch category/aisle ordering. Unmapped items always remain visible.
+
+**Recent shops** groups purchases by Pacific calendar day across all stores, with no trip-end step or minimum count. Open a day to select items to buy again. Frequently bought means present on at least three of the last ten shopping days currently loaded. The newest 300 purchases load initially; older history is fetched on demand. The recent view shows three shopping days at a time.
+
+Groceries has its own drawer actions, settings section and Quick guide. Appearance, animations, sign-in and Save / Share remain global. Open groceries once online to enable its account/household-scoped offline cache. Durable commands upload with Lists open; atomic purchases and command receipts prevent duplicate retries. Stale conflicts remain reviewable under Pending changes. **Website pushes do not publish the new database rules**; see FIREBASE_SETUP before first live use.
 
 ## Add and Manage Tasks
 

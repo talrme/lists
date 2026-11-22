@@ -15,6 +15,8 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 
 ## Preserve Current Behavior
 
+- Groceries is a separate household-only domain with curated catalog, saved-list CRUD, stores/aisles and Pacific-day purchase history. No task scheduling/ownership filters. Preserve durable command receipts, atomic whole-quantity purchase/guarded Undo, preview isolation and pending-change guards. Never seed old PDF counts as shopping/history, publish the PDF, or clear legacy real data. Publish grocery rules separately from website pushes.
+
 - Optional account-synced Someday is separate, never dated/daily-picked, safe to hide; tags use stable IDs with private/shared scope and history-safe rename/merge/archive. Keep metadata queues separate from tasks. Style/palette and audiences now sync per account; touch/animation/layout controls remain local. Desktop board starts at 1100px, deduplicates the daily pick and preserves Waiting as a status.
 - Visible Today/Week/Later. Week is strictly future through five future weekdays; Today and Week do not overlap. Week creation can pick today, then appears only Today. Today punt excludes today. Later-right/Week-left swipe moves to Today.
 - One per-person/day Later pick, stable across devices; completing/punting/removing consumes it without replacement. Empty pools can fill later. Never redraw a nonempty receipt.

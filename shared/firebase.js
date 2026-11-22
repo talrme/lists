@@ -4,7 +4,8 @@ import {photoUrl} from './task-fields.js?v=organizer1';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResults} from './device-store.js?v=2';
 import {validateReview} from './asana-review-core.js?v=1';
-import {organizerStore} from './organizer.js?v=1';
+import {organizerStore} from './organizer.js?v=2';
+import {groceryStore} from './grocery-store.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
   const [appSdk,authSdk,dbSdk]=await Promise.all([
@@ -19,15 +20,17 @@ export async function connectFirebase(config,events) {
   let user=null,preview=null,activeId=config.space,activeEnvironment=config.environment,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
   let record=null,recordKey='',serverTasks=[],networkReady=false,saving=0,flushing=false,retryTimer=null,syncError='',memberNames={},memberProfiles={};
   let metadataState={pending:0,syncing:false,error:''};
+  let groceryState={pending:0,syncing:false,error:''};
+  const groceries=groceryStore({sdk:dbSdk,db,device,project:config.firebase.projectId,events:{change:value=>events.groceries?.(value),status:value=>{groceryState=value;syncStatus();}}});
   const organizer=organizerStore({sdk:dbSdk,db,device,events:{change:value=>events.organizer?.(value),error:error=>events.error(error),status:value=>{metadataState=value;syncStatus();}}});
   const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('lists-device-'+config.firebase.projectId):null;
   const subject=()=>preview||user;
   const root=dbSdk.collection(db,'listSpaces');
   const path=()=>['listSpaces',activeId,'environments',activeEnvironment];
   const key=()=>`lists-household-v1-${user?.uid}`;
-  function syncStatus(){const connecting=!!user&&navigator.onLine&&!networkReady&&!record?.blocked;events.sync?.({pending:(record?.operations?.length||0)+metadataState.pending,syncing:!!saving||flushing||connecting||metadataState.syncing,connecting,offline:!navigator.onLine||!networkReady,error:syncError||metadataState.error,lastSynced:record?.lastSynced||null});}
+  function syncStatus(){const connecting=!!user&&navigator.onLine&&!networkReady&&!record?.blocked;events.sync?.({pending:(record?.operations?.length||0)+metadataState.pending+groceryState.pending,syncing:!!saving||flushing||connecting||metadataState.syncing||groceryState.syncing,connecting,offline:!navigator.onLine||!networkReady,error:syncError||metadataState.error||groceryState.error,lastSynced:record?.lastSynced||null});}
   function emitTasks(){tasks=projectTasks(serverTasks,record?.operations);events.tasks(tasks);syncStatus();}
-  function clearChildren(){organizer.stop();spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];serverTasks=[];memberNames={};memberProfiles={};record=null;recordKey='';networkReady=false;syncError='';clearTimeout(retryTimer);events.tasks([]);syncStatus();}
+  function clearChildren(){groceries.stop();organizer.stop();spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];serverTasks=[];memberNames={};memberProfiles={};record=null;recordKey='';networkReady=false;syncError='';clearTimeout(retryTimer);events.tasks([]);syncStatus();}
   async function saveRecord(patch,key=recordKey){
     if(!device||!key||preview)return;
     const next=await device.change(key,old=>({...old,...patch,...(patch.picks?{picks:{...old.picks,...patch.picks}}:{})}));
@@ -39,7 +42,7 @@ export async function connectFirebase(config,events) {
     const uid=user.uid,pointer=await device.read(pointerKey(uid,id)),cached=pointer?.target?await device.read(pointer.target):null;
     if(version!==spaceVersion||uid!==user?.uid||recordKey||!cached||cached.key!==scopeKey(uid,id,cached.environment)||cached.blocked||!belongsTo(cached.household,user))return;
     recordKey=pointer.target;record=cached;serverTasks=cached.tasks||[];activeEnvironment=cached.environment;
-    void organizer.bind(subject(),id,cached.environment,false);events.space?.(cached.household);events.members(cached.members||{},cached.profiles||{});emitTasks();events.ready();
+    void organizer.bind(subject(),id,cached.environment,false);void groceries.bind(subject(),id,cached.environment,false);events.space?.(cached.household);events.members(cached.members||{},cached.profiles||{});emitTasks();events.ready();
   }
   async function bindCache(household,environment,version){
     if(!device||preview)return;
@@ -55,7 +58,7 @@ export async function connectFirebase(config,events) {
     const key=recordKey;if(!device||!key||event.data!==key||preview)return;
     const next=await device.read(key);if(key!==recordKey||!next)return;record=next;serverTasks=next.tasks||[];emitTasks();void flushQueue();
   });
-  function resume(){syncStatus();if(navigator.onLine){void dbSdk.enableNetwork(db).then(()=>flushQueue()).catch(()=>{});}}
+  function resume(){syncStatus();if(navigator.onLine){void dbSdk.enableNetwork(db).then(()=>{void organizer.flush();void groceries.refresh();return flushQueue();}).catch(()=>{});}}
   window.addEventListener('online',resume);window.addEventListener('offline',()=>{networkReady=false;syncStatus();void dbSdk.disableNetwork(db).catch(()=>{});});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
   function stop(){organizer.stop();authVersion++;stopDiscovery();stopDiscovery=()=>{};stopSpace();stopSpace=()=>{};clearChildren();spaces=[];events.households?.([]);}
@@ -80,7 +83,7 @@ export async function connectFirebase(config,events) {
       if(signature===fingerprint)return;if(fingerprint&&activeEnvironment!==environment)events.loading?.();activeEnvironment=environment;fingerprint=signature;clearChildren();const run=spaceVersion;
       const account=subject();
       try{
-        await bindCache(household,environment,run);void organizer.bind(account,id,environment,!!preview);if(run!==spaceVersion||authRun!==authVersion)return;
+        await bindCache(household,environment,run);void organizer.bind(account,id,environment,!!preview);void groceries.bind(account,id,environment,!!preview);if(run!==spaceVersion||authRun!==authVersion)return;
         // Registration only records the identity already authorized by household rules.
         const profile=dbSdk.doc(db,'listSpaces',id,'members',account.uid);
         if(!preview&&navigator.onLine){
@@ -176,7 +179,7 @@ export async function connectFirebase(config,events) {
     if(flushing||!device||!recordKey||!user||preview||!networkReady||!navigator.onLine||record?.blocked||!record?.operations?.length)return;
     const key=recordKey,version=spaceVersion;
     const flush=async()=>{
-      if(key!==recordKey||flushing)return;flushing=true;syncError='';syncStatus();
+      if(key!==recordKey||version!==spaceVersion||flushing)return;flushing=true;syncError='';syncStatus();
       try{
         while(key===recordKey&&version===spaceVersion&&navigator.onLine&&networkReady&&!preview){
           const current=await device.read(key),operation=current?.operations?.[0];if(!operation||current.blocked)break;
@@ -190,9 +193,9 @@ export async function connectFirebase(config,events) {
       }catch(error){
         if(key===recordKey){const transient=['unavailable','deadline-exceeded','aborted','cancelled','resource-exhausted'].includes(error.code);syncError=error.code==='permission-denied'?'Pending changes need access restored. They remain saved on this device.':transient?'Changes saved on this device. Sync will retry.':'Pending changes need review. They remain saved on this device.';syncStatus();
           if(transient&&navigator.onLine){clearTimeout(retryTimer);retryTimer=setTimeout(()=>void flushQueue(),20000);}}
-      }finally{flushing=false;syncStatus();if(key!==recordKey)void flushQueue();}
+      }finally{flushing=false;syncStatus();if(key!==recordKey||version!==spaceVersion)void flushQueue();}
     };
-    if(navigator.locks)await navigator.locks.request('lists-outbox:'+config.firebase.projectId+key,{ifAvailable:true},lock=>lock?flush():undefined);else await flush();
+    if(navigator.locks)await navigator.locks.request('lists-outbox:'+config.firebase.projectId+key,()=>flush());else await flush();
   }
   return {
     async loadAsanaReview(){
@@ -211,17 +214,20 @@ export async function connectFirebase(config,events) {
     async login(){await authSdk.signInWithPopup(auth,new authSdk.GoogleAuthProvider());},
     async pendingChanges(){if(!device||!user||preview)return [];return (await device.recordsForUser(user.uid)).flatMap(saved=>(saved.operations||[]).map(operation=>({id:operation.id,household:operation.kind==='preferences'?'Your account':saved.household?.title||JSON.parse(saved.key)[1],title:operation.kind==='preferences'?'Account settings':operation.kind==='tags'?(operation.items[0]?.patch?.name||'Tag change'):operation.items[0]?.patch?.title||saved.tasks?.find(task=>task.id===operation.items[0]?.id)?.title||'Task change',count:operation.items.length})));},
     async discardPending(id){
-      requireWritable();if(flushing)throw new Error('Wait for the current sync to finish, then try again.');
+      requireWritable();if(flushing||groceryState.syncing||metadataState.syncing)throw new Error('Wait for the current sync to finish, then try again.');
       if(!device||!user)return;
       for(const saved of await device.recordsForUser(user.uid))if(saved.operations?.some(operation=>operation.id===id)){
         const next=await device.change(saved.key,old=>({...old,operations:old.operations.filter(operation=>operation.id!==id)}));
         if(saved.key===recordKey){record=next;syncError='';emitTasks();}channel?.postMessage(saved.key);
       }
-      void organizer.refresh();void flushQueue();
+      void organizer.refresh();void groceries.refresh();void flushQueue();
     },
+    activateGroceries:()=>groceries.activate(),
+    groceryCommand:command=>groceries.command(command),
+    groceryOlder:()=>groceries.older(),
     savePreferences:patch=>organizer.write('preferences','main',patch),
     saveTag:(id,patch)=>organizer.write('tags',id,patch),
-    async retrySync(){requireWritable();syncError='';syncStatus();if(navigator.onLine)await dbSdk.enableNetwork(db);await organizer.bind(subject(),activeId,activeEnvironment,false);await organizer.refresh();await flushQueue();},
+    async retrySync(){requireWritable();syncError='';syncStatus();if(navigator.onLine)await dbSdk.enableNetwork(db);await organizer.bind(subject(),activeId,activeEnvironment,false);await organizer.refresh();await groceries.retry();await flushQueue();},
     async logout(){if(device&&await device.userPending(user.uid))throw new Error('There are changes saved on this device waiting to sync. Reconnect before signing out.');const uid=user?.uid;stop();await authSdk.signOut(auth);if(device&&uid)await device.clearUser(uid);},
     selectSpace,
     async listUsers(){

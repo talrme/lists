@@ -45,12 +45,14 @@ async function mockBackend(page,base){
   await page.route('https://firestore.googleapis.com/**',route=>route.abort());
   await page.route('**/shared/firebase.js*',route=>route.fulfill({contentType:'text/javascript',body:`
     import {sandboxStore} from ${JSON.stringify(fixture)};
+    import {reduceCommand} from ${JSON.stringify(new URL('shared/grocery-core.js',base).href)};
     export async function connectFirebase(config,events){
       const store=sandboxStore(events.tasks,events.status);
       let activeUid='tal';const metadataKey=()=> 'lists-test-metadata-'+activeUid;const metadata=()=>JSON.parse(localStorage.getItem(metadataKey())||'{"settings":{},"tags":[]}');const publish=()=>events.organizer?.(metadata());
       const select=async uid=>{activeUid=uid;events.account({uid,email:uid+'@test.invalid',emailVerified:false,displayName:uid==='tal'?'Tal':'Sophie',providerData:[]});events.preview?.(null);events.households([{id:'home',title:'Test household'}]);events.space({id:'home',title:'Test household'});events.members({tal:'Tal',sophie:'Sophie'});publish();await store.ready();events.ready();};
       window.__testSync=events.sync;window.__testSelectUser=select;setTimeout(()=>void select('tal'),0);
-      return {...store,async savePreferences(patch){const value=metadata();value.settings={...value.settings,...patch};localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},async saveTag(id,patch){const value=metadata(),old=value.tags.find(tag=>tag.id===id);value.tags=old?value.tags.map(tag=>tag.id===id?{...tag,...patch}:tag):[...value.tags,{id,...patch}];localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},logout:async()=>events.account(null)};
+      const groceryKey='lists-test-groceries';const groceryRows=()=>JSON.parse(localStorage.getItem(groceryKey)||'[]');const groceryPublish=()=>events.groceries?.({rows:groceryRows(),hasOlder:false});window.addEventListener('storage',event=>{if(event.key===groceryKey)groceryPublish();});
+      return {...store,activateGroceries:groceryPublish,async groceryCommand(draft){const command={...draft,id:crypto.randomUUID(),at:Date.now()},old=groceryRows(),results=reduceCommand(old,command),map=new Map(old.map(row=>[row.collection+'/'+row.id,row]));for(const row of results)map.set(row.collection+'/'+row.id,row);localStorage.setItem(groceryKey,JSON.stringify([...map.values()]));groceryPublish();return command;},async groceryOlder(){},async savePreferences(patch){const value=metadata();value.settings={...value.settings,...patch};localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},async saveTag(id,patch){const value=metadata(),old=value.tags.find(tag=>tag.id===id);value.tags=old?value.tags.map(tag=>tag.id===id?{...tag,...patch}:tag):[...value.tags,{id,...patch}];localStorage.setItem(metadataKey(),JSON.stringify(value));publish();},logout:async()=>events.account(null)};
     }
   `}));
 }

@@ -152,6 +152,68 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt && request.resource.data.rev == resource.data.rev + 1;
         allow delete: if member(space) && readable(resource.data);
       }
+      function validGroceryEnvelope(data) {
+        return data.keys().hasAll(['type','key','value','rev','updatedAt'])
+          && data.keys().hasOnly(['type','key','value','rev','updatedAt'])
+          && data.key is string && data.key.size() > 0 && data.key.size() <= 160
+          && data.value is map && data.rev is int && data.rev > 0 && data.updatedAt == request.time;
+      }
+      function groceryName(value) { return value.name is string && value.name.size() > 0 && value.name.size() <= 120; }
+      function groceryQuantity(value) {
+        return groceryName(value) && value.category is string && value.category.size() <= 60
+          && value.quantity is number && value.quantity > 0 && value.quantity <= 9999
+          && value.unit is string && value.unit.size() > 0 && value.unit.size() <= 20
+          && value.get('notes', '') is string && value.get('notes', '').size() <= 2000
+          && value.get('locations', {}) is map && value.get('locations', {}).size() <= 40;
+      }
+      function validGrocery(data) {
+        let value = data.value;
+        return validGroceryEnvelope(data) && (
+          (data.type == 'item' && groceryQuantity(value) && value.active is bool
+            && value.catalogId is string && value.catalogId.size() <= 160
+            && value.keys().hasOnly(['name','category','quantity','unit','notes','catalogId','locations','active']))
+          || (data.type == 'catalog' && groceryQuantity(value) && value.archived is bool
+            && value.aliases is list && value.aliases.size() <= 30 && value.source is string && value.source.size() <= 30
+            && value.keys().hasOnly(['name','category','quantity','unit','notes','locations','aliases','archived','source']))
+          || (data.type == 'list' && groceryName(value) && value.entries is list && value.entries.size() <= 150 && value.archived is bool
+            && value.keys().hasOnly(['name','entries','archived']))
+          || (data.type == 'store' && groceryName(value) && value.locations is list && value.locations.size() <= 60 && value.archived is bool
+            && value.keys().hasOnly(['name','locations','archived'])));
+      }
+      match /environments/{environment}/groceries/{id} {
+        allow read: if administrator() || member(space);
+        allow create: if member(space) && id.matches('^(item|catalog|list|store)--[a-zA-Z0-9-]{1,160}$')
+          && id == request.resource.data.type + '--' + request.resource.data.key
+          && validGrocery(request.resource.data) && request.resource.data.rev == 1;
+        allow update: if member(space) && validGrocery(request.resource.data)
+          && request.resource.data.type == resource.data.type && request.resource.data.key == resource.data.key
+          && request.resource.data.rev == resource.data.rev + 1;
+        allow delete: if false;
+      }
+      match /environments/{environment}/groceryPurchases/{id} {
+        function validPurchase(data) {
+          let value = data.value;
+          return validGroceryEnvelope(data) && data.type == 'purchase' && data.key == id && groceryQuantity(value)
+            && value.catalogId is string && value.itemId is string && value.itemRev is int
+            && value.at is number && value.day is string && value.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && value.storeId is string && value.storeId.size() <= 100 && value.undone is bool
+            && value.keys().hasOnly(['name','category','quantity','unit','notes','catalogId','locations','active','at','day','storeId','undone','itemId','itemRev']);
+        }
+        allow read: if administrator() || member(space);
+        allow create: if member(space) && validPurchase(request.resource.data) && request.resource.data.rev == 1 && !request.resource.data.value.undone;
+        allow update: if member(space) && validPurchase(request.resource.data)
+          && request.resource.data.rev == resource.data.rev + 1
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rev','updatedAt','value'])
+          && request.resource.data.value.diff(resource.data.value).affectedKeys().hasOnly(['undone'])
+          && request.resource.data.value.undone && !resource.data.value.undone;
+        allow delete: if false;
+      }
+      match /environments/{environment}/groceryCommands/{id} {
+        allow read: if administrator() || member(space);
+        allow create: if member(space) && request.resource.data.keys().hasOnly(['actor','createdAt'])
+          && request.resource.data.actor == request.auth.uid && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
       match /environments/{environment}/daily/{day}/picks/{uid} {
         function eligible(taskId) {
           let task = get(/databases/$(database)/documents/listSpaces/$(space)/environments/$(environment)/tasks/$(taskId)).data;

@@ -73,7 +73,7 @@ export function organizerStore({sdk,db,device,events}){
       }catch(error){if(run===version){const transient=['unavailable','deadline-exceeded','aborted','cancelled','resource-exhausted'].includes(error.code);metadataError=error.code==='permission-denied'?'Settings or tags are saved on this device but need the latest Firebase rules to sync.':'Settings or tags are saved on this device. Use Retry sync if this persists.';clearTimeout(retry);if(transient)retry=setTimeout(()=>void flush(),20000);}}
       finally{flushing=false;if(run===version)emit();else void flush();}
     };
-    if(navigator.locks)await navigator.locks.request('lists-organizer:'+account,{ifAvailable:true},lock=>lock?work():undefined);else await work();
+    if(navigator.locks)await navigator.locks.request('lists-organizer:'+account,()=>work());else await work();
   }
   channel?.addEventListener('message',async event=>{if(preview||![prefKey(),tagCacheKey()].includes(event.data))return;const run=version,record=await device?.read(event.data);if(run===version&&record){records.set(event.data,record);emit();void flush();}});
   window.addEventListener('online',()=>void flush());

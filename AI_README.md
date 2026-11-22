@@ -1,6 +1,6 @@
 # Lists: AI Handoff
 
-Current implementation and maintenance contract, reviewed 2026-11-21. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
+Current implementation and maintenance contract, reviewed 2026-11-22. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
 
 ## Project and Non-Negotiable Boundaries
 
@@ -17,6 +17,8 @@ Current implementation and maintenance contract, reviewed 2026-11-21. This is no
 | File | Responsibility |
 | --- | --- |
 | `shared/app.js` | Composer, keyed rendering, dialogs, view/audience state, daily pick orchestration, completion overlays, settings and auth gate. |
+| `shared/groceries.js`, `shared/groceries.css` | Household shopping UI, compact quantities, catalog CRUD, saved lists, store routes and daily history. |
+| `shared/grocery-catalog.js`, `shared/grocery-core.js`, `shared/grocery-store.js` | Curated static defaults, pure commands, scoped listeners and durable idempotent grocery outbox. |
 | `shared/core.js` | Pure date keys, business days, schedule selection, list membership, daily pool, task validation and ordering. |
 | `shared/organizer.js`, `shared/tag-field.js` | Account settings/tag directory, canonical merges, durable metadata queue and tag picker. |
 | `shared/asana-review-core.js`, `shared/asana-review.js` | Local-only admin CSV review, recommendations, decisions/Undo/comments and private backup/restore. |
@@ -36,6 +38,19 @@ Current implementation and maintenance contract, reviewed 2026-11-21. This is no
 | `tools/build.mjs`, `tools/serve.cjs` | Generate root HTML/manifest and serve a no-store local preview on port 5195. |
 
 Icons, QR generation and sanitized read-only Markdown use vendored libraries. Use the existing Lucide icon set, not remote icon services. The details button is a rounded, thick-stroke double-chevron using theme `currentColor`; internal `leaf-options` naming is historical, not a visible leaf.
+
+## Household Groceries
+
+- Separate household-only workflow. No owner/private/shared, due-date, Today/Week/Later or daily-task-pick logic applies. Legacy category=grocery tasks are untouched and ignored, not migrated/deleted. Returning from background preserves an active grocery screen and draft.
+- Catalog: 412 options (399 curated from 884 source PDF bullet entries, plus 13 marked Added staple). No PDF/email metadata/personal-name labels/historical counts are committed. Defaults are 1 each, eggs 1 dozen. Baseline is public app data; household overrides and additions remain membership-protected. No shopping/purchase seeds. The numbered catalog review is a local document outside this public repo; no custom review feature was requested.
+- `groceries/{id}` under existing household/environment stores `{type,key,value,rev,updatedAt}`, IDs `type--key`, types item/catalog/list/store. One active item per canonical catalog ID; never silently convert units. Catalog overrides layer over static defaults. Archive rather than destroy history. Saved-list entries snapshot clean values; editing active quantities never edits templates. Duplicate active additions need explicit increase; template adds skip existing unless explicitly enabled.
+- Initial stores: Trader Joe's Emeryville and Berkeley Bowl; branch/aisles blank. Route IDs survive renaming/reordering. Unmapped/deleted locations remain visible under Unmapped. Assign item/store locations through catalog. Selected store and category/aisle order remain device-local.
+- `groceryPurchases/{uuid}` stores full quantity/unit/name/category/notes/store, Pacific date/time, source item ID and post-purchase revision. All stores on one date form one shop: no session, threshold or End trip. Undo marks a purchase undone and restores only its unchanged inactive item; it cannot overwrite re-added/edited items. Recent shows three days; latest300 purchases have a live query, Older loads more. Frequently bought means >=3 of last10 currently loaded shopping days, not guaranteed full-history analytics.
+- `groceryCommands/{uuid}` is an immutable receipt written atomically with results. Retries read it before applying quantity/purchase changes again. No receipt listener. Pure reducers power projection and transaction writes; explicit forms check revisions. Stale conflicts remain reviewable. Do not replace this with blind increments or a single full-household document. Future receipt TTL needs a deliberate maximum offline-retry policy first.
+- Cache key `[uid,household,environment,'groceries']`; separate durable outbox contributes to global Syncing, Pending changes, sign-out and update protection. No disk cache in admin preview. Grocery reads start lazily on use or pending recovery; no polling. Network resume retries all queues after enableNetwork. All three outboxes wait for their Web Lock instead of dropping an ifAvailable=false wake-up; keep scope/epoch checks when a queued lock starts. A forced-contention emulator test covers this. Concurrent non-increasing adds/already-purchased checks reconcile as no-ops; stale quantity deltas never resurrect bought items. Explicit stale form edits still require review.
+- Preserve native completion cancellation/thumb-side preferences. Live updates must not replace an open form or input. Passive Saved lists refreshes incoming changes. Quantity1 hides steppers until tapped. Purchased means the full quantity.
+- Publish rules separately; git push is not deployment. Household members share groceries, admin can read but not write as a nonmember. Rules constrain types/quantities, revisions, receipts and purchase edits. Never make rules public to work around publication.
+- Focused tests: grocery.test.js, groceries.cjs, rules.cjs and admin.cjs (actual SDK/demo emulator: two-account quantities, offline cold reload, purchase/Undo and shared-list arrival). No real household test mutations.
 
 ## Dates, Lists, and Scheduling
 

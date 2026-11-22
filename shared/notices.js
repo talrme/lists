@@ -18,7 +18,7 @@ export function createNotices({host,write,epoch,readOnly,errorText,motion}){
   if(undo){const button=document.createElement('button');button.className='toast-undo';button.textContent='Undo';button.title=undo.label?'Undo: '+undo.label:'Undo';button.onclick=async()=>{
     const action=entry.undo;if(entry.pending||!action||action.epoch!==epoch()||readOnly())return;
     entry.pending=true;clearTimeout(entry.timer);button.disabled=true;
-    try{await write(action.id,action.patch,action.rev);dismiss(entry);if(action.epoch===epoch())show('Undone');}
+    try{if(action.run)await action.run();else await write(action.id,action.patch,action.rev);dismiss(entry);if(action.epoch===epoch())show('Undone');}
     catch(error){dismiss(entry);if(action.epoch===epoch())show(errorText(error));}
    };node.append(button);}
   let swipe=null;

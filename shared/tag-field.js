@@ -1,5 +1,5 @@
 import {esc} from './task-fields.js?v=organizer1';
-import {canonicalTag,tagName,tagKey} from './organizer.js?v=1';
+import {canonicalTag,tagName,tagKey} from './organizer.js?v=2';
 
 export function bindTagField(form,{task={},getTags,saveTag,uid}){
   const host=document.createElement('div');host.className='tag-field';
