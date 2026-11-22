@@ -195,7 +195,7 @@ dialog.navigation-drawer[open]{display:flex;flex-direction:column;touch-action:p
 .leaf-options{color:var(--accent);border-radius:50%}.leaf-options svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .leaf-options:hover{background:var(--soft)}
 .task-check{position:relative}.complete-preview{position:absolute;inset:0;display:grid;place-items:center;opacity:0;color:var(--accent);pointer-events:none}
-.task-check:active:not(:disabled):not(.checked)>svg{opacity:0}.task-check:active:not(:disabled) .complete-preview{opacity:1}
+.task-check:not(.completion-tracking):not(.completion-cancelled):active:not(:disabled):not(.checked)>svg,.task-check.completion-pressed:not(.checked)>svg{opacity:0}.task-check:not(.completion-tracking):not(.completion-cancelled):active:not(:disabled) .complete-preview,.task-check.completion-pressed .complete-preview{opacity:1}
 .search-completed{display:flex;align-items:center;gap:8px;font-size:12px;min-height:36px;margin:0 0 12px;color:var(--muted)}.search-completed input{accent-color:var(--accent);width:17px;height:17px}
 .search-results>button{grid-template-columns:24px minmax(0,1fr);align-items:center}.search-result-copy{min-width:0;display:grid;gap:5px}.search-result-status{color:var(--muted);display:grid;place-items:center}.search-result-completed .search-result-status{color:var(--accent)}.search-result-completed strong{text-decoration:line-through;color:var(--muted)}.search-completed-heading{font-size:12px;font-weight:650;margin:14px 0 3px;color:var(--muted)}
 .search-results{display:grid;gap:6px}.search-results>button{text-align:left;padding:12px;background:var(--soft);border-radius:6px;display:grid;gap:5px;overflow-wrap:anywhere}.search-results strong{font-size:14px}.search-results small{font-size:11px;color:var(--muted)}
@@ -318,3 +318,22 @@ dialog:has(.asana-review){width:min(900px,calc(100% - 28px));max-width:900px}
 .asana-review .review-status{min-height:18px}
 @media(max-width:480px){.review-controls{grid-template-columns:1fr}.review-selection .primary,.review-selection .secondary{font-size:12px;padding:8px}.review-item{padding:10px}}
 @media(max-width:360px){.review-item-actions select{flex-basis:100%}}
+
+/* Completion targets retain a stable footprint during press/feedback. */
+body[data-completion-side=right] .task-summary{column-gap:4px}
+body[data-completion-target=wide] .task-check{width:56px;min-width:56px;min-height:52px;height:auto;align-self:stretch;border:0;border-radius:5px;margin:0 0 0 3px;background:color-mix(in srgb,var(--soft) 32%,transparent);color:var(--muted);transform:none;transition:background .1s,color .1s}
+body[data-completion-target=wide] .task-check:active{transform:none}
+body[data-completion-target=wide] .task-check svg{width:27px;height:27px;stroke-width:2.5;padding:0;border-radius:0;background:transparent}
+body[data-completion-target=wide] .task-check.completion-pressed:not(:disabled),body[data-completion-target=wide] .task-check:not(.completion-tracking):not(.completion-cancelled):active:not(:disabled){background:var(--accent);color:var(--accent-text);transition:none}
+body[data-completion-target=wide] .task-check .complete-preview{color:var(--accent-text)}
+body[data-completion-target=wide] .task-check.checked{color:var(--accent);background:var(--soft)}
+body[data-completion-side=right] .row-tags{padding-left:8px;padding-right:64px}
+body[data-design="7"][data-completion-side=right] .task-check{border-left:1px solid var(--line);border-right:0}
+body[data-design="8"][data-completion-side=right] .day-tasks:before{left:auto;right:31px}
+body[data-design="8"][data-completion-target=wide] .task-check{background:var(--surface)}
+body[data-design="8"][data-completion-side=right] .task-check.completion-pressed:not(:disabled),body[data-design="8"][data-completion-side=right] .task-check:not(.completion-tracking):not(.completion-cancelled):active:not(:disabled){background:var(--accent)}
+
+body[data-completion-side=left][data-completion-target=wide] .task-check{margin-left:0;margin-right:3px}
+body[data-completion-side=left][data-completion-target=wide] .row-tags{padding-left:64px}
+body[data-design="7"][data-completion-side=left][data-completion-target=wide] .task-check{border-right:1px solid var(--line)}
+body[data-design="8"][data-completion-side=left][data-completion-target=wide] .day-tasks:before{left:31px}

@@ -14,6 +14,10 @@ Details include a plain-text description, Private/Shared assignment, a date, and
 
 Completion responds immediately: press to preview a checkmark, then release to dismiss with confetti while the save finishes. Failed saves restore the latest saved state. Undo becomes available after the save. Notices stack up to four, expire independently, and can be swiped away on phones. Dismissing a notice is not Undo.
 
+On phones, completion is a muted checkmark in a 56px-wide area at the far right, separate from editable task text. Press fills it with the theme accent; release completes. Sliding outside cancels, even if you slide back in. Scrolling/cancelled touches do not complete tasks. A completion arriving from another device during a press cannot accidentally turn that tap into Reopen. Shared-owner pictures stay before the completion area.
+
+**Settings -> To-do settings -> Completion button** offers Auto / Left / Right. Auto chooses right below 768px and the existing left circle on larger screens. Left on phones retains the wider target for left-handed use. The position preference is saved on this device and applies across list categories; it does not change account-synced appearance.
+
 ## Scheduling
 
 Calendar dates use America/Los_Angeles. Business days mean Monday-Friday; public holidays are not excluded.

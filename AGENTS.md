@@ -20,6 +20,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 - One per-person/day Later pick, stable across devices; completing/punting/removing consumes it without replacement. Empty pools can fill later. Never redraw a nonempty receipt.
 - Nonempty timing taps add without navigation; empty taps browse. Double-chevron opens the preserved composer draft. Modal is default, with stable keyed form nodes and top/bottom actions.
 - Completion feedback is immediate/optimistic with acknowledgement-based Undo, rollback to authoritative state on failure, per-ID busy protection and workspace epoch guards.
+- Completion position is device-local Auto/Left/Right: wide right target on phones, old left circle on desktop Auto. Preserve native keyboard clicks, cancel captured pointer releases after leaving/scrolling, keep targets stable while pressed, and never toggle a changed remote checked state from an old press.
 - Search defaults active-only; opt-in completed results follow active with checked status. No extra search database reads.
 - Compact phone layout; Appearance first, list settings second/open; 1-10 day wheel/default5. No footer utilities or duplicate View modal. Quick Action icons default hidden on phones/shown larger.
 - Keep native scrolling, 150ms drag, natural day reflow, quiet reorder saves, no snap-back, no nested day clipping. Notices have no X; touch swipe dismisses without Undo.

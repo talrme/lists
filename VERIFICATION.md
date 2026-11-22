@@ -1,4 +1,8 @@
-# Verification — November 20, 2026
+# Verification — November 21, 2026
+
+## Thumb-Friendly Completion
+
+The focused completion-target browser suite passed 100 layout checks: Auto right on phones/left circle on desktop; 56px phone targets on either side; explicit Right on desktop; immediate theme-accent press feedback; leaving/re-entering, Escape and captured-touch cancellation; real CDP touch completion; delayed-write optimistic removal/Undo; native keyboard use; task-text editing; persisted settings; and a simulated remote completion during a held press that must not reopen the task. Both light/green and Night screenshots were inspected. Existing immediate-completion/search regressions (60 layouts), production root/style checks (80), touchscreen swipe/drag/native scrolling, automatic updates and offline shell checks passed. The touch test now fixes a weekday because its Today/Tomorrow scenario must not depend on a live Saturday/Sunday group. Tests used synthetic data; physical-phone hardware checks remain manual. No backend schema/rules or real task changes were required.
 
 ## Private Asana Review
 

@@ -1,6 +1,6 @@
 # Lists: AI Handoff
 
-Current implementation and maintenance contract, reviewed 2026-11-20. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
+Current implementation and maintenance contract, reviewed 2026-11-21. This is not a changelog. Use git history and [VERIFICATION.md](VERIFICATION.md) for past iterations. Keep this file, [README.md](README.md), [AGENTS.md](AGENTS.md), and the one-minute in-app guide accurate when behavior changes.
 
 ## Project and Non-Negotiable Boundaries
 
@@ -24,6 +24,7 @@ Current implementation and maintenance contract, reviewed 2026-11-20. This is no
 | `shared/firebase.js` | Firebase SDK/auth, scoped listeners, revisioned transactions, households, daily receipts, offline replay and sync state. |
 | `shared/device-store.js` | Account/household/environment IndexedDB records, atomic queue updates and task projections. |
 | `shared/gestures.js` | Vendored Sortable integration, hold-to-drag, directional swipes and surrounding-day reflow. |
+| `shared/completion-press.js` | Native-button pointer feedback, captured-touch cancellation and press-time render guard. |
 | `shared/day-groups.js`, `shared/day-wheel.js` | Weekend grouping and accessible 1-10-day scroll-snap setting. |
 | `shared/visibility.js`, `shared/search.js` | Owner display filters and local title/description search. |
 | `shared/motion.js`, `shared/notices.js` | Effect preferences/cleanup and independent Undo notices. |
@@ -102,6 +103,10 @@ Save review file downloads full private JSON including source/decisions/comments
 ## Completion, Motion, and Undo
 
 Completion is optimistic UI, not fake backend success:
+
+Auto completion layout puts a muted check in a 56px-wide right-hand target below 768px, and preserves the left circle on larger screens. `prefs.completionSide` is device-local auto/left/right, configurable in list settings. Phone Left is also wide; desktop Right is wide. DOM button order matches the chosen side; text remains edit-only. Style 7 dividers, style 8 rails and tag indentation follow the actual control position.
+
+The press controller retains native click/keyboard activation. Pointer-down fills the target immediately; leaving it permanently cancels that press, including re-entry. Pointercancel, scroll, blur, Escape, context menus, extra touches and workspace changes cancel too. Suppress any resulting captured-pointer click until a new press; do not suppress keyboard/assistive clicks. Pause keyed rerenders/software updates while held, release on click or a 250ms fallback if no click arrives. This is not a completion delay. The normal click handler compares the displayed checked state to the latest task before toggling, so remote completion while held cannot accidentally reopen it. Swipes/Sortable already exclude task-check controls.
 
 1. While pressed, an enabled incomplete task button previews a checkmark.
 2. Release adds a per-ID `pendingCompletions` overlay and busy guard, removes/reopens the row immediately, and starts completion confetti/travel before awaiting `store.write`.
@@ -230,6 +235,7 @@ Preview: `http://127.0.0.1:5195/lists/`; `PORT` overrides the port. Browser suit
 | General UI/styles | `production.cjs`, `phone-ux.cjs`, `task-header.cjs`, `guide.cjs` |
 | Scheduling/daily/search | `week-punt.cjs`, `menu-later.cjs`, `creation-search.cjs`, `instant-completion.cjs` |
 | Completion/animation/notices | `instant-completion.cjs`, `motion.cjs`, `feedback.cjs` |
+| Completion side/press safety | `completion-target.cjs`: actual CDP touch, drag-away/re-entry/Escape, remote-state race, keyboard, side persistence, theme/layout checks. `touch.cjs` uses a fixed weekday for its empty-Tomorrow drag scenario. |
 | Gestures/grouping | `touch.cjs`, `day-layout.cjs`, `drop.cjs` |
 | Caching/updates | `updates.cjs`, `offline-shell.cjs` |
 | Privacy/households/offline replay | `rules.cjs`, `admin.cjs` against local emulator |
