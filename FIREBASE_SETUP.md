@@ -32,6 +32,8 @@ No new project, public permissions, billing upgrade, service account, Cloud Func
 
 ## What Syncs
 
+The November 25 update adds owner-only `dismissed` and `sortOrder` fields to each existing daily-pick receipt. Publish the current complete rules to enable Not today / Undo and saved daily placement. The chosen task ID and creation time remain immutable, and no task content, dates, ownership or completion changes are needed. Website publication alone does not enable these receipt writes.
+
 - Tasks, assignments, dates, completion and ordering: existing household task documents.
 - Style, color palette, enabled Someday list and task-audience filters: `listUsers/UID/preferences/main`, editable only by that user.
 - Tag directory: `listSpaces/HOUSEHOLD/environments/ENV/tags/TAG_ID`. Shared tags are readable/editable by household members; personal tags are private to their creator except the disclosed administrator read-only preview.

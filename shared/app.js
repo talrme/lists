@@ -6,11 +6,11 @@ import {openAsanaImport} from './asana-import.js?v=1';
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=import1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=waiting2';
-import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
+import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=6';
 import {taskGestures} from './gestures.js?v=8';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=9';
+import {guideMarkup} from './guide.js?v=10';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -39,7 +39,7 @@ Object.assign(prefs,restoreAnimations(prefs));
 prefs.daysShown=Math.max(1,Math.min(10,Number.parseInt(prefs.daysShown)||1));
 const motion=createMotion(()=>prefs);
 let user=null,signedInAccount=null,preview=null,members={},profiles={},tasks=[],store=null,category='todo',view='today';
-let today=dayKey(Date.now(),config.timeZone),picks=[],picking=false,pickedDay='',pickedPool='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0;
+let today=dayKey(Date.now(),config.timeZone),picks=[],dailyState=null,picking=false,pickedDay='',pickedPool='',busy=new Set(),ready=false,pendingCreation=null,spaceEpoch=0,renderedLayout='';
 let households=[],currentSpace={id:config.space},inlineEditor=null,composerFields=null,installManifest=null;
 let grocery=null;
 let completionPress=null,gestures=null,lastRealSpace='',editorTransition=false,skipDropAnimation=false;
@@ -88,7 +88,7 @@ const phoneModal=modalViewport($('#dialog'));$('#task-list').before(boardTools);
 composerFields=bindFields($('#composer'),{uid:null,members,profiles,today,onTimingSelect:mode=>changeEditor(async()=>{
   if($('#composer').dataset.saving||!await leaveInline())return;
   if(mode==='someday'&&($('#composer').elements.date.value||$('#composer').elements.waiting.checked)&&!await confirmAction('Move to Someday / Maybe?','Its scheduled date and follow-up will be cleared. It will not appear in daily suggestions.','Move to Someday'))return;
-  composerFields.setTiming(mode);if(!composerHome){if($('#new-title').value.trim())$('#composer').requestSubmit();else{view={asap:'today',week:'upcoming',later:'later',someday:'someday'}[mode];render();motion.enter([...$('#task-list').children]);}}
+  composerFields.setTiming(mode);if(!composerHome){if($('#new-title').value.trim())$('#composer').requestSubmit();else{view={asap:'today',week:'upcoming',later:'later',someday:'someday'}[mode];render();}}
 }),onOptionsToggle:()=>changeEditor(async()=>{
   if($('#composer').dataset.saving)return;
   if(!$('#new-options').hidden){if(composerHome)close();else{composerFields.setExpanded(false);if(category==='todo')composerFields.showView(view);}return;}
@@ -137,13 +137,19 @@ function updatePeople(){
   composerFields.updatePeople(members,profiles,user?.uid);$('#edit-form')?._controller?.updatePeople(members,profiles,user?.uid);
   if($('.visibility-choices'))bindViews();
 }
+function dailySuggestion(task){return category==='todo'&&!task.completed&&!task.someday&&!task.waiting&&dateTiming(task.dueDate,today)==='later'&&picks.includes(task.id);}
+function dailyRank(){
+ if(Number.isFinite(dailyState?.sortOrder))return dailyState.sortOrder;
+ return tasks.filter(task=>task.category==='todo'&&!task.completed&&!task.someday&&(task.waiting?task.followUp:task.dueDate)&&taskDay(task,today,[])<=today).reduce((rank,task)=>Math.max(rank,task.sortOrder??task.createdAt),0)+1024;
+}
+function displayedOrder(task){return dailySuggestion(task)&&(boardVisible()||view==='today')?{...task,sortOrder:dailyRank()}:task;}
 function currentTasks(targetView=view){
   const view=targetView;
   const chosen=selection(),lastDay=boardVisible()?today:dayGroups(today,prefs.daysShown).at(-1).end;
   return displayTasks().filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
     .filter(task=>selectedTask(task,{uid:user?.uid,email:user?.email,selection:chosen,profiles})||category==='todo'&&view==='today'&&picks.includes(task.id)&&candidateTasks([{...task,dueDate:null}],user?.uid,user?.email,today).length)
     .filter(task=>category==='todo'?view==='today'?!!taskDay(task,today,picks)&&taskDay(task,today,picks)<=lastDay:inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
-    .sort(taskOrder);
+    .sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b)));
 }
 function rowMarkup(task){
   const rowView=actionView(task),resolvedTags=taskTags(task,tags),right=completionSide()==='right',wide=phoneMedia.matches||right;
@@ -151,16 +157,17 @@ function rowMarkup(task){
   const suggestion=category==='todo'&&rowView==='today'&&!task.waiting&&dateTiming(task.dueDate,today)==='later'&&picks.includes(task.id);
   const metadata=[suggestion?'From Later':null,view==='later'&&(task.waiting?task.followUp:task.dueDate)?shortDate(task.waiting?task.followUp:task.dueDate):null].filter(Boolean),hasDetails=!!task.description?.trim();
   const check=`<button type="button" class="task-check ${task.completed?'checked':''}" data-complete="${esc(task.id)}" aria-label="${task.completed?'Reopen':'Complete'} ${esc(task.title)}" ${busy.has(task.id)||preview?'disabled':''}>${icon(task.completed||wide?'check':'circle')}${!task.completed?`<span class="complete-preview" aria-hidden="true">${icon('check')}</span>`:''}</button>`;
-  return `<div class="task-summary">${!right?check:''}<button ${pendingCompletions.has(task.id)?'disabled':''} class="task-content" aria-keyshortcuts="Alt+M" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${task.waiting?'<span class="waiting-badge" role="img" aria-label="Waiting for a response" title="Waiting for a response">'+icon('message-circle-more')+'</span>':''}</span>${hasDetails?`<span class="task-excerpt">${esc(task.description.trim().replace(/\s+/g,' '))}</span>`:''}${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${resolvedTags.length?`<div class="row-tags">${resolvedTags.slice(0,2).map(tag=>`<button type="button" class="tag-chip" data-filter-tag="${esc(tag.id)}">${esc(tag.name)}</button>`).join('')}${resolvedTags.length>2?`<button type="button" class="tag-chip" data-edit="${esc(task.id)}" aria-label="See all tags for ${esc(task.title)}">+${resolvedTags.length-2}</button>`:''}</div>`:''}${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&!task.someday&&quickActionsVisible()?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="${rowView==='upcoming'||rowView==='later'?'Move to Today':'Punt to Week'} ${esc(task.title)}" title="${rowView==='upcoming'||rowView==='later'?'Move to Today':'Punt to Week'}" ${preview||busy.has(task.id)?'disabled':''}>${icon(rowView==='upcoming'||rowView==='later'?'list-start':'corner-up-right')}</button>`:''}${right?check:''}</div>`;
+  return `<div class="task-summary">${!right?check:''}<button ${pendingCompletions.has(task.id)?'disabled':''} class="task-content" aria-keyshortcuts="Alt+M" data-edit="${esc(task.id)}" aria-expanded="${inlineEditor?.id===task.id}"><span class="task-title"><span class="task-name">${esc(task.title)}</span>${task.waiting?'<span class="waiting-badge" role="img" aria-label="Waiting for a response" title="Waiting for a response">'+icon('message-circle-more')+'</span>':''}</span>${hasDetails?`<span class="task-excerpt">${esc(task.description.trim().replace(/\s+/g,' '))}</span>`:''}${metadata.length?`<span class="task-meta">${metadata.map(esc).join(' · ')}</span>`:''}</button>${resolvedTags.length?`<div class="row-tags">${resolvedTags.slice(0,2).map(tag=>`<button type="button" class="tag-chip" data-filter-tag="${esc(tag.id)}">${esc(tag.name)}</button>`).join('')}${resolvedTags.length>2?`<button type="button" class="tag-chip" data-edit="${esc(task.id)}" aria-label="See all tags for ${esc(task.title)}">+${resolvedTags.length-2}</button>`:''}</div>`:''}${suggestion?`<button type="button" class="text-button not-today" data-skip-later="${esc(task.id)}" aria-label="Not today: ${esc(task.title)}" title="Keep in Later and use today’s suggestion" ${preview||busy.has(task.id)?'disabled':''}>${icon('corner-down-left')}<span>Not today</span></button>`:''}${task.visibility==='shared'?avatar(task.assigneeUid,members,profiles):''}${category==='todo'&&!task.completed&&!task.someday&&quickActionsVisible()?`<button data-quick="week" data-id="${esc(task.id)}" class="icon-button defer-task" aria-label="${rowView==='upcoming'||rowView==='later'?'Move to Today':'Punt to Week'} ${esc(task.title)}" title="${rowView==='upcoming'||rowView==='later'?'Move to Today':'Punt to Week'}" ${preview||busy.has(task.id)?'disabled':''}>${icon(rowView==='upcoming'||rowView==='later'?'list-start':'corner-up-right')}</button>`:''}${right?check:''}</div>`;
 }
 function render(){
-  const shopping=category==='grocery';grocery?.show(shopping);$('#composer').hidden=shopping;$('#task-list').hidden=shopping;$('.list-heading').hidden=shopping;dayControls.hidden=shopping;boardTools.hidden=shopping;
-  if(shopping){document.body.classList.remove('desktop-board');$('#empty-state').hidden=true;updateNavigation();document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));return;}
+  const shopping=category==='grocery';grocery?.show(shopping);$('#composer').hidden=shopping;$('#task-list').hidden=shopping;$('.list-heading').hidden=shopping;if(shopping){dayControls.hidden=true;boardTools.hidden=true;}
+  if(shopping){renderedLayout='';document.body.classList.remove('desktop-board');$('#empty-state').hidden=true;updateNavigation();document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));return;}
   if(!user||gestures?.isActive()||completionPress?.isActive())return;
   document.body.dataset.completionSide=completionSide();document.body.dataset.completionTarget=phoneMedia.matches||completionSide()==='right'?'wide':'standard';
   if(!accountSettings.showSomeday&&view==='someday'&&!$('#new-title').value.trim()&&!composerHome&&!inlineEditor){view='today';composerFields.setTiming('asap');}
   updateNavigation();$('#expand-days-label').textContent='Show '+prefs.extendedDays+(prefs.extendedDays===1?' day':' days');
-  const positions=skipDropAnimation?new Map():motion.snapshot();skipDropAnimation=false;
+  const layout=JSON.stringify([spaceEpoch,category,view,boardVisible(),prefs.daysShown,prefs.style,selection()]);
+  const positions=!ready||renderedLayout!==layout||skipDropAnimation?new Map():motion.snapshot();skipDropAnimation=false;renderedLayout=ready?layout:'';
   const todo=category==='todo',board=boardVisible();document.body.classList.toggle('desktop-board',board);dayControls.hidden=!todo||view!=='today'||board;$('[data-days=today]').hidden=prefs.daysShown===1;$('[data-days=more]').hidden=prefs.daysShown>1;
   $('#new-title').placeholder=composerHome?'Task name':todo?'Add a to-do…':category==='grocery'?'Add a grocery…':category==='movies'?'Add a movie…':'Add an item…';
   $('#new-title').setAttribute('aria-label',todo?'New task':'New item');$('#composer .schedule-line').classList.toggle('no-timing',!todo);
@@ -169,7 +176,7 @@ function render(){
   const captions={someday:'Someday / Maybe',today:'Today',upcoming:'Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',!todo||['today','upcoming','later'].includes(view));
   const boardViews=['today','upcoming','later',...(accountSettings.showSomeday?['someday']:[])];
   boardTools.hidden=!board;
-  const list=board?[...new Map(boardViews.flatMap(currentTasks).filter(task=>!boardWaiting||task.waiting).map(task=>[task.id,task])).values()].sort(taskOrder):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
+  const list=board?[...new Map(boardViews.flatMap(currentTasks).filter(task=>!boardWaiting||task.waiting).map(task=>[task.id,task])).values()].sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b))):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
   const todayBoardIds=new Set(board?currentTasks('today').map(task=>task.id):[]);
   let completionExit=false;
   // Preserve an open form node: a live snapshot must not dismiss a phone keyboard or erase a draft.
@@ -185,7 +192,7 @@ function render(){
     let row=rows.get(task.id);
     if(!row){row=document.createElement('article');row.dataset.task=task.id;}
     const suggestion=todo&&actionView(task)==='today'&&!task.waiting&&dateTiming(task.dueDate,today)==='later'&&picks.includes(task.id);
-    row.className=`task-row ${task.completed?'completed':''} ${suggestion?'suggestion':''} ${inlineEditor?.id===task.id?'is-editing':''}`;
+    row.className=`task-row ${task.completed?'completed':''} ${suggestion?'suggestion':''} ${inlineEditor?.id===task.id?'is-editing':''}`;row.dataset.daily=String(suggestion);
     const summary=rowMarkup(task),old=row.querySelector('.task-summary');
     if(inlineEditor?.id!==task.id)row.querySelector('.task-edit-form')?.remove();
     if(!old)row.innerHTML=summary;else if(row.dataset.summary!==summary)old.outerHTML=summary;row.dataset.summary=summary;
@@ -203,10 +210,26 @@ function render(){
   document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));
   $('#composer').querySelectorAll('input,textarea,button').forEach(control=>{if(preview&&!control.matches('[data-view]')){control.disabled=true;control.dataset.previewDisabled='true';}else if(control.dataset.previewDisabled){control.disabled=false;delete control.dataset.previewDisabled;}});icons();motion.rearrange(positions,completionExit?60:0);gestures?.sync();
 }
+function receiveDaily(state){
+ if(state.day!==today||state.uid!==user?.uid)return;
+ if(!dailyState||dailyState.day!==state.day)skipDropAnimation=true;
+ dailyState=state;picks=state.taskId&&!state.dismissed?[state.taskId]:[];render();
+}
+async function skipLater(task){
+ if(preview||busy.has(task.id)||!dailySuggestion(task))return;
+ const epoch=spaceEpoch,day=today,uid=user.uid;busy.add(task.id);render();
+ try{
+  await store.updateDaily(day,uid,task.id,{dismissed:true});
+  if(epoch!==spaceEpoch)return;
+  receiveDaily({...(dailyState||{}),day,uid,taskId:task.id,dismissed:true});
+  notify('Kept in Later for today',{id:task.id,label:task.title,run:()=>store.updateDaily(day,uid,task.id,{dismissed:false})});
+ }catch(error){if(epoch===spaceEpoch)notify(errorText(error));}
+ finally{busy.delete(task.id);if(epoch===spaceEpoch)render();}
+}
 async function dailyPick(){
   const token=`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`,pool=candidateTasks(tasks,user?.uid,user?.email,today).map(task=>task.id).join(',');if(!ready||!user||picking===token||pickedDay===token&&(picks.length||pickedPool===pool))return;
-  const uid=user.uid,day=today;picking=token;pickedPool=pool;
-  try{const id=await store.pick(day,uid);if(picking===token&&token===`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`){picks=id?[id]:[];pickedDay=token;render();}}catch(error){if(picking===token){pickedDay=token;status(error?.code?.includes('permission-denied')?'Daily From Later needs the updated Firestore rules published. Other task editing is unaffected.':errorText(error));}}finally{if(picking===token){picking=false;if(!picks.length&&pickedPool!==candidateTasks(tasks,user?.uid,user?.email,today).map(task=>task.id).join(','))void dailyPick();}}
+  const uid=user.uid,day=today,firstDraw=!pickedDay;picking=token;pickedPool=pool;
+  try{const id=await store.pick(day,uid);if(picking===token&&token===`${today}_${user?.uid}_${currentSpace.id}_${spaceEpoch}`){if(firstDraw)skipDropAnimation=true;picks=id?[id]:[];pickedDay=token;render();}}catch(error){if(picking===token){pickedDay=token;status(error?.code?.includes('permission-denied')?'Daily From Later needs the updated Firestore rules published. Other task editing is unaffected.':errorText(error));}}finally{if(picking===token){picking=false;if(!picks.length&&pickedPool!==candidateTasks(tasks,user?.uid,user?.email,today).map(task=>task.id).join(','))void dailyPick();}}
 }
 function onTasks(value){tasks=value;render();if(ready)void dailyPick();}
 function open(title,body,{focusTitle=true}={}){if(composerHome&&body!==$('#composer'))restoreComposer();$('#dialog-title').textContent=title;$('#dialog-body').replaceChildren();if(typeof body==='string')$('#dialog-body').innerHTML=body;else $('#dialog-body').append(body);$('#dialog').classList.remove('settings-modal','search-modal');icons();if(!$('#dialog').open){$('#dialog').showModal();motion.dialog($('#dialog'));}$('#dialog').scrollTop=0;if(typeof body!=='string'&&body.querySelector('.task-editor-heading')){if(focusTitle)body.elements.title.focus({preventScroll:true});else {phoneModal.hideKeyboard();body.querySelector('.editor-top-actions button')?.focus({preventScroll:true});}}}
@@ -332,7 +355,7 @@ async function deferTask(task){
 }
 async function moveTask(task,ids,day,{exact=false,lane=null,sourceLane=null}={}){
   if(preview||busy.has(task.id))return;
-  const ordered=ids.map(id=>id===task.id?task:tasks.find(t=>t.id===id)).filter(Boolean),rank=insertionOrder(ordered,task.id),patch={};
+  const ordered=ids.map(id=>id===task.id?task:tasks.find(t=>t.id===id)).filter(Boolean).map(displayedOrder),rank=insertionOrder(ordered,task.id),patch={};
   if(day&&day!==(!exact&&category==='todo'&&view==='today'?groupDay(taskDay(task,today,picks),dayGroups(today,prefs.daysShown)):taskDay(task,today,picks))){if(task.waiting)patch.followUp=day;else patch.dueDate=day;}
   if(lane&&lane!==(sourceLane||actionView(task))){
     if(lane==='someday'&&(task.dueDate||task.waiting)&&!await confirmAction('Move to Someday / Maybe?','Its scheduled date and follow-up will be cleared.','Move to Someday'))return false;
@@ -340,7 +363,18 @@ async function moveTask(task,ids,day,{exact=false,lane=null,sourceLane=null}={})
     if(patch.waiting){patch.followUp=patch.dueDate||addDays(today,30);patch.dueDate=null;}
   }
   if(day&&task.someday)patch.someday=false;
-  const changes=rank===null?ordered.map((item,index)=>({id:item.id,rev:item.rev,patch:{sortOrder:index*1024,...(item.id===task.id?patch:{})}})):[{id:task.id,rev:task.rev,patch:{...patch,sortOrder:rank}}];
+  const suggestion=(view==='today'||sourceLane==='today')?ordered.find(dailySuggestion):null;
+  const receiptReorder=!!suggestion&&!Object.keys(patch).length;
+  if(receiptReorder){
+    const receiptEpoch=spaceEpoch;busy.add(task.id);
+    try{
+      if(rank===null)await store.updateDaily(today,user.uid,suggestion.id,{sortOrder:ordered.indexOf(suggestion)*1024});
+      else if(dailySuggestion(task)){await store.updateDaily(today,user.uid,task.id,{sortOrder:rank});return true;}
+      else if(!Number.isFinite(dailyState?.sortOrder)&&ordered.indexOf(suggestion)<ordered.findIndex(item=>item.id===task.id))await store.updateDaily(today,user.uid,suggestion.id,{sortOrder:dailyRank()});
+    }catch(error){if(receiptEpoch===spaceEpoch)notify(errorText(error));return false;}
+    finally{busy.delete(task.id);if(receiptEpoch===spaceEpoch)render();}
+  }
+  const changes=rank===null?ordered.map((item,index)=>({id:item.id,rev:item.rev,patch:{sortOrder:index*1024,...(item.id===task.id?patch:{})}})).filter(change=>!receiptReorder||change.id!==suggestion.id):[{id:task.id,rev:task.rev,patch:{...patch,sortOrder:rank}}];
   const epoch=spaceEpoch;changes.forEach(change=>busy.add(change.id));
   try{
     if(changes.length===1)await store.write(changes[0].id,changes[0].patch,changes[0].rev);else await store.writeMany(changes);
@@ -424,7 +458,7 @@ function householdPicker(){return `<label class="field">Household<select id="hou
 function bindDaysSetting(){
  if($('#days-shown'))bindDayWheel($('#days-shown'),prefs.extendedDays,value=>{prefs.extendedDays=value;if(prefs.daysShown>1)prefs.daysShown=value;persist();render();});
 }
-function resetWorkspace(){grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];boardWaiting=false;$('#board-waiting').checked=false;pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
+function resetWorkspace(){grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];boardWaiting=false;$('#board-waiting').checked=false;pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];dailyState=null;renderedLayout='';picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
 function switchHousehold(id){if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);}
 function updateInstallManifest(){
   const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.set('household',currentSpace.id);const root=appRoot;
@@ -547,10 +581,11 @@ document.addEventListener('click',async event=>{
   if(button.hasAttribute('data-close'))close();
   if(button.id==='exit-preview'){store.exitPreview();const url=new URL(location.href);url.searchParams.set('household',currentSpace.id);history.replaceState(null,'',url);}
   if(button.dataset.days){prefs.daysShown=button.dataset.days==='today'?1:prefs.extendedDays;persist();render();}
-  if(button.dataset.view&&!button.closest('#composer')){if(!await leaveInline())return;view=button.dataset.view;composerFields.setTiming(composerMode());if(button.closest('#dialog'))close();render();motion.enter([...$('#task-list').children]);}
-  if(button.dataset.category){if(!await leaveInline())return;if(category==='grocery'&&grocery.hasDraft()&&!await confirmAction('Leave this grocery draft?','The item has not been added.','Discard'))return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;if(category==='grocery')grocery.discardDraft();category=button.dataset.category;view=category==='todo'?'today':'later';composerFields.reset();$('#new-title').value='';render();motion.enter([...$('#task-list').children]);}
+  if(button.dataset.view&&!button.closest('#composer')){if(!await leaveInline())return;view=button.dataset.view;composerFields.setTiming(composerMode());if(button.closest('#dialog'))close();render();}
+  if(button.dataset.category){if(!await leaveInline())return;if(category==='grocery'&&grocery.hasDraft()&&!await confirmAction('Leave this grocery draft?','The item has not been added.','Discard'))return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;if(category==='grocery')grocery.discardDraft();category=button.dataset.category;view=category==='todo'?'today':'later';composerFields.reset();$('#new-title').value='';render();}
   if(button.dataset.filterTag)openSearch([button.dataset.filterTag]);
   if(button.dataset.edit){const task=tasks.find(t=>t.id===button.dataset.edit);if(task)await changeEditor(async()=>{if(inlineEditor?.id===task.id)await leaveInline();else await taskEditor(task);});}
+  if(button.dataset.skipLater){const task=tasks.find(t=>t.id===button.dataset.skipLater);if(task)void skipLater(task);}
   if(button.dataset.complete){const task=tasks.find(t=>t.id===button.dataset.complete);if(task&&task.completed===button.classList.contains('checked'))void completeTask(task,button.getBoundingClientRect());else render();}
   if(button.dataset.quick){const task=tasks.find(t=>t.id===button.dataset.id);if(task)await deferTask(task);}
   if(button.dataset.move){const task=tasks.find(t=>t.id===button.dataset.move),form=$('#edit-form');if(task&&await leaveInline()){if(form?.isConnected&&formFingerprint(form)!==form._initial&&!await confirmAction('Discard unsaved changes?','Your task has not been changed.','Discard'))return;moveOptions(task);}}
@@ -581,9 +616,9 @@ async function start(){
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=import1');
+    const {connectFirebase}=await import('./firebase.js?v=daily2');
     store=await connectFirebase(config,{
-      tasks:onTasks,status,sync:syncStatus,groceries(value){grocery?.receive(value);},organizer(value){tags=value.tags;applyAccountSettings(value.settings);},
+      tasks:onTasks,status,sync:syncStatus,daily:receiveDaily,groceries(value){grocery?.receive(value);},organizer(value){tags=value.tags;applyAccountSettings(value.settings);},
       refreshDaily(){pickedDay='';if(ready)void dailyPick();},
       preview(profile){preview=profile;user=profile||signedInAccount;document.documentElement.toggleAttribute('data-preview',!!profile);$('#preview-banner').hidden=!profile;$('#preview-name').textContent=profile?'Viewing as '+profile.name:'';close();},
       account(account){$('#playground-banner').hidden=true;lastRealSpace='';close();$('#confirmation').close();signedInAccount=account;preview=null;user=account;accountSettings={...accountDefaults};if(account){try{accountSettings={...accountDefaults,...JSON.parse(localStorage.getItem('lists-account-settings-'+account.uid)||'{}')};}catch{}}applyAccountSettings(accountSettings);updateNavigation();resetWorkspace();households=[];if(account){updatePeople();accessGate('Checking household access…');}else gate('Personal lists stay hidden from other household members. Tal, the administrator, can view all users’ tasks.',`<button class="primary" id="google-login">${icon('log-in')} Continue with Google</button>`);$('#google-login')?.addEventListener('click',async()=>{try{await store.login();}catch(error){notify(errorText(error));}});},
@@ -597,7 +632,7 @@ async function start(){
     });
   }catch(error){gate('Could not connect to Google sign-in. Check your connection and try again.',`<button class="primary" onclick="location.reload()">Try again</button>`);status(errorText(error));}
 }
-function checkDay(){const current=dayKey(Date.now(),config.timeZone);if(today!==current){today=current;composerFields.setDay(current);$('#edit-form')?._controller?.setDay(current);pickedDay='';picks=[];render();void dailyPick();}}
+function checkDay(){const current=dayKey(Date.now(),config.timeZone);if(today!==current){today=current;composerFields.setDay(current);$('#edit-form')?._controller?.setDay(current);pickedDay='';picks=[];dailyState=null;renderedLayout='';render();void dailyPick();}}
 completionPress=bindCompletionPress($('#task-list'),{context:()=>spaceEpoch,onIdle:()=>render()});
 phoneMedia.addEventListener('change',()=>{completionPress.cancel();appearance();render();});
 gestures=taskGestures({canSwipe:()=>ready&&prefs.swipeDefer&&category==='todo'&&view!=='someday'&&!preview,canMove:()=>ready&&category!=='grocery'&&!preview,findTask:id=>tasks.find(task=>task.id===id),onDefer:deferTask,onMove:moveTask,onIdle:()=>{skipDropAnimation=true;render();},motion,context:()=>spaceEpoch,swipeLabel:task=>actionView(task)==='today'?'Punt to Week':'Move to Today',swipeDirection:task=>actionView(task)==='upcoming'?'left':'right'});

@@ -57,6 +57,14 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   const home='listSpaces/home/environments/staging/tasks/';
   await read(home+'new-task',tal,true,'Missing task readable for create transaction');
   await write(home+'private-tal',task('test-tal'),tal,true,'Create Tal private task');
+  const daily='listSpaces/home/environments/staging/daily/2026-11-25/picks/test-tal';
+  await write(daily,{taskId:'private-tal'},tal,true,'Daily suggestion created',['createdAt']);
+  await write(daily,{dismissed:true,sortOrder:22},tal,true,'Owner skips and positions own daily suggestion',[],true);
+  await write(daily,{dismissed:false},tal,true,'Owner can undo Not today',[],true);
+  await write(daily,{taskId:'other'},tal,false,'Skipping never permits replacing the daily pick',[],true);
+  await write(daily,{dismissed:true},sophie,false,'Other household member cannot skip my pick',[],true);
+  await write(daily,{dismissed:'yes'},tal,false,'Daily dismissed state must be boolean',[],true);
+  await write(daily,{sortOrder:1e16},tal,false,'Daily order is bounded',[],true);
   await write(home+'undated-waiting',{...task('test-tal'),waiting:true},tal,true,'Waiting may stay undated in Later');
   await read(home+'undated-waiting',sophie,false,'Undated waiting remains private');
   await write(home+'dated-waiting',{...task('test-tal'),waiting:true,followUp:'2026-12-01'},tal,true,'Dated waiting remains supported');

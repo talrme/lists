@@ -8,7 +8,7 @@ export function restore(value={}){
  return {animationLevel:level,animations:effects};
 }
 export function createMotion(getPrefs){
- const running=new Set(),media=matchMedia('(prefers-reduced-motion: reduce)');
+ const running=new Set(),media=matchMedia('(prefers-reduced-motion: reduce)');let settingsSignature='';
  const enabled=key=>!!getPrefs().animations[key]&&!media.matches&&!document.hidden;
  function animate(key,node,frames,options={},remove=false){
   if(!node?.isConnected||!enabled(key)){if(remove)node?.remove();return;}
@@ -18,19 +18,29 @@ export function createMotion(getPrefs){
  }
  function clear(){for(const stop of running)stop();running.clear();}
  function sync(){
-  clear();for(const key of Object.keys(labels))document.documentElement.toggleAttribute('data-fx-'+key,enabled(key));
+  const signature=JSON.stringify([getPrefs().animationLevel,...Object.keys(labels).map(enabled)]);
+  if(signature!==settingsSignature){clear();settingsSignature=signature;}
+  for(const key of Object.keys(labels))document.documentElement.toggleAttribute('data-fx-'+key,enabled(key));
   document.documentElement.dataset.animationLevel=getPrefs().animationLevel;
  }
  media.addEventListener('change',sync);document.addEventListener('visibilitychange',sync);
  function pop(key,node){const wild=getPrefs().animationLevel==='wild',row=node?.classList.contains('task-row');return animate(key,node,[{transform:'scale(1)'},{transform:`scale(${row?1.025:wild?1.14:1.06}) rotate(${row?0:wild?-4:-1}deg)`,offset:.45},{transform:'scale(1)'}]);}
  function enter(nodes){nodes.slice(0,16).forEach((node,i)=>animate('navigation',node,[{opacity:0,transform:'translateY(12px) rotate(-.6deg)'},{opacity:1,transform:'none'}],{delay:i*24,fill:'backwards'}));}
- function snapshot(){if(!enabled('reorder')||document.querySelector('.task-edit-form'))return new Map();return new Map([...document.querySelectorAll('.task-row')].map(node=>[node.dataset.task,node.getBoundingClientRect()]));}
+ function geometry(node){
+  const rect=node.getBoundingClientRect(),moving=node.getAnimations().some(animation=>animation.id==='lists-reorder');
+  const transform=moving?new DOMMatrixReadOnly(getComputedStyle(node).transform):null;
+  return {rect,layout:{top:rect.top-(transform?.m42||0),left:rect.left-(transform?.m41||0)},node};
+ }
+ function snapshot(){if(!enabled('reorder')||document.querySelector('.task-edit-form'))return new Map();return new Map([...document.querySelectorAll('.task-row')].filter(node=>node.getBoundingClientRect().width>0).map(node=>[node.dataset.task,geometry(node)]));}
  function rearrange(before,delay=0){
   if(!enabled('reorder')||document.querySelector('.task-edit-form'))return;
   for(const node of document.querySelectorAll('.task-row')){
-   const old=before.get(node.dataset.task);if(!old)continue;
+   const old=before.get(node.dataset.task);if(!old||old.node!==node)continue;
+   const target=geometry(node).layout;
+   // Sync/status renders must not restart an in-flight move to the same layout.
+   if(Math.abs(old.layout.top-target.top)+Math.abs(old.layout.left-target.left)<=1)continue;
    node.getAnimations().filter(animation=>animation.id==='lists-reorder').forEach(animation=>animation.cancel());
-   const next=node.getBoundingClientRect(),dy=old.top-next.top,dx=old.left-next.left;
+   const next=node.getBoundingClientRect(),dy=old.rect.top-next.top,dx=old.rect.left-next.left;
    if(Math.abs(dy)+Math.abs(dx)>1)animate('reorder',node,[{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{delay,fill:'backwards'});
   }
  }

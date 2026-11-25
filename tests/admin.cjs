@@ -150,6 +150,15 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   assert(await draw(tal,'2099-11-15'),'Legacy null receipt fills after candidates arrive');
   const [firstPick,concurrentPick]=await Promise.all([draw(tal,'2099-11-16'),draw(talAgain,'2099-11-16')]);
   assert(firstPick);assert.equal(concurrentPick,firstPick,'Two browsers must reuse one transactionally saved daily choice');
+  const beforeSkippedTask=(await readCollection('listSpaces/home/environments/staging/tasks')).find(doc=>doc.name.endsWith('/'+firstPick));
+  await tal.evaluate(id=>window.__testStore.updateDaily('2099-11-16','test-tal',id,{dismissed:true,sortOrder:2048}),firstPick);
+  assert.equal(await draw(talAgain,'2099-11-16'),null,'Not today is shared across the same account’s browsers without selecting another task');
+  await talAgain.reload();await talAgain.locator('#workspace').waitFor();await talAgain.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');
+  assert.equal(await draw(talAgain,'2099-11-16'),null,'Dismissal survives a cold reload');
+  assert.deepEqual((await readCollection('listSpaces/home/environments/staging/tasks')).find(doc=>doc.name.endsWith('/'+firstPick)),beforeSkippedTask,'Not today never changes completion, dates or Later ordering');
+  await tal.evaluate(id=>window.__testStore.updateDaily('2099-11-16','test-tal',id,{dismissed:false}),firstPick);
+  assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Undo restores the original daily selection');
+  await talAgain.context().setOffline(true);assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Undone selection remains available in the offline cache');await talAgain.context().setOffline(false);
   const receiptsBefore=await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks');
   assert.equal(receiptsBefore.find(doc=>doc.name.endsWith('/test-tal')).fields.taskId.stringValue,firstPick);
   await talAgain.reload();await talAgain.locator('#workspace').waitFor();await talAgain.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Reload must not redraw');

@@ -1,4 +1,14 @@
-# Verification — November 24, 2026
+# Verification — November 25, 2026
+
+## Stable Lists and Daily Suggestion Controls
+
+Reproduced repeated row movement under startup/sync/completion: render temporarily revealed the hidden board toolbar, measuring every row 31px too low, then hid it before FLIP. Also removed automatic list re-entry calls, suppressed initial/hidden/layout-switch measurements, retained unchanged in-flight layout targets, and stopped unchanged appearance sync from clearing active animations. Completion confetti and travel effects remain.
+
+The steady-lists suite passed 15 combinations across five styles, phone, desktop list and desktop board. It measures monotonic completion under repeated task/member/preferences/ready callbacks, exactly one FLIP per changed target, quiet startup/tab switches, bottom-first uncolored daily suggestion, personal reorder/reload, Not today/Undo/reload/no replacement and unchanged underlying Later data. Phone/board screenshots were inspected.
+
+Local Firestore rules passed 144 checks, including owner-only dismissal/order, immutable picked ID and bounded state. The actual-SDK demo-emulator suite passed two-browser dismissal/reload, unchanged task data, Undo, offline cached receipt, and the existing account/privacy/household/grocery/import regressions. No production tasks or receipts were changed by tests. Matching rules still require separate publication; daily receipt mutations need online access.
+
+Also passed 56 pure tests, production layouts (80), immediate completion/search (60), guide layouts (60), daily creation/search, desktop organizer, day grouping/reflow, trusted CDP touch, delayed drag-drop, offline shell and automatic updater suites. The touch alignment assertion now accepts Chrome's equivalent flex-end/flow-end computed value; application swipe styling is unchanged. Physical-device testing was not performed.
 
 ## Prepared Import Through Existing Sign-In
 

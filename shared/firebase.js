@@ -20,7 +20,7 @@ export async function connectFirebase(config,events) {
   let device=null;try{device=await openDeviceStore(config.firebase.projectId);}catch{events.status('Offline storage unavailable on this browser. Online saves still work.');}
   let user=null,preview=null,activeId=config.space,activeEnvironment=config.environment,tasks=[],spaces=[],stopDiscovery=()=>{},stopSpace=()=>{},children=[],authVersion=0,spaceVersion=0,needsReconnect=false;
   let record=null,recordKey='',serverTasks=[],networkReady=false,saving=0,flushing=false,retryTimer=null,syncError='',memberNames={},memberProfiles={};
-  let metadataState={pending:0,syncing:false,error:''};
+  let metadataState={pending:0,syncing:false,error:''},stopDaily=()=>{},dailyWatchKey='';
   let groceryState={pending:0,syncing:false,error:''};
   const groceries=groceryStore({sdk:dbSdk,db,device,project:config.firebase.projectId,events:{change:value=>events.groceries?.(value),status:value=>{groceryState=value;syncStatus();}}});
   const organizer=organizerStore({sdk:dbSdk,db,device,events:{change:value=>events.organizer?.(value),error:error=>events.error(error),status:value=>{metadataState=value;syncStatus();}}});
@@ -31,10 +31,10 @@ export async function connectFirebase(config,events) {
   const key=()=>`lists-household-v1-${user?.uid}`;
   function syncStatus(){const connecting=!!user&&navigator.onLine&&!networkReady&&!record?.blocked;events.sync?.({pending:(record?.operations?.length||0)+metadataState.pending+groceryState.pending,syncing:!!saving||flushing||connecting||metadataState.syncing||groceryState.syncing,connecting,offline:!navigator.onLine||!networkReady,error:syncError||metadataState.error||groceryState.error,lastSynced:record?.lastSynced||null});}
   function emitTasks(){tasks=projectTasks(serverTasks,record?.operations);events.tasks(tasks);syncStatus();}
-  function clearChildren(){groceries.stop();organizer.stop();spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];serverTasks=[];memberNames={};memberProfiles={};record=null;recordKey='';networkReady=false;syncError='';clearTimeout(retryTimer);events.tasks([]);syncStatus();}
+  function clearChildren(){stopDaily();stopDaily=()=>{};dailyWatchKey='';groceries.stop();organizer.stop();spaceVersion++;children.forEach(fn=>fn());children=[];tasks=[];serverTasks=[];memberNames={};memberProfiles={};record=null;recordKey='';networkReady=false;syncError='';clearTimeout(retryTimer);events.tasks([]);syncStatus();}
   async function saveRecord(patch,key=recordKey){
     if(!device||!key||preview)return;
-    const next=await device.change(key,old=>({...old,...patch,...(patch.picks?{picks:{...old.picks,...patch.picks}}:{})}));
+    const next=await device.change(key,old=>({...old,...patch,...(patch.picks?{picks:{...old.picks,...patch.picks}}:{}),...(patch.pickStates?{pickStates:{...old.pickStates,...patch.pickStates}}:{})}));
     if(key===recordKey){record=next;emitTasks();}channel?.postMessage(key);
     return next;
   }
@@ -64,6 +64,21 @@ export async function connectFirebase(config,events) {
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
   function stop(){organizer.stop();authVersion++;stopDiscovery();stopDiscovery=()=>{};stopSpace();stopSpace=()=>{};clearChildren();spaces=[];events.households?.([]);}
   function availableSpaces(){events.households?.(spaces.filter(space=>belongsTo(space,subject())));}
+  async function publishDaily(day,uid,value,version){
+    if(version!==spaceVersion)return;
+    const state={day,uid,taskId:value.taskId||null,dismissed:!!value.dismissed,sortOrder:Number.isFinite(value.sortOrder)?value.sortOrder:null};
+    events.daily?.(state);
+    if(!preview&&device&&recordKey&&JSON.stringify(record?.pickStates?.[day])!==JSON.stringify(state))await saveRecord({pickStates:{[day]:state}});
+  }
+  function watchDaily(day,uid,ref,version){
+    const key=version+'_'+day+'_'+uid;if(dailyWatchKey===key)return;
+    stopDaily();dailyWatchKey=key;let fingerprint='';
+    stopDaily=dbSdk.onSnapshot(ref,snapshot=>{
+      if(version!==spaceVersion||dailyWatchKey!==key||!snapshot.exists())return;
+      const data=snapshot.data(),next=JSON.stringify([data.taskId,!!data.dismissed,data.sortOrder??null]);
+      if(next===fingerprint)return;fingerprint=next;void publishDaily(day,uid,data,version).catch(error=>events.error(error));
+    },error=>{if(version===spaceVersion)events.error(error);});
+  }
   function requireAdmin(){if(!isAdministrator(user))throw new Error('Only Tal can manage households.');}
   function requireWritable(){if(preview)throw new Error('View as user is read-only. Exit the preview to make changes.');}
   function requireOnline(){if(!navigator.onLine)throw new Error('You are offline. Keep this open and try again when connected.');}
@@ -353,12 +368,31 @@ export async function connectFirebase(config,events) {
     async remove(id,rev){
       return mutateItems([{id,type:'remove',rev}]);
     },
+    async updateDaily(day,uid,taskId,patch){
+      requireWritable();requireOnline();
+      if(!networkReady||uid!==user?.uid)throw new Error('Reconnect before changing today’s suggestion.');
+      if(!Object.keys(patch).length||Object.keys(patch).some(key=>!['dismissed','sortOrder'].includes(key))||'dismissed'in patch&&typeof patch.dismissed!=='boolean'||'sortOrder'in patch&&(!Number.isFinite(patch.sortOrder)||Math.abs(patch.sortOrder)>1e15))throw new Error('Invalid daily suggestion change.');
+      const version=spaceVersion,account=user,ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid);
+      saving++;syncStatus();
+      try{
+        const state=await dbSdk.runTransaction(db,async transaction=>{
+          const old=await transaction.get(ref);
+          if(preview||user!==account||version!==spaceVersion)throw new Error('The active account or household changed.');
+          if(!old.exists()||old.data().taskId!==taskId)throw new Error('Today’s suggestion changed. Reopen the list.');
+          transaction.update(ref,patch);return {...old.data(),...patch};
+        });
+        if(version===spaceVersion&&user===account)await publishDaily(day,uid,state,version);
+      }finally{saving--;syncStatus();}
+    },
     async pick(day,uid){
+      if(uid!==subject()?.uid)throw new Error('Daily suggestions belong to the current account.');
       const ref=dbSdk.doc(db,...path(),'daily',day,'picks',uid),candidates=candidateTasks(serverTasks,uid,subject()?.email,day),version=spaceVersion,cacheKey=recordKey;
-      if(preview){const old=await dbSdk.getDoc(ref);return old.exists()?old.data().taskId:null;}
-      if(!navigator.onLine||!networkReady)return record?.picks?.[day]??null;
+      if(preview){const old=await dbSdk.getDoc(ref);if(old.exists())await publishDaily(day,uid,old.data(),version);return old.exists()&&!old.data().dismissed?old.data().taskId:null;}
+      if(record?.pickStates?.[day])events.daily?.(record.pickStates[day]);
+      if(!navigator.onLine||!networkReady)return record?.pickStates?.[day]?.dismissed?null:record?.pickStates?.[day]?.taskId??record?.picks?.[day]??null;
+      watchDaily(day,uid,ref,version);
       const taskId=await dbSdk.runTransaction(db,async transaction=>{
-        const old=await transaction.get(ref);if(old.exists()&&old.data().taskId)return old.data().taskId;
+        const old=await transaction.get(ref);if(old.exists()&&old.data().taskId)return old.data().dismissed?null:old.data().taskId;
         const taskId=choose(candidates)?.id||null;
         if(!taskId)return null;
         if(old.exists())transaction.update(ref,{taskId});

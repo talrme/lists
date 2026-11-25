@@ -52,7 +52,11 @@ Today and Week do not overlap in the normal single-day view. Existing saved date
 
 **One daily From Later pick:** eligible private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks form one pool. Undated and farther-out dated tasks qualify; completed, Waiting, and Someday tasks do not. The pick is saved per person, household, and Pacific date, so refreshes and devices agree. An initially empty pool can get its first pick when an eligible task is added.
 
-Completing, punting, or deleting the chosen item uses that day's pick; there is no replacement. Punting does not mark the task completed. Tomorrow gets a new draw, which may choose an unfinished item again. The daily pick is a projection into Today, not a permanent date change.
+The pick starts at the bottom of Today, with the same styling as other tasks and a quiet From Later label. Drag it to change its position for your own daily view; its original Later ordering is unchanged.
+
+Completing, punting, deleting, or choosing **Not today** uses that day's pick; there is no replacement. Not today removes only today's suggestion, leaving the task unfinished in Later with its original date. Undo restores the same suggestion. These daily controls/positions sync for the same account across devices and survive reloads. Saving them requires a connection and the latest Firestore rules; cached state remains available offline. Tomorrow gets a new draw, which may choose an unfinished item again. The daily pick is a projection into Today, not a permanent date change.
+
+Task lists open and switch without replaying entrance bounces. Completion keeps confetti and one smooth upward movement; repeated sync/status renders do not restart that movement.
 
 ## Phone Navigation
 
