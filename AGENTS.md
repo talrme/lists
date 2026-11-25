@@ -11,6 +11,7 @@ Read [README.md](README.md), [AI_README.md](AI_README.md), and [FIREBASE_SETUP.m
 - Offline caches/operations remain account/household/environment scoped. Preserve revision checks, deleted-task non-resurrection, pending sign-out guards and visible saved-locally vs synced states.
 - Only the validated isolated Playground may receive explicit admin test seeds/resets.
 - Asana review is admin-only and browser-local, not an importer. Never commit CSVs, source notes, backup JSON or real-data test fixtures. Retain all originals, confirm review replacement/merge, and require separate explicit approval before adding tasks.
+- Approved imports use the separate prepared-file action, never implicit review decisions or a public embedded CSV. The actual signed-in administrator owns every private imported task; no write-as-user bypass. Stable source IDs skip existing tasks, all missing records commit atomically, and saved details are read back for verification. Keep real prepared files outside the repository. User-authorized real imports are distinct from synthetic tests.
 - Git push does not deploy Firestore rules. Never claim publication or physical-device verification without evidence. Give manual setup instructions one step at a time.
 
 ## Preserve Current Behavior

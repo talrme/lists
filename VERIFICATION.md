@@ -1,5 +1,9 @@
 # Verification — November 24, 2026
 
+## Prepared Import Through Existing Sign-In
+
+The separate prepared-file importer passed four pure schema/privacy/date/order tests and synthetic browser menu/deep-link/explicit-approval/source-escaping checks at 320/390/1280px. The real Firestore SDK + actual rules demo-emulator suite passed an atomic 261-task synthetic batch with description/date verification, duplicate retries after editing an imported task, nonadministrator/preview denial, plus existing household/offline/grocery/admin regressions. This is not evidence of a production data import. Private payloads remain outside this repository.
+
 ## Optional Waiting Dates
 
 Waiting tasks now allow null followUp and stay in Later, while dueDate remains null. Existing date presets still work; clearing the date and saving/reopening or editing the title preserves the undated Waiting state. The guide and editor label explain the optional date. Matching Firestore rules must be published separately.

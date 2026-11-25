@@ -6,6 +6,7 @@ import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResu
 import {validateReview} from './asana-review-core.js?v=1';
 import {organizerStore} from './organizer.js?v=2';
 import {groceryStore} from './grocery-store.js?v=1';
+import {importDrafts} from './asana-import-core.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
   const [appSdk,authSdk,dbSdk]=await Promise.all([
@@ -204,6 +205,39 @@ export async function connectFirebase(config,events) {
       if(uid!==user?.uid||version!==spaceVersion||preview)throw new Error('The active account or household changed.');
       return saved?.asanaReview||null;
     },
+    async importAsanaTasks(value){
+      requireAdmin();requireWritable();requireOnline();
+      if(!networkReady)throw new Error('Wait for household syncing to finish.');
+      const account=user,version=spaceVersion,base=path(),uid=account.uid;
+      const check=()=>{requireWritable();if(user!==account||spaceVersion!==version)throw new Error('Account or household changed. Reopen the import.');};
+      if(device&&await device.userPending(uid))throw new Error('Wait for pending changes to sync before importing.');
+      check();requireAdmin();
+      const drafts=importDrafts(value,{uid,day:dayKey(Date.now(),config.timeZone),existing:serverTasks});
+      const refs=drafts.map(task=>dbSdk.doc(db,...base,'tasks',task.id));
+      saving++;syncStatus();
+      try{
+        const receipt=await dbSdk.runTransaction(db,async transaction=>{
+          check();const old=await Promise.all(refs.map(ref=>transaction.get(ref)));
+          check();const created=[];let skipped=0;
+          for(let i=0;i<drafts.length;i++){
+            if(old[i].exists()){
+              if(old[i].data().ownerUid!==uid)throw new Error('A source ID already belongs to another account. Nothing was overwritten.');
+              skipped++;continue;
+            }
+            const {id,...data}=drafts[i];transaction.set(refs[i],{...data,updatedAt:dbSdk.serverTimestamp()});created.push(id);
+          }
+          return {createdIds:created,skipped};
+        });
+        check();
+        const snapshot=await dbSdk.getDocsFromServer(dbSdk.query(dbSdk.collection(db,...base,'tasks'),dbSdk.where('ownerUid','==',uid)));
+        check();const rows=new Map(snapshot.docs.map(doc=>[doc.id,doc.data()]));
+        for(const id of receipt.createdIds){
+          const actual=rows.get(id),expected=drafts.find(task=>task.id===id);
+          if(!actual||Object.entries(expected).some(([key,value])=>key!=='id'&&actual[key]!==value))throw new Error('Tasks were saved, but verification was interrupted. Retry safely to check existing IDs.');
+        }
+        return {created:receipt.createdIds.length,skipped:receipt.skipped};
+      }finally{saving--;syncStatus();}
+    },
     async saveAsanaReview(value){
       requireAdmin();requireWritable();if(!device)throw new Error('Device storage is unavailable. Review progress cannot be saved safely.');
       if(value!==null)validateReview(value);
@@ -228,7 +262,7 @@ export async function connectFirebase(config,events) {
     savePreferences:patch=>organizer.write('preferences','main',patch),
     saveTag:(id,patch)=>organizer.write('tags',id,patch),
     async retrySync(){requireWritable();syncError='';syncStatus();if(navigator.onLine)await dbSdk.enableNetwork(db);await organizer.bind(subject(),activeId,activeEnvironment,false);await organizer.refresh();await groceries.retry();await flushQueue();},
-    async logout(){if(device&&await device.userPending(user.uid))throw new Error('There are changes saved on this device waiting to sync. Reconnect before signing out.');const uid=user?.uid;stop();await authSdk.signOut(auth);if(device&&uid)await device.clearUser(uid);},
+    async logout(){if(saving)throw new Error('Wait for the current save to finish before signing out.');if(device&&await device.userPending(user.uid))throw new Error('There are changes saved on this device waiting to sync. Reconnect before signing out.');const uid=user?.uid;stop();await authSdk.signOut(auth);if(device&&uid)await device.clearUser(uid);},
     selectSpace,
     async listUsers(){
       requireAdmin();

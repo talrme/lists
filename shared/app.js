@@ -2,8 +2,9 @@ import {config} from '../config.js?v=lists-95c4f';
 import {dayKey,addDays,taskDraft,schedule,inView,shortDate,taskDay,taskOrder,insertionOrder,creationOrder,assignedTo,unassigned,candidateTasks,dateTiming} from './core.js?v=organizer1';
 import {createGroceries} from './groceries.js?v=1';
 import {openAsanaReview} from './asana-review.js?v=1';
+import {openAsanaImport} from './asana-import.js?v=1';
 import {isAdministrator} from './households.js?v=sharing2';
-import {adminSection,bindAdmin} from './admin.js?v=review1';
+import {adminSection,bindAdmin} from './admin.js?v=import1';
 import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=waiting2';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
 import {taskGestures} from './gestures.js?v=8';
@@ -498,7 +499,7 @@ function settings(){
   document.querySelectorAll('button[data-palette]').forEach(button=>button.onclick=()=>{void saveAccountPreferences({palette:button.dataset.palette});document.querySelectorAll('button[data-palette]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
   $('[data-preference=quickWeek]')?.addEventListener('change',event=>{prefs.quickWeek=event.target.checked;persist();render();});
   document.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=async()=>{if(!await leaveInline())return;saveListPrefs({editor:button.dataset.editorMode});$('.editor-mode .choice-track').style.setProperty('--choice',button.dataset.editorMode==='modal'?1:0);document.querySelectorAll('[data-editor-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
-  $('#sign-out').onclick=async()=>{try{await store.logout();close();}catch(error){const region=$('#sign-out-error');if(region)region.textContent=errorText(error);}};$('#household-select').onchange=event=>switchHousehold(event.target.value);bindAdmin({account:signedInAccount,store,onOpen:switchHousehold,onPreview:profile=>store.viewAs(profile),liveUrl:config.liveUrl,confirmAction,onAsanaReview:()=>void openAsanaReview({store,open,confirmAction})});
+  $('#sign-out').onclick=async()=>{try{await store.logout();close();}catch(error){const region=$('#sign-out-error');if(region)region.textContent=errorText(error);}};$('#household-select').onchange=event=>switchHousehold(event.target.value);bindAdmin({account:signedInAccount,store,onOpen:switchHousehold,onPreview:profile=>store.viewAs(profile),liveUrl:config.liveUrl,confirmAction,onAsanaReview:()=>void openAsanaReview({store,open,confirmAction}),onAsanaImport:preparedImport});
 }
 function addSettingHelp(){
  const help={
@@ -565,12 +566,22 @@ function gate(message,extra=''){$('#workspace').hidden=true;$('#gate').hidden=fa
 $('#task-list').addEventListener('keydown',event=>{if(event.altKey&&event.key.toLowerCase()==='m'&&!preview){const row=event.target.closest('.task-row'),task=tasks.find(task=>task.id===row?.dataset.task);if(task){event.preventDefault();moveOptions(task);}}});
 function accessGate(message){gate(message,'<button class="secondary" data-action="settings">Settings</button><p id="access-error" class="inline-error" role="alert"></p>');}
 function showWorkspace(){$('#gate').hidden=true;$('#gate').replaceChildren();$('#workspace').hidden=false;updatePeople();render();}
+let preparedImportRequested=new URL(location.href).searchParams.get('import')==='asana',preparedImportBusy=false;
+function preparedImport(){
+ if(!ready||preview||!isAdministrator(signedInAccount))return;
+ openAsanaImport({store,open,account:signedInAccount,household:currentSpace,onBusy:value=>{preparedImportBusy=value;}});
+}
+function requestedImport(){
+ if(!preparedImportRequested||preview||!isAdministrator(signedInAccount))return;
+ preparedImportRequested=false;const url=new URL(location.href);url.searchParams.delete('import');history.replaceState(null,'',url);
+ setTimeout(preparedImport,0);
+}
 async function start(){
   $('#mode-status').textContent='Private household · Google sign-in';
   if(!config.firebase){gate('Google sign-in is not connected yet.',`<a class="text-link" href="FIREBASE_SETUP.md">Firebase setup instructions</a>`);return;}
   gate('Connecting securely…');
   try{
-    const {connectFirebase}=await import('./firebase.js?v=groceries1');
+    const {connectFirebase}=await import('./firebase.js?v=import1');
     store=await connectFirebase(config,{
       tasks:onTasks,status,sync:syncStatus,groceries(value){grocery?.receive(value);},organizer(value){tags=value.tags;applyAccountSettings(value.settings);},
       refreshDaily(){pickedDay='';if(ready)void dailyPick();},
@@ -581,7 +592,7 @@ async function start(){
       loading(){resetWorkspace();close();accessGate('Loading household…');},
       unavailable(message){resetWorkspace();if(!$('#dialog').classList.contains('settings-modal'))close();accessGate(message);},
       members(value,details={}){members=value;profiles=details;updatePeople();render();},
-      ready(){ready=true;showWorkspace();void dailyPick();},
+      ready(){ready=true;showWorkspace();void dailyPick();requestedImport();},
       error(error){status(errorText(error));const region=$('#access-error');if(region)region.textContent=errorText(error)+(isAdministrator(signedInAccount)?' Open Settings → Admin after publishing the updated rules.':' Ask your household administrator to check your Google email invitation.');else notify(errorText(error));},
     });
   }catch(error){gate('Could not connect to Google sign-in. Check your connection and try again.',`<button class="primary" onclick="location.reload()">Try again</button>`);status(errorText(error));}
@@ -602,7 +613,7 @@ function watchDay(){clearTimeout(midnightTimer);checkDay();if(!document.hidden)m
 document.addEventListener('visibilitychange',watchDay);window.addEventListener('online',()=>{if(ready)void dailyPick();});boardMedia.addEventListener('change',()=>render());matchMedia('(min-width:768px)').addEventListener('change',()=>{if(prefs.quickWeek===null){render();const input=$('[data-preference=quickWeek]');if(input)input.checked=quickActionsVisible();}});watchDay();void start();
 void setupUpdates({canReload:async()=>{
  const reason=()=>!navigator.onLine?'Reconnect before updating.':
-  grocery?.hasDraft()||metadataPending||busy.size||picking||editorTransition||gestures?.isActive()||completionPress?.isActive()||document.querySelector('[data-saving]')?'Finishing your current action before updating.':
+  grocery?.hasDraft()||preparedImportBusy||metadataPending||busy.size||picking||editorTransition||gestures?.isActive()||completionPress?.isActive()||document.querySelector('[data-saving]')?'Finishing your current action before updating.':
   $('#new-title').value.trim()||$('#new-description').value.trim()||$('#composer').elements.date.value||$('#composer').elements.followUp.value||$('#composer').elements.waiting.checked||$('#composer').elements.person.value!=='private'||JSON.parse($('#composer').elements.tagIds?.value||'[]').length||!$('#new-options').hidden||inlineEditor||[...document.querySelectorAll('dialog[open] form:not([method="dialog"])')].some(form=>form.getClientRects().length)?'Finish or cancel your draft before updating.':
   syncState?.pending||syncState?.syncing&&!syncState?.connecting?'Wait for your changes to sync before updating.':'';
  const blocked=reason();if(blocked)return blocked;

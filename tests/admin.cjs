@@ -44,6 +44,23 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
    await window.__testStore.saveAsanaReview({version:1,rows:[row],sourceCount:1,completed:0,decisions:{},history:[]});
    if((await window.__testStore.loadAsanaReview()).rows[0].id!=='123')throw Error('Local review did not persist');
   });
+  await tal.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');
+  const imported=await tal.evaluate(async()=>{
+   const synced=async()=>{for(let i=0;i<100;i++){if(!(await window.__testStore.pendingChanges()).length)return;await new Promise(resolve=>setTimeout(resolve,100));}throw new Error('Synthetic setup did not finish syncing.');};
+   const plan={kind:'lists-asana-import',version:1,tasks:[['991','today',false],['992','week',false],['993','later',true],['994','someday',false]].map(([sourceId,destination,waiting])=>({sourceId,title:'Synthetic import '+sourceId,description:'Complete details\n\nSecond paragraph and https://example.com/source',destination,waiting}))};
+   const first=await window.__testStore.importAsanaTasks(plan);
+   await window.__testStore.write('asana-991',{title:'User edited import'},1);
+   await synced();
+   const second=await window.__testStore.importAsanaTasks(plan);
+   await window.__testStore.remove('asana-991',2);for(const id of ['992','993','994'])await window.__testStore.remove('asana-'+id,1);
+   await synced();
+   const largePlan={kind:'lists-asana-import',version:1,tasks:Array.from({length:261},(_,i)=>({sourceId:String(20000+i),title:'Synthetic bulk import '+i,description:'Full multiline details\n\nItem '+i,destination:i<10?'later':['today','week','later','someday'][i%4],waiting:i<10}))};
+   const large=await window.__testStore.importAsanaTasks(largePlan);
+   const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),apps=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js'),db=sdk.getFirestore(apps.getApp('lists')),batch=sdk.writeBatch(db);
+   for(const task of largePlan.tasks)batch.delete(sdk.doc(db,'listSpaces','home','environments','staging','tasks','asana-'+task.sourceId));
+   await batch.commit();return {first,second,large};
+  });
+  assert.deepEqual(imported,{first:{created:4,skipped:0},second:{created:0,skipped:4},large:{created:261,skipped:0}},'Actual import writes and verifies 261 private descriptions/date states and never overwrites repeat IDs');
   const {page:talSecond,context:talSecondContext}=await openPerson('Tal');await talSecond.locator('#workspace').waitFor();
   await tal.evaluate(()=>window.__testStore.savePreferences({style:7,palette:'garden',showSomeday:true}));
   await talSecond.waitForFunction(()=>document.documentElement.dataset.palette==='garden'&&document.body.dataset.design==='7');
@@ -180,6 +197,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const playgroundBefore=await readPlayground(),oldRun=playgroundBefore.fields.playgroundRun.stringValue;
   await tal.locator('#open-playground').click();await tal.locator('#playground-banner').waitFor();await tal.getByText('[Test] Only I can see this private task',{exact:true}).waitFor();assert.equal(await tal.getByText('Tal private entry',{exact:true}).count(),0);
   assert(await sophie.evaluate(async()=>{try{await window.__testStore.loadAsanaReview();return false;}catch(error){return error.message.includes('Only Tal');}}),'Nonadmin cannot read local admin review via adapter');
+  assert(await sophie.evaluate(async()=>{try{await window.__testStore.importAsanaTasks({});return false;}catch(error){return error.message.includes('Only Tal');}}),'Nonadmin cannot call prepared import');
   const {page:sophiePlay}=await openPerson('Sophie','playground');await sophiePlay.locator('#workspace').waitFor();await sophiePlay.locator('#playground-banner').waitFor();assert.equal(await sophiePlay.getByText('[Test] Only I can see this private task',{exact:true}).count(),0);
   await add(sophiePlay,'[Test] Sophie private');assert.equal(await tal.getByText('[Test] Sophie private',{exact:true}).count(),0);
   await ui.scope(sophiePlay,'mine');
@@ -227,6 +245,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.locator('[data-edit]').first().click();await tal.locator('#dialog-title').filter({hasText:'Task details'}).waitFor();assert.equal(await tal.locator('#dialog-body input,#dialog-body textarea,#dialog-body button[type=submit]').count(),0);await tal.locator('#dialog [data-close]').first().click();
   const blocked=await tal.evaluate(async()=>{const failures=[];for(const action of [()=>window.__testStore.write('ignored',{title:'No mutation'},1),()=>window.__testStore.remove('ignored',1),()=>window.__testStore.saveHousehold({}),()=>window.__testStore.writeMany([{id:'ignored',rev:1,patch:{sortOrder:1}}]),()=>window.__testStore.configurePlayground([]),()=>window.__testStore.seedPlayground(),()=>window.__testStore.resetPlayground(1),()=>window.__testStore.loadAsanaReview(),()=>window.__testStore.saveAsanaReview(null)]){try{await action();failures.push(false);}catch(error){failures.push(error.message.includes('read-only'));}}return failures;});assert.deepEqual(blocked,[true,true,true,true,true,true,true,true,true]);
   assert.equal((await fetch(receipt,{headers:{Authorization:'Bearer owner'}})).status,404,'Preview must not create a missing daily receipt');
+  assert(await tal.evaluate(async()=>{try{await window.__testStore.importAsanaTasks({});return false;}catch(error){return error.message.includes('read-only');}}),'Read-only preview cannot import');
   await ui.scope(tal,'shared');assert.equal(await tal.getByText('Alice private entry',{exact:true}).count(),0);await ui.scope(tal,'mine');
   for(const width of [320,390,1280]){await tal.setViewportSize({width,height:844});assert(await tal.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await tal.screenshot({path:`/private/tmp/lists-view-as-${width}.png`});}
   await tal.screenshot({path:'/private/tmp/lists-view-as.png'});

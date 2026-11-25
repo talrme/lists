@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
-    "test": "node --test tests/core.test.js tests/day-groups.test.js tests/later-date.test.js tests/search.test.js tests/visibility.test.js tests/admin-core.test.js tests/organizer.test.js tests/asana-review.test.js tests/grocery.test.js",
+    "test": "node --test tests/core.test.js tests/day-groups.test.js tests/later-date.test.js tests/search.test.js tests/visibility.test.js tests/admin-core.test.js tests/organizer.test.js tests/asana-review.test.js tests/asana-import.test.js tests/grocery.test.js",
     "serve": "node tools/serve.cjs"
   }
 }

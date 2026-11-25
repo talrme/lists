@@ -111,6 +111,14 @@ Progress is private **to this browser/device, signed-in administrator, household
 
 ## Firebase and Development
 
+### Approved Task Imports
+
+**Settings -> Admin -> Asana task review -> Import prepared tasks** accepts a private prepared Lists JSON file. The direct link `?import=asana` opens the same dialog after the actual administrator signs in. Choosing a file only previews it; **Import N tasks** is the explicit write action. The original CSV review remains review-only.
+
+Imports create private To-do tasks owned by the real signed-in user in the displayed household. Complete descriptions are preserved. Today gets today's Pacific date; Week spreads across the next five weekdays excluding today; Later, undated Waiting and Someday get no date. The current importer accepts 1–400 prepared tasks, not raw CSVs or saved-review JSON. Completed rows/subtasks must be excluded during preparation.
+
+Stable `asana-SOURCE_ID` document IDs prevent duplicate retries. Existing IDs are left unchanged, including edited or completed imported tasks. The online import checks account/household/preview state, waits for pending changes to finish, creates missing records in one transaction, and verifies their saved fields against the prepared file. It never writes through an admin impersonation bypass. Latest Firestore rules are needed for undated Waiting and optional Someday fields. Personal prepared files and original CSVs stay outside Git/public assets.
+
 Firebase project: `lists-95c4f`. Public web configuration is in `config.js`. **Keep `config.environment = 'staging'`: this legacy database namespace holds real production tasks, not a staging website.** Do not rename, migrate, seed, or clear it during UI work.
 
 See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for setup. Website pushes do not publish database rules; use the current [firestore.rules](firestore.rules) when publishing rules separately. Do not assume a repository rule change is deployed without confirmation.

@@ -113,7 +113,15 @@ Pinned official PapaParse handles quoted/multiline/BOM CSV as strings (IDs must 
 
 Normalized-title and conservative token-overlap candidates are suggestions, not auto-merges. Money/paperwork, ideas, older-created and past-source-date filters do not assert urgency, relevance or completion. No automatic date mapping or assignment. Review decisions are keep + proposed destination, skip, defer, or merge into another kept main task. 20 items/page, explicit selections/bulk actions, confirmed Combine, 50 decision Undo snapshots, optional per-row comments. Originals stay intact. Re-deciding a merge primary releases its sources for re-review. Durable local saves serialize actions; failures retain the previous saved review and show errors. Restored JSON is validated and its untrusted Undo history discarded.
 
-Save review file downloads full private JSON including source/decisions/comments but no Undo history. Restore and replacing/removing a review confirm first. Downloading/marking Keep is NOT importing. Actual Lists task writes, source-to-target provenance/idempotency, final mapping and approved import are deferred; do not imply they exist. Review UI is a visible form so software updates protect ongoing review interactions. Test only synthetic fixture/emulator writes; reading the actual user CSV locally to validate counts is allowed, not a production task mutation.
+Save review file downloads full private JSON including source/decisions/comments but no Undo history. Restore and replacing/removing a review confirm first. Downloading/marking Keep is NOT importing. Review UI is a visible form so software updates protect ongoing review interactions. Test only synthetic fixture/emulator writes.
+
+### Explicit Prepared Import
+
+Separate Admin -> Asana -> Import prepared tasks accepts `{kind:'lists-asana-import',version:1,tasks:[{sourceId,title,description,destination,waiting}]}`, with 1–400 unique numeric-string source IDs. Raw CSV/review files are not accepted here. Only selecting the file previews counts and escaped full details; explicit Import is required to write. `?import=asana` only opens that dialog for the actual verified administrator after the household is ready. It never uploads anything automatically.
+
+The actual adapter enforces administrator + nonpreview + online/server-ready + no pending changes, captures UID/household/environment/epoch, and creates only private tasks for the authenticated account. It reads every stable `asana-SOURCE_ID` before writes, skips existing own records without overwriting edits/completion, rejects other-owner collisions, and commits missing records atomically. Full descriptions and field types/lengths are validated; file-supplied identities, dates and arbitrary keys are not trusted. Today is Pacific today; Week cycles the next five weekdays excluding today; Later/Waiting/Someday remain undated. Source dates are discarded. The caller preparing a file must explicitly exclude completed tasks/subtasks according to user instructions.
+
+Server readback verifies all newly created fields. The importer reports created/skipped totals; retries never modify existing records. Source files are not persisted by this screen or placed in public assets/Git. Importing blocks automatic updates even if its modal closes, and active saves block sign-out. The matching optional-Waiting rules still require separate publication. Synthetic browser tests cover menu/deep link/file confirmation/XSS/phone sizing; the actual-SDK demo-emulator suite tests a 261-task batch, retained descriptions, repeat IDs after edits, nonadmin and preview denial. Do not claim a real import occurred until the real server acknowledges it.
 
 ## Completion, Motion, and Undo
 
@@ -246,7 +254,7 @@ Preview: `http://127.0.0.1:5195/lists/`; `PORT` overrides the port. Browser suit
 | Change | Relevant browser suites |
 | --- | --- |
 | Someday/tags/preferences/board | `organizer.test.js`, `organizer.cjs`, `rules.cjs`; `admin.cjs` includes two independent same-user browsers and offline preference replay. |
-| Asana review | `asana-review.test.js`, `asana-review.cjs`; `admin.cjs` verifies actual adapter persistence and nonadmin/preview denial. No production CSV in fixtures. |
+| Asana review/import | `asana-review.test.js`, `asana-review.cjs`, `asana-import.test.js`, `asana-import.cjs`; `admin.cjs` verifies actual adapter storage, 261-task import/readback/idempotence and nonadmin/preview denial. No production CSV in fixtures. |
 | General UI/styles | `production.cjs`, `phone-ux.cjs`, `task-header.cjs`, `guide.cjs` |
 | Scheduling/daily/search | `week-punt.cjs`, `menu-later.cjs`, `creation-search.cjs`, `instant-completion.cjs` |
 | Completion/animation/notices | `instant-completion.cjs`, `motion.cjs`, `feedback.cjs` |
