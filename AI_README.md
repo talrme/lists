@@ -188,7 +188,7 @@ listSpaces/HOUSEHOLD/environments/staging/daily/YYYY-MM-DD/picks/UID
   taskId, createdAt
 ```
 
-Creator `ownerUid` and `createdAt` are immutable. UI Task owner means assignee, not creator. Personal tasks are writable only by creator; approved household members can edit shared tasks. Only creator may make a shared task private. Rules enforce verified Google identity, invitation/membership, allowed fields/assignees and rev+1.
+Creator `ownerUid` and `createdAt` are immutable. UI Task owner means assignee, not creator. Personal tasks are writable only by creator; approved household members can edit shared tasks. Only creator may make a shared task private. Rules enforce verified Google identity, invitation/membership, allowed fields/assignees and rev+1. Waiting permits a null followUp (undated Later); dueDate must still be null, and a nonwaiting task cannot carry followUp. Saving/editing an undated Waiting task must not invent a date. This needs the matching published Firestore rules.
 
 Invited-but-unregistered assignment uses optional `assigneeEmail` with null UID, not an unassigned task. Shared invitation validation applies independently in rules. After registration, old email-assigned tasks remain visible; editing can convert to UID and explicitly clear email. Unrelated edits preserve historical assignments after invitation revocation, but new assignments to revoked users are denied. No bulk migration or polling.
 

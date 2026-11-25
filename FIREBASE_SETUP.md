@@ -14,6 +14,8 @@ Google sign-in, Pages authorization, Firestore, and the Tal/Sophie household are
 
 ## Required for Someday, Tags, and Account Settings
 
+The November 24 update also permits Waiting tasks without a follow-up date. They remain private/shared under the same access rules and appear in Later plus Waiting. Publishing website files alone does not apply this database validation change.
+
 Publish the current repository rules. They add optional task `someday`/`tagIds`, private account preferences, and a household/personal tag directory. Existing private/shared task permissions, invitations and read-only administrator access remain protected.
 
 **One manual step now: publish the rules.**

@@ -1,4 +1,10 @@
-# Verification — November 22, 2026
+# Verification — November 24, 2026
+
+## Optional Waiting Dates
+
+Waiting tasks now allow null followUp and stay in Later, while dueDate remains null. Existing date presets still work; clearing the date and saving/reopening or editing the title preserves the undated Waiting state. The guide and editor label explain the optional date. Matching Firestore rules must be published separately.
+
+Passed 52 pure tests, 60 editor style/palette/layout checks including undated Waiting save/reopen, 60 guide checks, the real service-worker offline-shell test, and 137 isolated demo-Firestore rule checks. New rule checks cover private undated Waiting, partner read denial, dated Waiting, and rejection of conflicting/mistyped dates. No production tasks were written by these tests. Private Asana CSVs/plans/notes are not in this repository. Website cache and app module versions were advanced for the editor update.
 
 ## Household Groceries
 

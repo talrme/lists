@@ -57,6 +57,12 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   const home='listSpaces/home/environments/staging/tasks/';
   await read(home+'new-task',tal,true,'Missing task readable for create transaction');
   await write(home+'private-tal',task('test-tal'),tal,true,'Create Tal private task');
+  await write(home+'undated-waiting',{...task('test-tal'),waiting:true},tal,true,'Waiting may stay undated in Later');
+  await read(home+'undated-waiting',sophie,false,'Undated waiting remains private');
+  await write(home+'dated-waiting',{...task('test-tal'),waiting:true,followUp:'2026-12-01'},tal,true,'Dated waiting remains supported');
+  await write(home+'invalid-waiting-date',{...task('test-tal'),waiting:true,dueDate:'2026-12-01'},tal,false,'Waiting cannot also have a due date');
+  await write(home+'invalid-followup',{...task('test-tal'),followUp:'2026-12-01'},tal,false,'Nonwaiting cannot have a follow-up');
+  await write(home+'invalid-followup-type',{...task('test-tal'),waiting:true,followUp:7},tal,false,'Waiting date must be date or null');
   await write(home+'private-sophie',task('test-sophie'),sophie,true,'Create Sophie private task');
   await write(home+'description',{...task('test-sophie'),description:'**Bold**\n- [ ] Checklist'},sophie,true,'Formatted description stored as plain Markdown');
   await read(home+'description',bob,false,'Description remains protected from outsiders');

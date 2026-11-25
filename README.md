@@ -26,7 +26,7 @@ Type a name, then tap **Today**, **Week**, or **Later** to add without changing 
 
 The rounded **double-chevron** button opens details, preserving your text. Add/edit dialogs open without the keyboard; tap the task name to edit it. Both have top and bottom Save/Cancel actions. Closing the add dialog preserves its draft for the current session; explicit Cancel clears it.
 
-Details include a plain-text description, Private/Shared assignment, a date, and a Waiting for a response flag with a follow-up date. Shared defaults assignment to you; choose another invited person or Unassigned when needed.
+Details include a plain-text description, Private/Shared assignment, a date, and a Waiting for a response flag with an optional follow-up date. An undated Waiting task stays in Later and remains visible in Waiting. Shared defaults assignment to you; choose another invited person or Unassigned when needed.
 
 Completion responds immediately: press to preview a checkmark, then release to dismiss with confetti while the save finishes. Failed saves restore the latest saved state. Undo becomes available after the save. Notices stack up to four, expire independently, and can be swiped away on phones. Dismissing a notice is not Undo.
 

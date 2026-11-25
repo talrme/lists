@@ -64,7 +64,7 @@ service cloud.firestore {
         && task.visibility in ['private','shared']
         && (task.visibility == 'shared' || (task.ownerUid == request.auth.uid && task.assigneeUid == null))
         && dateOrNull(task.dueDate) && dateOrNull(task.followUp) && task.waiting is bool && task.completed is bool
-        && (task.waiting ? (task.followUp != null && task.dueDate == null) : task.followUp == null)
+        && (task.waiting ? task.dueDate == null : task.followUp == null)
         && task.rev is int && task.createdAt is number && task.updatedAt == request.time;
     }
     function tagId(ids, i) { return ids.size() <= i || (ids[i] is string && ids[i].matches('^[a-zA-Z0-9-]{1,80}$')); }

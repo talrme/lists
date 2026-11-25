@@ -4,12 +4,12 @@ import {createGroceries} from './groceries.js?v=1';
 import {openAsanaReview} from './asana-review.js?v=1';
 import {isAdministrator} from './households.js?v=sharing2';
 import {adminSection,bindAdmin} from './admin.js?v=review1';
-import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=organizer1';
+import {esc,avatar,descriptionHtml,fieldsMarkup,bindFields,fieldValues,editorActions} from './task-fields.js?v=waiting2';
 import {labels as effectLabels,presets as animationPresets,restore as restoreAnimations,createMotion} from './motion.js?v=5';
 import {taskGestures} from './gestures.js?v=8';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=8';
+import {guideMarkup} from './guide.js?v=9';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -300,7 +300,7 @@ function draftFrom(form,task=null){
   const draft=taskDraft(raw);
   if(task?.someday&&!draft.someday)draft.someday=false;
   if(task?.assigneeEmail&&!draft.assigneeEmail)draft.assigneeEmail=null;
-  if(raw.waiting){if(!raw.followUp||!/^\d{4}-\d{2}-\d{2}$/.test(raw.followUp))throw new Error('Choose a follow-up date.');draft.waiting=true;draft.followUp=raw.followUp;}
+  if(raw.waiting){if(raw.followUp&&!/^\d{4}-\d{2}-\d{2}$/.test(raw.followUp))throw new Error('Choose a valid follow-up date.');draft.waiting=true;draft.followUp=raw.followUp||null;}
   if(task)draft.completed=task.completed;
   return {raw,draft};
 }
@@ -374,7 +374,7 @@ $('#composer').addEventListener('submit',async event=>{
   }catch(error){$('#compose-error').textContent=errorText(error);}finally{delete form.dataset.saving;form.querySelectorAll('[type=submit],.cancel-new-task,.options-toggle').forEach(control=>control.disabled=!!preview);}
 });
 async function taskEditor(task,{modal=false,existing=null}={}){
-  if(preview){open('Task details',`<p class="task-preview">${esc(task.title)}</p>${task.description?`<div class="rich-description">${descriptionHtml(task.description)}</div>`:'<p class="settings-note">No description.</p>'}<p class="settings-note">${task.waiting?'Follow up '+esc(shortDate(task.followUp)):task.dueDate?'Due '+esc(shortDate(task.dueDate)):'Sometime later'}</p><div class="modal-footer"><button class="secondary" data-close>Close</button></div>`);return;}
+  if(preview){open('Task details',`<p class="task-preview">${esc(task.title)}</p>${task.description?`<div class="rich-description">${descriptionHtml(task.description)}</div>`:'<p class="settings-note">No description.</p>'}<p class="settings-note">${task.waiting?(task.followUp?'Follow up '+esc(shortDate(task.followUp)):'Waiting for a response · No follow-up date'):task.dueDate?'Due '+esc(shortDate(task.dueDate)):'Sometime later'}</p><div class="modal-footer"><button class="secondary" data-close>Close</button></div>`);return;}
   if(!existing&&(!await leaveComposer()||!await leaveInline()))return;
   const form=existing||document.createElement('form');form.id='edit-form';form.className='task-edit-form';
   if(!existing){
