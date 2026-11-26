@@ -10,7 +10,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=9';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=13';
+import {guideMarkup} from './guide.js?v=14';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -19,6 +19,7 @@ import {searchTasks} from './search.js?v=1';
 import {dayGroups,desktopDayGroups,groupDay} from './day-groups.js?v=2';
 import {desktopSearch} from './desktop-search.js?v=1';
 import {waitingOrder,waitingDrop} from './waiting-board.js?v=1';
+import {normalizeColumnOrder,visibleColumnOrder} from './column-order.js?v=1';
 import {accountDefaults,taskTags,matchingTags,tagName,tagKey,canonicalTag,bucket} from './organizer.js?v=2';
 import {bindTagField} from './tag-field.js?v=2';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
@@ -53,6 +54,7 @@ function mergedBoard(){return boardVisible()&&prefs.daysShown>1;}
 function visibleDays(){return mergedBoard()?desktopDayGroups(today,prefs.daysShown):dayGroups(today,prefs.daysShown);}
 function desktopExtendedCount(){return Math.round((Date.parse(desktopDayGroups(today,prefs.extendedDays).at(-1).end)-Date.parse(today))/86400000);}
 function laneOf(task){return bucket(task,today,dateTiming);}
+function columnOrder(){return normalizeColumnOrder(prefs.desktopColumnOrder?.[user?.uid]);}
 function columnCollapsed(lane){return ['waiting','later','someday'].includes(lane)&&prefs.desktopColumns?.[user?.uid]?.[lane]===true;}
 function openColumn(lane){if(!columnCollapsed(lane))return;prefs.desktopColumns[user.uid][lane]=false;persist();}
 let columnTimer=null;
@@ -203,7 +205,7 @@ function render(){
   document.body.dataset.completionSide=completionSide();document.body.dataset.completionTarget=phoneMedia.matches||completionSide()==='right'?'wide':'standard';
   if(!accountSettings.showSomeday&&view==='someday'&&!revealedTask&&!$('#new-title').value.trim()&&!composerHome&&!inlineEditor){view='today';composerFields.setTiming('asap');}
   updateNavigation();$('#expand-days-label').textContent='Show '+prefs.extendedDays+(prefs.extendedDays===1?' day':' days');
-  const layout=JSON.stringify([spaceEpoch,category,view,boardVisible(),prefs.daysShown,prefs.style,selection(),columnCollapsed('waiting'),columnCollapsed('later'),columnCollapsed('someday')]);
+  const layout=JSON.stringify([spaceEpoch,category,view,boardVisible(),prefs.daysShown,prefs.style,selection(),columnOrder(),columnCollapsed('waiting'),columnCollapsed('later'),columnCollapsed('someday')]);
   const positions=!ready||renderedLayout!==layout||skipDropAnimation?new Map():motion.snapshot();skipDropAnimation=false;renderedLayout=ready?layout:'';
   const todo=category==='todo',board=boardVisible(),merged=mergedBoard();document.body.classList.toggle('desktop-board',board);document.body.classList.toggle('merged-board',merged);dayControls.hidden=!todo||(!board&&view!=='today');$('[data-days=today]').hidden=prefs.daysShown===1;$('[data-days=more]').hidden=prefs.daysShown>1;
   if(board)$('#expand-days-label').textContent='Show next '+desktopExtendedCount()+' days';
@@ -212,7 +214,7 @@ function render(){
   $('#composer .timing-track').hidden=!todo;$('#composer .exact-date-row').classList.toggle('category-hidden',!todo);$('#composer .waiting-toggle').classList.toggle('category-hidden',!todo);
   syncSomedayControls($('#composer'));
   const captions={someday:'Someday / Maybe',today:'Today',upcoming:'Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',!todo||['today','upcoming','later'].includes(view));
-  const boardViews=['today',...(!merged?['upcoming']:[]),'waiting','later',...(accountSettings.showSomeday||tasks.some(task=>task.id===revealedTask&&task.someday)?['someday']:[])];
+  const boardViews=visibleColumnOrder(columnOrder(),{merged,someday:accountSettings.showSomeday||tasks.some(task=>task.id===revealedTask&&task.someday)});
   $('#task-list').style.setProperty('--board-columns',boardViews.map(lane=>columnCollapsed(lane)?'minmax(48px,0fr)':lane==='today'?merged?'minmax(420px,1.8fr)':'minmax(260px,1.4fr)':'minmax(170px,1fr)').join(' '));
   const list=board?[...new Map(boardViews.filter(lane=>lane!=='waiting').flatMap(currentTasks).map(task=>[task.id,task])).values()].sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b))):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row:not([data-waiting-copy])')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
   const todayBoardIds=new Set(board?currentTasks('today').map(task=>task.id):[]);
@@ -224,8 +226,8 @@ function render(){
   const grouped=todo&&view==='today'&&!board,buckets=board?boardViews.flatMap(lane=>lane==='today'&&merged?visibleDays():[{start:lane,end:'',lane,weekend:false}]):grouped?visibleDays():[{start:'',end:'',weekend:false}],days=buckets.map(bucket=>bucket.start);
   const groups=new Map([...host.querySelectorAll('.day-group')].map(group=>[group.dataset.day,group]));
   let combined=host.querySelector('.board-merged');
-  if(merged&&!combined){combined=document.createElement('section');combined.className='board-merged board-lane';combined.dataset.lane='today';combined.innerHTML='<h2 class="merged-heading">Today & Week</h2>';host.prepend(combined);}
-  for(const bucket of buckets){const day=bucket.start,parent=merged&&!bucket.lane?combined:host;let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';groups.set(day,group);}const siblings=buckets.filter(item=>(merged&&!item.lane?combined:host)===parent),index=siblings.indexOf(bucket)+(parent===combined||merged?1:0);if(parent.children[index]!==group)parent.insertBefore(group,parent.children[index]||null);
+  if(merged&&!combined){combined=document.createElement('section');combined.className='board-merged board-lane';combined.dataset.lane='today';combined.innerHTML='<h2 class="merged-heading">Today & Week</h2>';host.append(combined);}
+  for(const bucket of buckets){const day=bucket.start,parent=merged&&!bucket.lane?combined:host;let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';groups.set(day,group);}if(group.parentNode!==parent)parent.append(group);if(parent===combined){const index=buckets.filter(item=>!item.lane).indexOf(bucket)+1;if(parent.children[index]!==group)parent.insertBefore(group,parent.children[index]||null);}
    const target=group.querySelector('.day-tasks');target.dataset.day=bucket.lane?'':day;group.dataset.end=bucket.end;group.classList.toggle('weekend-group',bucket.weekend);group.classList.toggle('board-lane',!!bucket.lane);group.classList.toggle('selected-lane',view===bucket.lane);if(bucket.lane){group.dataset.lane=bucket.lane;target.dataset.lane=bucket.lane;}else{delete group.dataset.lane;delete target.dataset.lane;}
    const heading=group.querySelector('.day-heading');heading.hidden=!bucket.lane&&!merged&&(!grouped||prefs.daysShown===1);heading.textContent=bucket.lane?laneLabels[bucket.lane]:bucket.weekend?'Weekend · '+shortDate(day)+(bucket.end!==day?' – '+shortDate(bucket.end):''):(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');
    const collapsible=board&&['waiting','later','someday'].includes(bucket.lane),collapsed=collapsible&&columnCollapsed(bucket.lane);group.toggleAttribute('data-column-collapsed',collapsed);target.hidden=collapsed;
@@ -258,6 +260,8 @@ function render(){
   }
   for(const [day,group] of groups)if(!days.includes(day)){const orphan=group.querySelector('.is-editing');if(orphan)groups.get(days[0]).querySelector('.day-tasks').append(orphan);group.remove();}
   if(!merged)combined?.remove();
+  const orderedGroups=board?boardViews.map(lane=>merged&&lane==='today'?combined:groups.get(lane)):days.map(day=>groups.get(day));
+  orderedGroups.forEach((group,index)=>{if(host.children[index]!==group)host.insertBefore(group,host.children[index]||null);});
   const controlHome=board?(merged?combined:groups.get('today')):null;if(controlHome){if(dayControls.parentNode!==controlHome||dayControls!==controlHome.lastElementChild)controlHome.append(dayControls);}else $('#empty-state').after(dayControls);
   for(const day of days){const group=groups.get(day);group.classList.toggle('empty-day',!group.querySelector('.task-row'));group.classList.toggle('has-day-heading',board||grouped&&prefs.daysShown>1);}
   if(inlineEditor&&!tasks.some(task=>task.id===inlineEditor.id))inlineEditor.form.querySelector('.editor-notice').textContent='This task was removed on another device. Your unsaved draft is shown below.';
@@ -605,12 +609,26 @@ function settings(){
   document.querySelectorAll('[data-editor-mode]').forEach(button=>button.onclick=async()=>{if(!await leaveInline())return;saveListPrefs({editor:button.dataset.editorMode});$('.editor-mode .choice-track').style.setProperty('--choice',button.dataset.editorMode==='modal'?1:0);document.querySelectorAll('[data-editor-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));});
   $('#sign-out').onclick=async()=>{try{await store.logout();close();}catch(error){const region=$('#sign-out-error');if(region)region.textContent=errorText(error);}};$('#household-select').onchange=event=>switchHousehold(event.target.value);bindAdmin({account:signedInAccount,store,onOpen:switchHousehold,onPreview:profile=>store.viewAs(profile),liveUrl:config.liveUrl,confirmAction,onAsanaReview:()=>void openAsanaReview({store,open,confirmAction}),onAsanaImport:preparedImport});
 }
+function bindColumnOrder(){
+ if(category!=='todo'||$('#desktop-column-order'))return;
+ const panel=document.createElement('details');panel.id='desktop-column-order';panel.innerHTML=`<summary>Desktop column order</summary><div class="column-order-rows"></div><button type="button" class="icon-button column-order-reset" aria-label="Reset column order" title="Reset column order">${icon('rotate-ccw')}</button><span class="sr-only" role="status" aria-live="polite"></span>`;$('#desktop-board').closest('.toggle-row').after(panel);
+ const paint=()=>{panel.querySelector('.column-order-rows').innerHTML=columnOrder().map((lane,index,order)=>`<div class="column-order-row" data-column-order-row="${lane}" tabindex="-1"><span>${esc(laneLabels[lane])}</span><button type="button" class="icon-button" data-order-column="${lane}" data-order-step="-1" aria-label="Move ${esc(laneLabels[lane])} up" title="Move earlier" ${index===0?'disabled':''}>${icon('arrow-up')}</button><button type="button" class="icon-button" data-order-column="${lane}" data-order-step="1" aria-label="Move ${esc(laneLabels[lane])} down" title="Move later" ${index===order.length-1?'disabled':''}>${icon('arrow-down')}</button></div>`).join('');icons();};
+ panel.addEventListener('click',event=>{
+  const button=event.target.closest('button');if(!button)return;let order=columnOrder(),lane=button.dataset.orderColumn;
+  if(button.classList.contains('column-order-reset'))order=normalizeColumnOrder();
+  else if(lane){const from=order.indexOf(lane),to=from+Number(button.dataset.orderStep);if(to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];}else return;
+  prefs.desktopColumnOrder={...prefs.desktopColumnOrder,[user.uid]:order};persist();render();paint();
+  if(lane){const row=panel.querySelector(`[data-column-order-row="${lane}"]`),next=row.querySelector(`[data-order-step="${button.dataset.orderStep}"]:not(:disabled)`);(next||row).focus({preventScroll:true});panel.querySelector('[role=status]').textContent=laneLabels[lane]+' is column '+(order.indexOf(lane)+1)+' of '+order.length;}
+ });paint();
+}
 function addSettingHelp(){
+ bindColumnOrder();
  const help={
   'Style':'Changes layout and typography across devices signed into your account.',
   'Color schemes':'Changes colors, including Night, across devices signed into your account.',
   'Show Someday / Maybe':'Shows a separate optional list. Items are never scheduled or selected as the daily Later task. Hiding it does not delete them.',
-  'Desktop board':'On wide screens, show Today, Week, Later and optional Someday side by side. Phones keep a single list.',
+  'Desktop board':'On wide screens, show Today, Week, Waiting, Later and optional Someday side by side. Phones keep a single list.',
+  'Desktop column order':'Saved for your account on this device. In the expanded view, Today and Week merge at whichever of their positions comes first. Hidden Someday keeps its saved position. Reset restores Today, Week, Waiting, Later, Someday.',
   'Extended view: number of days':'Sets how many calendar days Show days opens in Today. Weekends are grouped together.',
   'Completion button':'Auto puts a wider completion check on the right below 768px, and keeps the circle on the left on larger screens. Override Left or Right for this device. Press, then release to complete; slide outside before releasing to cancel. Task text still opens editing.',
   'Open task details':'Choose a pop-up modal or expand details within the task list.',

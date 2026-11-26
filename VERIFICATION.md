@@ -1,5 +1,11 @@
 # Verification — November 25, 2026
 
+## Desktop Column Order
+
+Default order is Today/Week/Waiting/Later/Someday, with Waiting second when Today/Week merge. Settings has an expandable Desktop column order section with up/down controls, Reset, help, boundary disabling, focus preservation and announcements. Preferences are device-local and UID-scoped. Merged Today/Week occupies their earlier saved slot; hidden Someday retains its position. Outer board lanes are ordered separately from nested day groups, preserving task nodes and data.
+
+Passed 63 pure tests and the synthetic column-order browser suite: all-column moves, custom merged placement, reload, collapsed columns, optional Someday, Reset, help, unchanged tasks, 320px settings and account isolation. Custom-order desktop screenshot inspected. Also passed Waiting drag/edit/completion/Undo, merged days/search, production (80 layouts), phone UX (30), steady motion/daily controls (15), guide (60), offline shell and automatic updates. No database/rules changes, production task writes or physical-device testing.
+
 ## Desktop Waiting Column
 
 Waiting is a collapsible desktop projection alongside Today/Week/Later/Someday, replacing Waiting-only. Paired rows share logical mutations and have distinct visual-instance motion keys. Hover/focus links both appearances; edits/completion/Undo apply to the same saved task. Drag into Waiting sets the flag with null dates; drag its Waiting appearance out clears the flag and uses Today/Week/Later or the actual merged day target. Same-column reorder keeps scheduling; No longer waiting preserves a dated follow-up with Undo. Phone Waiting remains one row per task.
