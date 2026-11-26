@@ -1,9 +1,5 @@
 # Lists: Firebase Setup
 
-## Manual Today Order Preparation
-
-The Today reorder correction adds optional `todayOrder` to account preferences: a household/environment scope, Pacific date and up to 2,000 unique task IDs. This lets the owner override the initial carryover-first order for the current day without rewriting task dates, ranks or a partner's arrangement. Existing clients remain compatible; ownership/read restrictions are unchanged. The expanded rules passed 157 isolated emulator checks. Before releasing the client, publish the complete current rules in the Firestore Rules editor and confirm publication. A Git push does not publish database rules; keep the existing client live until confirmation.
-
 ## Completed Today Preparation
 
 The Completed today feature needs optional numeric `completedAt` on tasks. The current rules accept that field without requiring it, so existing clients/tasks stay compatible. Private/shared permissions are unchanged. Completion time is the original action time, including offline actions, not the latest edit/upload time. Legacy tasks without a recorded completion time are not guessed into today's history.

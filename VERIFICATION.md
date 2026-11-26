@@ -1,5 +1,13 @@
 # Verification — November 26, 2026
 
+## Immediate Mouse Drag Startup
+
+Reproduced a genuine startup failure: moving the mouse immediately after pressing a task canceled Sortable's 150ms delayed selection, so dragging never began. Previous held-drag tests waited 190ms or more and masked it. Delay now applies only to touch; mouse retains the 4px movement threshold. Click suppression distinguishes an actual drag/chosen touch hold from an ordinary mouse choose/unchoose, preserving click-to-edit. Task scheduling, ranking and carryover grouping are unchanged. The user's reported spontaneous recovery after moving toward Week preceded this client release; its exact cause is not confirmed.
+
+Passed the new 20-case immediate-mouse suite across five styles and phone-width/single-list/desktop-board/merged layouts, including saved reorder/reload, regular click and keyboard editing, and no editor after dropping. Trusted CDP touch tests passed tap editing, hold/release suppression, hold-drag, directional swipes and native vertical scrolling. Delayed-save drop stability and full-day drag reflow also passed. Regression passes: section quick-add, Waiting board, Today rollover, steady motion (15), production layouts (80), phone UX (30), existing rules (151), offline shell and automatic updates. No production task mutations or physical-device verification.
+
+An initial account-order rules experiment (9de584f) was prepared before the user clarified that dragging would not start. No client using that field was released; it is removed from the repository in this correction. The owner had confirmed publishing the optional self-only permission, but this fix neither uses it nor requires a live rules rollback. No claim of remotely reverting those rules is made. App59/worker39 load gestures10.
+
 ## Section Quick Add and Collapsed Titles
 
 To-do column and visible expanded-date headings reveal a quiet Lucide plus on hover/focus, faintly visible on touch. Stable inline fields add private tasks with existing creation-order/scheduling semantics without changing views or the main composer. Waiting is flagged/undated; date/weekend groups use their first day. Failed saves retain the ID and randomized date. Escape collapses without clearing text. If a layout change or midnight removes the heading, a labeled recovery field keeps the draft reachable above the list; workspace changes clear private drafts. Unfinished quick drafts block automatic reload/return-to-Today. Sideways collapsed Waiting/Later/Someday titles now expand by click, Enter or Space, independently of the existing eye buttons.

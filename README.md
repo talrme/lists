@@ -69,7 +69,7 @@ Task lists open and switch without replaying entrance bounces. Completion keeps 
 - Swipe **right in Today** to punt to Week.
 - Swipe **right in Later**, or **left in Week**, to move to Today.
 - Quick Action icons offer the same actions. They default off on phones and on for larger screens; override this in Settings.
-- Hold a row briefly to drag it. Moving between days changes its due/follow-up date. Shared-task ordering syncs across household members as well as devices.
+- On touchscreens, hold a row briefly to drag it. Mouse dragging starts as soon as you move, with no hold requirement; a normal click still opens details. Moving between days changes its due/follow-up date. Shared-task ordering syncs across household members as well as devices.
 - **Show N days** expands Today; **Show today only** collapses it. The day-count wheel in Settings ranges from 1-10, default 5. Weekends share a group. Extended Today intentionally previews future tasks too.
 - Reopening returns to Today while keeping your day-count preference, unless a draft, dialog, or active action needs protection.
 

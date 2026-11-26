@@ -1,5 +1,5 @@
 export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,motion,context,swipeLabel,swipeDirection}){
- const host=document.querySelector('#task-list'),sortables=new Map();let active=false,dragging=false,chosen=false,swipe=null,suppressUntil=0;
+ const host=document.querySelector('#task-list'),sortables=new Map();let active=false,dragging=false,chosen=false,chosenTouch=false,swipe=null,suppressUntil=0;
  let flowFrame=0;const flowAnimations=new Map();
  function animateFlow(event){
   if(flowFrame||!motion.enabled('reorder'))return;
@@ -21,12 +21,12 @@ export function taskGestures({canSwipe,canMove,findTask,onDefer,onMove,onIdle,mo
   host.querySelectorAll('.day-tasks').forEach(node=>{
    if(!sortables.has(node))sortables.set(node,new window.Sortable(node,{
     group:'list-tasks',draggable:'.task-row',filter:'.is-editing,.completed,button:not(.task-content),input,textarea,select,a',preventOnFilter:false,
-    delay:150,delayOnTouchOnly:false,touchStartThreshold:6,
+    delay:150,delayOnTouchOnly:true,touchStartThreshold:6,
     animation:motion.enabled('reorder')?180:0,forceFallback:true,fallbackOnBody:true,fallbackTolerance:4,
     ghostClass:'task-drag-placeholder',chosenClass:'task-drag-chosen',fallbackClass:'task-drag-float',scrollSensitivity:70,scrollSpeed:12,
-    onChoose(){chosen=true;swipe=null;active=true;sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
+    onChoose(event){chosen=true;chosenTouch=!!event.originalEvent?.touches||event.originalEvent?.pointerType==='touch';swipe=null;active=true;sortables.forEach(sortable=>sortable.option('animation',motion.enabled('reorder')?180:0));},
     onMove:animateFlow,
-    onUnchoose(){if(!chosen)return;chosen=false;suppressUntil=performance.now()+350;if(!dragging)idle();},
+    onUnchoose(){if(!chosen)return;chosen=false;if(dragging||chosenTouch)suppressUntil=performance.now()+350;if(!dragging)idle();},
     onStart(event){dragging=true;active=true;event.item._movingTask=findTask(event.item.dataset.task);event.item._movingEpoch=context();document.body.classList.add('task-dragging');},
     async onEnd(event){
      suppressUntil=performance.now()+350;const task=event.item._movingTask,epoch=event.item._movingEpoch;delete event.item._movingTask;delete event.item._movingEpoch;

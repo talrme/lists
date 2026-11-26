@@ -90,13 +90,6 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   const prefs='listUsers/test-tal/preferences/main',tagRoot='listSpaces/home/environments/staging/tags/';
   await write(prefs,{style:7,palette:'night',showSomeday:true,audiences:{todo:{private:true,'test-tal':true}}},tal,true,'Own account preferences sync');
   await read(prefs,sophie,false,'Partner cannot read account preferences');
-  const todayOrder={scope:'["home","staging"]',day:'2026-11-26',ids:['private-tal','shared-tal']};
-  await write(prefs,{todayOrder},tal,true,'Own daily manual order syncs',['updatedAt'],true);
-  await write(prefs,{todayOrder},sophie,false,'Partner cannot change daily manual order',['updatedAt'],true);
-  await write(prefs,{todayOrder:{...todayOrder,ids:['duplicate','duplicate']}},tal,false,'Reject duplicate daily order IDs',['updatedAt'],true);
-  await write(prefs,{todayOrder:{...todayOrder,ids:Array.from({length:2001},(_,i)=>'task-'+i)}},tal,false,'Bound daily order size',['updatedAt'],true);
-  await write(prefs,{todayOrder:{...todayOrder,day:'yesterday'}},tal,false,'Require date-only manual order',['updatedAt'],true);
-  await write(prefs,{todayOrder:{...todayOrder,extra:true}},tal,false,'Reject arbitrary daily order fields',['updatedAt'],true);
   await write(prefs,{palette:'garden'},sophie,false,'Partner cannot alter own preferences',[],true);
   await write(prefs,{admin:true},tal,false,'Preferences cannot grant privileges',[],true);
   await write(prefs,{style:99},tal,false,'Invalid style denied',['updatedAt'],true);
