@@ -74,12 +74,20 @@ service cloud.firestore {
       match /preferences/{id} {
         allow read: if googleAccount() && (request.auth.uid == uid || administrator());
         allow create, update: if googleAccount() && request.auth.uid == uid && id == 'main'
-          && request.resource.data.keys().hasOnly(['style','palette','showSomeday','audiences','updatedAt'])
+          && request.resource.data.keys().hasOnly(['style','palette','showSomeday','audiences','todayOrder','updatedAt'])
           && request.resource.data.get('style', 1) in [1,7,4,8,9]
           && request.resource.data.get('palette', 'original') in ['original','garden','cherry','night']
           && request.resource.data.get('showSomeday', false) is bool
           && request.resource.data.get('audiences', {}) is map
           && request.resource.data.get('audiences', {}).keys().hasOnly(['todo','grocery','movies','other'])
+          && (!('todayOrder' in request.resource.data) || (
+            request.resource.data.todayOrder is map
+            && request.resource.data.todayOrder.keys().hasAll(['scope','day','ids'])
+            && request.resource.data.todayOrder.keys().hasOnly(['scope','day','ids'])
+            && request.resource.data.todayOrder.scope is string && request.resource.data.todayOrder.scope.size() <= 200
+            && request.resource.data.todayOrder.day is string && request.resource.data.todayOrder.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && request.resource.data.todayOrder.ids is list && request.resource.data.todayOrder.ids.size() <= 2000
+            && request.resource.data.todayOrder.ids.toSet().size() == request.resource.data.todayOrder.ids.size()))
           && request.resource.data.updatedAt == request.time;
         allow delete: if false;
       }
