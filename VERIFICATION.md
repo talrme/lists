@@ -1,5 +1,11 @@
 # Verification — November 26, 2026
 
+## Section Quick Add and Collapsed Titles
+
+To-do column and visible expanded-date headings reveal a quiet Lucide plus on hover/focus, faintly visible on touch. Stable inline fields add private tasks with existing creation-order/scheduling semantics without changing views or the main composer. Waiting is flagged/undated; date/weekend groups use their first day. Failed saves retain the ID and randomized date. Escape collapses without clearing text. If a layout change or midnight removes the heading, a labeled recovery field keeps the draft reachable above the list; workspace changes clear private drafts. Unfinished quick drafts block automatic reload/return-to-Today. Sideways collapsed Waiting/Later/Someday titles now expand by click, Enter or Space, independently of the existing eye buttons.
+
+Passed 72 pure tests and synthetic quick-add browser checks: all five destinations, private defaults, preserved composer/current view, live-snapshot focus, failure/retry ID/date, collapse/restore draft retention, recovered dated draft, keyboard/click title expansion, account isolation, 40 style/palette/desktop-width combinations and phone expanded days. Screenshots inspected. Regression passes: desktop columns, board-tab stability (80), steady motion (15), production layouts (80), phone UX (30), completed-today, Waiting board, Today rollover, guide (60), offline shell and automatic updates. App58/CSS41/worker38 cache the new module; guide remains under 280 words. No rules/schema changes, production task mutations or physical-device testing.
+
 ## Completed Today
 
 Default-on, crossed-out accomplishments from every To-do scheduling list appear beneath today's active tasks, including expanded/merged days. Eye control and Settings share a UID/device-local visibility preference. Owner filters/private authorization apply, with the owner's daily-pick exception. A separate keyed, non-sortable projection avoids active-row identity and motion collisions. Completion captures original action time, including offline; reopen clears it, Undo restores it (including legacy null), and editing a finished task never resets it. No updatedAt fallback or historical backfill. The section clears at Pacific midnight, not the completed records.

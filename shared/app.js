@@ -10,7 +10,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=9';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=16';
+import {guideMarkup} from './guide.js?v=17';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -22,6 +22,7 @@ import {waitingOrder,waitingDrop} from './waiting-board.js?v=1';
 import {normalizeColumnOrder,visibleColumnOrder} from './column-order.js?v=1';
 import {carriedOver,todayOrder} from './today-order.js?v=1';
 import {completedOn,completedOrder,createCompletedToday} from './completed-today.js?v=1';
+import {sectionDraft,createSectionAdd} from './section-add.js?v=1';
 import {accountDefaults,taskTags,matchingTags,tagName,tagKey,canonicalTag,bucket} from './organizer.js?v=2';
 import {bindTagField} from './tag-field.js?v=2';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
@@ -107,6 +108,13 @@ const desktopFinder=desktopSearch({mount:quickEntry,getTasks:()=>displayTasks().
 $('.list-heading').append($('#back-asap'));
 const phoneModal=modalViewport($('#dialog'));
 const completedToday=createCompletedToday({icon,markup:task=>rowMarkup(task,false,'completed-today'),onToggle:toggleCompletedToday});
+const sectionAdd=createSectionAdd({icon,host:$('#task-list'),save:async(operation,target,origin)=>{
+ if(preview||!ready||!user)throw new Error('Sign in to add a task.');
+ const epoch=spaceEpoch;
+ operation.draft??=sectionDraft(operation.title,{lane:target.lane,day:target.day,today,uid:user.uid},tasks);
+ if(target.heading.isConnected)motion.travel(origin,target.heading);await store.write(operation.id,operation.draft);if(epoch!==spaceEpoch)return;
+ notify('Task added');motion.arrival(operation.id,target.heading.isConnected?target.heading:$('#open-menu'));
+}});
 composerFields=bindFields($('#composer'),{uid:null,members,profiles,today,onTimingSelect:mode=>changeEditor(async()=>{
   if($('#composer').dataset.saving||!await leaveInline())return;
   if(mode==='someday'&&($('#composer').elements.date.value||$('#composer').elements.waiting.checked)&&!await confirmAction('Move to Someday / Maybe?','Its scheduled date and follow-up will be cleared. It will not appear in daily suggestions.','Move to Someday'))return;
@@ -205,7 +213,7 @@ function rowMarkup(task,waitingCopy=false,displayLane=view){
 }
 function render(){
   const shopping=category==='grocery';grocery?.show(shopping);$('#composer').hidden=shopping;$('#task-list').hidden=shopping;$('.list-heading').hidden=shopping;if(shopping)dayControls.hidden=true;
-  if(shopping){completedToday.reset();desktopFinder.setVisible(false);renderedLayout='';document.body.classList.remove('desktop-board','merged-board');$('#empty-state').hidden=true;updateNavigation();document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));return;}
+  if(shopping){sectionAdd.render([]);completedToday.reset();desktopFinder.setVisible(false);renderedLayout='';document.body.classList.remove('desktop-board','merged-board');$('#empty-state').hidden=true;updateNavigation();document.querySelectorAll('[data-category]').forEach(button=>button.toggleAttribute('aria-current',button.dataset.category===category));return;}
   if(!user||gestures?.isActive()||completionPress?.isActive())return;
   document.body.dataset.completionSide=completionSide();document.body.dataset.completionTarget=phoneMedia.matches||completionSide()==='right'?'wide':'standard';
   if(!accountSettings.showSomeday&&view==='someday'&&!revealedTask&&!$('#new-title').value.trim()&&!composerHome&&!inlineEditor){view='today';composerFields.setTiming('asap');}
@@ -234,9 +242,12 @@ function render(){
   if(merged&&!combined){combined=document.createElement('section');combined.className='board-merged board-lane';combined.dataset.lane='today';combined.innerHTML='<h2 class="merged-heading">Today & Week</h2>';host.append(combined);}
   for(const bucket of buckets){const day=bucket.start,parent=merged&&!bucket.lane?combined:host;let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';groups.set(day,group);}if(group.parentNode!==parent)parent.append(group);if(parent===combined){const index=buckets.filter(item=>!item.lane).indexOf(bucket)+1;if(parent.children[index]!==group)parent.insertBefore(group,parent.children[index]||null);}
    const target=group.querySelector('.day-tasks');target.dataset.day=bucket.lane?'':day;group.dataset.end=bucket.end;group.classList.toggle('weekend-group',bucket.weekend);group.classList.toggle('board-lane',!!bucket.lane);group.classList.toggle('selected-lane',view===bucket.lane);if(bucket.lane){group.dataset.lane=bucket.lane;target.dataset.lane=bucket.lane;}else{delete group.dataset.lane;delete target.dataset.lane;}
-   const heading=group.querySelector('.day-heading');heading.hidden=!bucket.lane&&!merged&&(!grouped||prefs.daysShown===1);heading.textContent=bucket.lane?laneLabels[bucket.lane]:bucket.weekend?'Weekend · '+shortDate(day)+(bucket.end!==day?' – '+shortDate(bucket.end):''):(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');
+   const heading=group.querySelector('.day-heading');heading.hidden=!bucket.lane&&!merged&&(!grouped||prefs.daysShown===1);const headingLabel=bucket.lane?laneLabels[bucket.lane]:bucket.weekend?'Weekend · '+shortDate(day)+(bucket.end!==day?' – '+shortDate(bucket.end):''):(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');
    const collapsible=board&&['waiting','later','someday'].includes(bucket.lane),collapsed=collapsible&&columnCollapsed(bucket.lane);group.toggleAttribute('data-column-collapsed',collapsed);target.hidden=collapsed;
-   if(collapsible){const label=laneLabels[bucket.lane],action=(collapsed?'Show ':'Hide ')+label;target.id='board-tasks-'+bucket.lane;heading.innerHTML=`<span class="lane-title">${esc(label)}</span><button type="button" class="icon-button column-eye" data-toggle-column="${bucket.lane}" aria-label="${esc(action)}" title="${esc(action)}" aria-expanded="${!collapsed}" aria-controls="${target.id}">${icon(collapsed?'eye-off':'eye')}</button>`;}
+   const headingKey=JSON.stringify([headingLabel,collapsible,collapsed]);if(heading.dataset.headingKey!==headingKey){heading.dataset.headingKey=headingKey;
+    if(collapsible){const label=laneLabels[bucket.lane],action=(collapsed?'Show ':'Hide ')+label;target.id='board-tasks-'+bucket.lane;heading.innerHTML=(collapsed?`<button type="button" class="lane-title" data-expand-column="${bucket.lane}" aria-label="Show ${esc(label)} column" aria-expanded="false" aria-controls="${target.id}">${esc(label)}</button>`:`<span class="lane-title">${esc(label)}</span>`)+`<button type="button" class="icon-button column-eye" data-toggle-column="${bucket.lane}" aria-label="${esc(action)}" title="${esc(action)}" aria-expanded="${!collapsed}" aria-controls="${target.id}">${icon(collapsed?'eye-off':'eye')}</button>`;
+    }else heading.innerHTML=`<span class="lane-title">${esc(headingLabel)}</span>`;
+   }
   }
   const cursors=new Map(days.map(day=>[day,groups.get(day).querySelector('.day-tasks').firstElementChild]));
   for(const task of list){
@@ -267,6 +278,7 @@ function render(){
   if(!merged)combined?.remove();
   const orderedGroups=board?boardViews.map(lane=>merged&&lane==='today'?combined:groups.get(lane)):days.map(day=>groups.get(day));
   orderedGroups.forEach((group,index)=>{if(host.children[index]!==group)host.insertBefore(group,host.children[index]||null);});
+  sectionAdd.render(todo&&!preview&&ready?buckets.flatMap(bucket=>{const group=groups.get(bucket.start),heading=group.querySelector('.day-heading');return heading.hidden?[]:[{key:bucket.lane?'lane:'+bucket.lane:'day:'+bucket.start,label:heading.querySelector('.lane-title').textContent,heading,parent:group,lane:bucket.lane||null,day:bucket.lane?null:bucket.start,collapsed:group.hasAttribute('data-column-collapsed')}];}):[]);
   const completionParent=todo&&(board||view==='today')?groups.get(board&&!merged?'today':today):null;
   const accomplishments=completionParent?displayTasks().filter(task=>task.category==='todo'&&(task.visibility==='shared'||task.ownerUid===user?.uid)&&completedOn(task,today,config.timeZone)&&(selectedTask(task,{uid:user?.uid,email:user?.email,selection:selection(),profiles})||picks.includes(task.id))).sort(completedOrder):[];
   const completedCount=completedToday.render({tasks:accomplishments,parent:completionParent,shown:showCompletedToday()});
@@ -538,7 +550,7 @@ function householdPicker(){return `<label class="field">Household<select id="hou
 function bindDaysSetting(){
  if($('#days-shown'))bindDayWheel($('#days-shown'),prefs.extendedDays,value=>{prefs.extendedDays=value;if(prefs.daysShown>1)prefs.daysShown=Math.max(boardVisible()?2:1,value);persist();render();});
 }
-function resetWorkspace(){completedToday.reset();clearTimeout(columnTimer);$('#task-list').classList.remove('column-transition');$('#empty-state').after(dayControls);revealedTask=null;highlightedTask=null;clearTimeout(highlightTimer);desktopFinder.reset();desktopFinder.setVisible(false);grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];dailyState=null;renderedLayout='';picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
+function resetWorkspace(){sectionAdd.reset();completedToday.reset();clearTimeout(columnTimer);$('#task-list').classList.remove('column-transition');$('#empty-state').after(dayControls);revealedTask=null;highlightedTask=null;clearTimeout(highlightTimer);desktopFinder.reset();desktopFinder.setVisible(false);grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];dailyState=null;renderedLayout='';picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
 function switchHousehold(id){if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);}
 function updateInstallManifest(){
   const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.set('household',currentSpace.id);const root=appRoot;
@@ -680,6 +692,7 @@ document.addEventListener('click',async event=>{
   if(button.id==='exit-preview'){store.exitPreview();const url=new URL(location.href);url.searchParams.set('household',currentSpace.id);history.replaceState(null,'',url);}
   if(button.dataset.days)await changeDays(button.dataset.days!=='today');
   if(button.dataset.toggleColumn)await toggleColumn(button.dataset.toggleColumn);
+  if(button.dataset.expandColumn&&columnCollapsed(button.dataset.expandColumn))await toggleColumn(button.dataset.expandColumn);
   if(button.dataset.view&&!button.closest('#composer')){if(!await leaveInline())return;view=button.dataset.view;composerFields.setTiming(composerMode());if(button.closest('#dialog'))close();render();}
   if(button.dataset.category){if(!await leaveInline())return;if(category==='grocery'&&grocery.hasDraft()&&!await confirmAction('Leave this grocery draft?','The item has not been added.','Discard'))return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;if(category==='grocery')grocery.discardDraft();category=button.dataset.category;view=category==='todo'?'today':'later';composerFields.reset();$('#new-title').value='';render();}
   if(button.dataset.filterTag)openSearch([button.dataset.filterTag]);
@@ -738,7 +751,7 @@ gestures=taskGestures({canSwipe:()=>ready&&prefs.swipeDefer&&category==='todo'&&
 let returnToToday=false;
 function resumeToday(){
  if(category==='grocery'){returnToToday=false;return;}
- if(!returnToToday||document.hidden||!ready||document.querySelector('dialog[open]')||inlineEditor||editorTransition||gestures?.isActive()||busy.size||$('#composer').dataset.saving||$('#new-title').value.trim()||$('#new-description').value.trim())return;
+ if(!returnToToday||sectionAdd.hasDraft()||document.hidden||!ready||document.querySelector('dialog[open]')||inlineEditor||editorTransition||gestures?.isActive()||busy.size||$('#composer').dataset.saving||$('#new-title').value.trim()||$('#new-description').value.trim())return;
  returnToToday=false;category='todo';view='today';composerFields.reset('asap');render();window.scrollTo({top:0,behavior:'instant'});
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden)returnToToday=true;else resumeToday();});window.addEventListener('pageshow',()=>resumeToday());
@@ -747,7 +760,7 @@ function watchDay(){clearTimeout(midnightTimer);checkDay();if(!document.hidden)m
 document.addEventListener('visibilitychange',watchDay);window.addEventListener('online',()=>{if(ready)void dailyPick();});boardMedia.addEventListener('change',()=>render());matchMedia('(min-width:768px)').addEventListener('change',()=>{if(prefs.quickWeek===null){render();const input=$('[data-preference=quickWeek]');if(input)input.checked=quickActionsVisible();}});watchDay();void start();
 void setupUpdates({canReload:async()=>{
  const reason=()=>!navigator.onLine?'Reconnect before updating.':
-  grocery?.hasDraft()||preparedImportBusy||metadataPending||busy.size||picking||editorTransition||gestures?.isActive()||completionPress?.isActive()||document.querySelector('[data-saving]')?'Finishing your current action before updating.':
+  sectionAdd.hasDraft()||grocery?.hasDraft()||preparedImportBusy||metadataPending||busy.size||picking||editorTransition||gestures?.isActive()||completionPress?.isActive()||document.querySelector('[data-saving]')?'Finishing your current action before updating.':
   $('#new-title').value.trim()||$('#new-description').value.trim()||$('#composer').elements.date.value||$('#composer').elements.followUp.value||$('#composer').elements.waiting.checked||$('#composer').elements.person.value!=='private'||JSON.parse($('#composer').elements.tagIds?.value||'[]').length||!$('#new-options').hidden||inlineEditor||[...document.querySelectorAll('dialog[open] form:not([method="dialog"])')].some(form=>form.getClientRects().length)?'Finish or cancel your draft before updating.':
   syncState?.pending||syncState?.syncing&&!syncState?.connecting?'Wait for your changes to sync before updating.':'';
  const blocked=reason();if(blocked)return blocked;

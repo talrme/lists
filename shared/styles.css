@@ -330,7 +330,28 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .board-merged .day-tasks{min-height:64px;grid-template-columns:1fr}
  body.desktop-board .board-lane>.day-controls{margin-top:12px}
 }
-@media(prefers-reduced-motion:reduce){.task-row,body.desktop-board #task-list.column-transition{transition:none}}
+.day-heading:has(.section-add-toggle){display:flex;align-items:center;gap:6px;min-height:32px}
+.day-heading>.lane-title{min-width:0;overflow-wrap:anywhere;flex:1}
+.section-add-toggle{width:28px;min-width:28px;height:28px;min-height:28px;margin-left:auto;opacity:0;pointer-events:none;color:var(--muted);transition:opacity .12s}
+.section-add-toggle svg,.section-add-field svg{width:15px;height:15px}
+.day-group:hover>.day-heading>.section-add-toggle,.day-heading:focus-within>.section-add-toggle,.section-add-toggle.has-draft{opacity:.6;pointer-events:auto}
+.day-heading>.section-add-toggle:hover,.day-heading>.section-add-toggle:focus-visible{opacity:1;color:var(--accent)}
+.section-add-form{margin:0 0 10px;min-width:0}
+.section-add-form[hidden]{display:none}
+.section-add-field{display:flex;align-items:center;min-width:0;border:1px solid var(--line);border-radius:5px;background:var(--surface)}
+.section-add-field:focus-within{border-color:var(--accent)}
+.section-add-field input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:13px;padding:9px 10px;outline:none}
+.section-add-field input::placeholder{color:var(--muted)}
+.section-add-field>.icon-button{width:32px;min-width:32px;height:36px;color:var(--muted)}
+.section-add-form>.inline-error:empty{display:none}
+.section-add-recovery{display:grid;gap:4px;max-width:760px;margin-bottom:12px}
+.section-add-recovery-heading{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.section-add-recovery .section-add-toggle{opacity:.6;pointer-events:auto}
+.board-lane[data-column-collapsed] button.lane-title{border:0;background:none;padding:8px 0;cursor:pointer;font:inherit;line-height:1.5;align-self:center;flex:none}
+.board-lane[data-column-collapsed] button.lane-title:hover{color:var(--accent)}
+@media(hover:none){.day-heading>.section-add-toggle{opacity:.45;pointer-events:auto}}
+@media(min-width:1100px){body.desktop-board .board-lane>.day-heading:has(.section-add-toggle){display:flex}body.desktop-board .board-lane[data-column-collapsed]>.day-heading>.section-add-toggle{display:none}}
+@media(prefers-reduced-motion:reduce){.task-row,body.desktop-board #task-list.column-transition,.section-add-toggle{transition:none}}
 dialog:has(.asana-review){width:min(900px,calc(100% - 28px));max-width:900px}
 .asana-review{min-width:0;font-size:13px}
 .review-summary{display:grid;gap:7px;margin:0 0 16px}
