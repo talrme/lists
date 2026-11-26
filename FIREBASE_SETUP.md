@@ -1,5 +1,11 @@
 # Lists: Firebase Setup
 
+## Completed Today Preparation
+
+The Completed today feature needs optional numeric `completedAt` on tasks. The current rules accept that field without requiring it, so existing clients/tasks stay compatible. Private/shared permissions are unchanged. Completion time is the original action time, including offline actions, not the latest edit/upload time. Legacy tasks without a recorded completion time are not guessed into today's history.
+
+Before publishing the client feature, the owner must copy the complete current `firestore.rules` into [Firestore Rules](https://console.firebase.google.com/project/lists-95c4f/firestore/databases/-default-/security/rules) and click Publish, then confirm done. A GitHub push does not publish database rules. The optional-field rules passed 151 isolated demo-emulator checks; live publication still needs confirmation. Until then, keep the existing website release unchanged so ordinary completion is not disrupted by old rules.
+
 ## Groceries Update
 
 The dedicated grocery workflow adds membership-protected `groceries`, `groceryPurchases` and `groceryCommands` collections beneath the existing household/environment. No new Firebase project, database, account or composite index is needed. To-do data is not migrated or cleared.

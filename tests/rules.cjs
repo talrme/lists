@@ -57,6 +57,13 @@ function fields(data){return Object.fromEntries(Object.entries(data).map(([k,v])
   const home='listSpaces/home/environments/staging/tasks/';
   await read(home+'new-task',tal,true,'Missing task readable for create transaction');
   await write(home+'private-tal',task('test-tal'),tal,true,'Create Tal private task');
+  await write(home+'completed-time',{...task('test-tal'),completed:true,completedAt:Date.now()},tal,true,'Optional numeric completion time is accepted');
+  await read(home+'completed-time',sophie,false,'Completion history remains private');
+  await write(home+'completed-time',{completed:false,completedAt:null,rev:2},tal,true,'Reopening may clear completion time',['updatedAt'],true);
+  await write(home+'completed-time',{completed:true,rev:3},tal,true,'Legacy clients can still complete without a time',['updatedAt'],true);
+  await write(home+'invalid-completed-time',{...task('test-tal'),completed:true,completedAt:'today'},tal,false,'Completion time must be numeric or null');
+  await write(home+'negative-completed-time',{...task('test-tal'),completed:true,completedAt:-1},tal,false,'Completion time cannot be negative');
+  await write(home+'huge-completed-time',{...task('test-tal'),completed:true,completedAt:1e16},tal,false,'Completion time is bounded');
   const daily='listSpaces/home/environments/staging/daily/2026-11-25/picks/test-tal';
   await write(daily,{taskId:'private-tal'},tal,true,'Daily suggestion created',['createdAt']);
   await write(daily,{dismissed:true,sortOrder:22},tal,true,'Owner skips and positions own daily suggestion',[],true);

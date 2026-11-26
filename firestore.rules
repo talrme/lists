@@ -48,7 +48,8 @@ service cloud.firestore {
     }
     function validTask(task) {
       return task.keys().hasAll(['title','category','ownerUid','assigneeUid','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
-        && task.keys().hasOnly(['title','description','sortOrder','someday','tagIds','category','ownerUid','assigneeUid','assigneeEmail','visibility','dueDate','waiting','followUp','completed','rev','createdAt','updatedAt'])
+        && task.keys().hasOnly(['title','description','sortOrder','someday','tagIds','category','ownerUid','assigneeUid','assigneeEmail','visibility','dueDate','waiting','followUp','completed','completedAt','rev','createdAt','updatedAt'])
+        && (task.get('completedAt', null) == null || (task.completedAt is number && task.completedAt >= 0 && task.completedAt <= 1000000000000000))
         && task.get('someday', false) is bool
         && (!task.get('someday', false) || (task.category == 'todo' && task.dueDate == null && !task.waiting && task.followUp == null))
         && task.get('tagIds', []) is list && task.get('tagIds', []).size() <= 20
