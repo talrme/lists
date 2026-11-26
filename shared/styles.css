@@ -131,6 +131,9 @@ html[data-palette=night] .compact-date input{color-scheme:dark}
 .modal-composer .task-options>.description-field{margin-top:10px;padding-top:12px}
 .waiting-label{display:inline-flex;align-items:center;gap:7px}
 .waiting-label svg{width:16px;height:16px;color:var(--muted)}
+.waiting-clock{position:relative;display:inline-block;width:16px;height:16px;flex:none;vertical-align:middle;color:var(--muted)}
+.waiting-clock>svg:first-child{display:block;width:100%;height:100%}
+.waiting-clock>svg:last-child{position:absolute;left:4px;top:3px;width:8px;height:8px;stroke-width:2.1}
 .punt-traveler{background:var(--surface);color:var(--ink);box-shadow:0 8px 24px #0003;border:1px solid var(--line);border-radius:7px;font-size:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:12px;z-index:12}
 body .modal-composer{padding:0!important;border:0!important;box-shadow:none!important;margin:0;border-radius:0;background:transparent}
 .navigation-bar{display:flex;align-items:center;justify-content:space-between;min-height:44px;margin:-5px 0 4px}
@@ -278,9 +281,6 @@ html:has(#dialog[open]){overflow:hidden}
 .task-row{outline:2px solid transparent;outline-offset:3px;transition:outline-color .65s ease}
 .task-row[data-search-highlight]{outline-color:var(--accent)}
 .task-row[data-linked-task]:not([data-search-highlight]){outline-color:color-mix(in srgb,var(--accent) 45%,transparent)}
-.stop-waiting{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);padding:4px;min-height:32px}
-.stop-waiting svg{width:15px;height:15px;flex-shrink:0}
-.stop-waiting:hover{color:var(--accent)}
 .column-order-row{display:grid;grid-template-columns:minmax(0,1fr) 36px 36px;align-items:center;gap:4px;min-height:42px;border-bottom:1px solid var(--line);font-size:12px}
 .column-order-row>span{overflow-wrap:anywhere}
 .column-order-row .icon-button{width:36px;min-width:36px;height:36px;min-height:36px;color:var(--muted)}
@@ -299,8 +299,6 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .column-transition>.board-lane{overflow:clip}
  body.desktop-board .board-lane:has(>.day-heading>.column-eye)>.day-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:52px}
  body.desktop-board .board-lane>.day-heading,body.desktop-board .merged-heading{min-height:52px;box-sizing:border-box}
- body.desktop-board [data-waiting-copy] .task-summary{flex-wrap:wrap}
- body.desktop-board [data-waiting-copy] .stop-waiting{margin-left:auto}
  .column-eye{width:32px;min-width:32px;height:32px;min-height:32px;color:var(--muted);opacity:.48}
  .column-eye svg{width:16px;height:16px}
  .column-eye:hover,.column-eye:focus-visible{opacity:1;color:var(--accent)}

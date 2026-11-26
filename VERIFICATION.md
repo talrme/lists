@@ -1,5 +1,11 @@
 # Verification — November 25, 2026
 
+## Waiting Indicator Cleanup
+
+Removed the No longer waiting button, handler and styling. Waiting status is cleared by dragging its Waiting appearance out or editing the flag. Shared waitingIcon composes the existing Lucide speech bubble and simple clock using theme colors, replacing the three dots in scheduled-list badges, task details and the menu. Waiting-column and standalone Waiting rows omit the redundant badge.
+
+Passed 63 pure tests, the paired Waiting browser suite (clock glyphs, absent action/badges, edits, drag in/out, dates, completion/Undo, all themes/desktop widths and phone fallback), production layouts (80), phone UX (30), offline shell and automatic updater. Desktop screenshot inspected. No database/rules changes, real task writes or physical-device testing.
+
 ## Desktop Column Order
 
 Default order is Today/Week/Waiting/Later/Someday, with Waiting second when Today/Week merge. Settings has an expandable Desktop column order section with up/down controls, Reset, help, boundary disabling, focus preservation and announcements. Preferences are device-local and UID-scoped. Merged Today/Week occupies their earlier saved slot; hidden Someday retains its position. Outer board lanes are ordered separately from nested day groups, preserving task nodes and data.
