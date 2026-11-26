@@ -1,4 +1,10 @@
-# Verification — November 25, 2026
+# Verification — November 26, 2026
+
+## Stable Desktop Timing Tabs
+
+Reproduced the global selected-tab formatting bug: clicking Later added Nov 26 under a Today task. Row metadata now follows its actual displayed column, including daily and farther-out date projections in merged Today, while Waiting copies retain follow-up dates. The global Someday page heading remains screen-reader-only on desktop boards, avoiding a second heading and board shift; phone/single-list Someday retains its heading.
+
+The new synthetic board-tab-stability suite passes 80 geometry/metadata comparisons across Today/Week/Later/Someday tabs, five styles, 1100/1440px widths and normal/merged boards, plus phone fallback. Screenshots inspected. Also passed production layouts (80), Waiting drag/edit/completion/Undo, offline shell and automatic updates. No task/database/rules changes or physical-device tests.
 
 ## Waiting Indicator Cleanup
 

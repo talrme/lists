@@ -87,6 +87,8 @@ Subtle eye buttons in Waiting, Later and Someday headers collapse a column into 
 
 **Settings -> To-do settings -> Desktop column order** rearranges all five columns with up/down arrows. The default is Today, Week, Waiting, Later, Someday; Reset restores it. When Today and Week merge, the combined column occupies whichever of their positions comes first. Hiding Someday keeps its saved position for later. Column order is saved per account on this device, without changing tasks or phone navigation.
 
+Switching timing tabs on desktop does not change board row details or add a second page heading. Dates stay with Later items and Waiting follow-ups; Today/Week and merged day groups do not gain date subtitles when Later is selected.
+
 The top-right desktop search box searches names, descriptions and tags locally as you type, with small-typo tolerance, scrollable results and opt-in completed tasks. Select a result to reveal its list, scroll to it and highlight it for five seconds, without opening the editor. Hidden-owner and hidden-Someday results are revealed temporarily, without changing saved filters or enabling Someday. Arrow keys and Enter select results; Escape dismisses them.
 
 A daily From Later task appears once, under Today. Drag across columns or day groups to change scheduling; drag within one to reorder. Waiting remains a status with its own desktop column, not a fourth scheduling bucket. Disable **Desktop board** for the single-list desktop layout. Phones retain single-list navigation and expandable days.
