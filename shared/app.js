@@ -10,7 +10,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=8';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=11';
+import {guideMarkup} from './guide.js?v=12';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -53,6 +53,16 @@ function mergedBoard(){return boardVisible()&&prefs.daysShown>1;}
 function visibleDays(){return mergedBoard()?desktopDayGroups(today,prefs.daysShown):dayGroups(today,prefs.daysShown);}
 function desktopExtendedCount(){return Math.round((Date.parse(desktopDayGroups(today,prefs.extendedDays).at(-1).end)-Date.parse(today))/86400000);}
 function laneOf(task){return bucket(task,today,dateTiming);}
+function columnCollapsed(lane){return ['later','someday'].includes(lane)&&prefs.desktopColumns?.[user?.uid]?.[lane]===true;}
+function openColumn(lane){if(!columnCollapsed(lane))return;prefs.desktopColumns[user.uid][lane]=false;persist();}
+let columnTimer=null;
+async function toggleColumn(lane){
+ if(!['later','someday'].includes(lane)||!boardVisible()||gestures?.isActive()||completionPress?.isActive()||!await leaveInline())return;
+ const collapsed=!columnCollapsed(lane);prefs.desktopColumns||={};prefs.desktopColumns[user.uid]={...prefs.desktopColumns[user.uid],[lane]:collapsed};persist();
+ const host=$('#task-list');clearTimeout(columnTimer);host.classList.toggle('column-transition',motion.enabled('navigation'));render();
+ if(!collapsed)motion.animate('navigation',host.querySelector(`[data-lane="${lane}"]>.day-tasks`),[{opacity:0},{opacity:1}],{duration:220,delay:100,fill:'backwards'});
+ host.querySelector(`[data-toggle-column="${lane}"]`)?.focus({preventScroll:true});columnTimer=setTimeout(()=>host.classList.remove('column-transition'),420);
+}
 function actionView(task){return boardVisible()?(inView(task,'today',today,picks)?'today':laneOf(task)):view;}
 const laneLabels={today:'Today',upcoming:'Week',later:'Later',someday:'Someday / Maybe'};
 function syncSomedayControls(form){if(!form)return;const allowed=accountSettings.showSomeday||form.elements.when.value==='someday';form.querySelector('[data-timing=someday]').hidden=!allowed;form.querySelector('.timing-track').classList.toggle('four-timings',allowed);}
@@ -94,7 +104,7 @@ const phoneModal=modalViewport($('#dialog'));$('#task-list').before(boardTools);
 composerFields=bindFields($('#composer'),{uid:null,members,profiles,today,onTimingSelect:mode=>changeEditor(async()=>{
   if($('#composer').dataset.saving||!await leaveInline())return;
   if(mode==='someday'&&($('#composer').elements.date.value||$('#composer').elements.waiting.checked)&&!await confirmAction('Move to Someday / Maybe?','Its scheduled date and follow-up will be cleared. It will not appear in daily suggestions.','Move to Someday'))return;
-  composerFields.setTiming(mode);if(!composerHome){if($('#new-title').value.trim())$('#composer').requestSubmit();else{view={asap:'today',week:'upcoming',later:'later',someday:'someday'}[mode];render();}}
+  composerFields.setTiming(mode);if(!composerHome){if($('#new-title').value.trim())$('#composer').requestSubmit();else{view={asap:'today',week:'upcoming',later:'later',someday:'someday'}[mode];if(boardVisible())openColumn(view);render();}}
 }),onOptionsToggle:()=>changeEditor(async()=>{
   if($('#composer').dataset.saving)return;
   if(!$('#new-options').hidden){if(composerHome)close();else{composerFields.setExpanded(false);if(category==='todo')composerFields.showView(view);}return;}
@@ -162,7 +172,7 @@ async function revealSearchTask(id){
  const task=displayTasks().find(task=>task.id===id&&task.category==='todo'&&(task.visibility==='shared'||task.ownerUid===user?.uid));
  if(!task){notify('That task is no longer available.');return;}
  revealedTask=id;highlightedTask=id;clearTimeout(highlightTimer);boardWaiting=false;$('#board-waiting').checked=false;
- view=task.completed?'done':laneOf(task);composerFields.showView(view);render();
+ view=task.completed?'done':laneOf(task);if(boardVisible())openColumn(view);composerFields.showView(view);render();
  const row=[...$('#task-list').querySelectorAll('.task-row')].find(node=>node.dataset.task===id);
  if(row){row.querySelector('.task-content')?.focus({preventScroll:true});row.scrollIntoView({block:'center',behavior:motion.enabled('navigation')?'smooth':'instant'});}
  const epoch=spaceEpoch;highlightTimer=setTimeout(()=>{if(epoch!==spaceEpoch||highlightedTask!==id)return;highlightedTask=null;row?.removeAttribute('data-search-highlight');},5000);
@@ -194,7 +204,7 @@ function render(){
   document.body.dataset.completionSide=completionSide();document.body.dataset.completionTarget=phoneMedia.matches||completionSide()==='right'?'wide':'standard';
   if(!accountSettings.showSomeday&&view==='someday'&&!revealedTask&&!$('#new-title').value.trim()&&!composerHome&&!inlineEditor){view='today';composerFields.setTiming('asap');}
   updateNavigation();$('#expand-days-label').textContent='Show '+prefs.extendedDays+(prefs.extendedDays===1?' day':' days');
-  const layout=JSON.stringify([spaceEpoch,category,view,boardVisible(),prefs.daysShown,prefs.style,selection()]);
+  const layout=JSON.stringify([spaceEpoch,category,view,boardVisible(),prefs.daysShown,prefs.style,selection(),columnCollapsed('later'),columnCollapsed('someday')]);
   const positions=!ready||renderedLayout!==layout||skipDropAnimation?new Map():motion.snapshot();skipDropAnimation=false;renderedLayout=ready?layout:'';
   const todo=category==='todo',board=boardVisible(),merged=mergedBoard();document.body.classList.toggle('desktop-board',board);document.body.classList.toggle('merged-board',merged);dayControls.hidden=!todo||(!board&&view!=='today');$('[data-days=today]').hidden=prefs.daysShown===1;$('[data-days=more]').hidden=prefs.daysShown>1;
   if(board)$('#expand-days-label').textContent='Show next '+desktopExtendedCount()+' days';
@@ -204,6 +214,7 @@ function render(){
   syncSomedayControls($('#composer'));
   const captions={someday:'Someday / Maybe',today:'Today',upcoming:'Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',!todo||['today','upcoming','later'].includes(view));
   const boardViews=['today',...(!merged?['upcoming']:[]),'later',...(accountSettings.showSomeday||tasks.some(task=>task.id===revealedTask&&task.someday)?['someday']:[])];
+  $('#task-list').style.setProperty('--board-columns',boardViews.map(lane=>columnCollapsed(lane)?'minmax(48px,0fr)':lane==='today'?merged?'minmax(420px,1.8fr)':'minmax(300px,1.4fr)':'minmax(215px,1fr)').join(' '));
   boardTools.hidden=!board;
   const list=board?[...new Map(boardViews.flatMap(currentTasks).filter(task=>!boardWaiting||task.waiting).map(task=>[task.id,task])).values()].sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b))):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
   const todayBoardIds=new Set(board?currentTasks('today').map(task=>task.id):[]);
@@ -219,6 +230,8 @@ function render(){
   for(const bucket of buckets){const day=bucket.start,parent=merged&&!bucket.lane?combined:host;let group=groups.get(day);if(!group){group=document.createElement('section');group.className='day-group';group.dataset.day=day;group.innerHTML='<h2 class="day-heading"></h2><div class="day-tasks"></div>';groups.set(day,group);}const siblings=buckets.filter(item=>(merged&&!item.lane?combined:host)===parent),index=siblings.indexOf(bucket)+(parent===combined||merged?1:0);if(parent.children[index]!==group)parent.insertBefore(group,parent.children[index]||null);
    const target=group.querySelector('.day-tasks');target.dataset.day=bucket.lane?'':day;group.dataset.end=bucket.end;group.classList.toggle('weekend-group',bucket.weekend);group.classList.toggle('board-lane',!!bucket.lane);group.classList.toggle('selected-lane',view===bucket.lane);if(bucket.lane){group.dataset.lane=bucket.lane;target.dataset.lane=bucket.lane;}else{delete group.dataset.lane;delete target.dataset.lane;}
    const heading=group.querySelector('.day-heading');heading.hidden=!bucket.lane&&!merged&&(!grouped||prefs.daysShown===1);heading.textContent=bucket.lane?laneLabels[bucket.lane]:bucket.weekend?'Weekend · '+shortDate(day)+(bucket.end!==day?' – '+shortDate(bucket.end):''):(day===today?'Today':day===addDays(today,1)?'Tomorrow':day?new Intl.DateTimeFormat('en-US',{weekday:'long',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z')):'')+(day?' · '+shortDate(day):'');
+   const collapsible=board&&['later','someday'].includes(bucket.lane),collapsed=collapsible&&columnCollapsed(bucket.lane);group.toggleAttribute('data-column-collapsed',collapsed);target.hidden=collapsed;
+   if(collapsible){const label=laneLabels[bucket.lane],action=(collapsed?'Show ':'Hide ')+label;target.id='board-tasks-'+bucket.lane;heading.innerHTML=`<span class="lane-title">${esc(label)}</span><button type="button" class="icon-button column-eye" data-toggle-column="${bucket.lane}" aria-label="${esc(action)}" title="${esc(action)}" aria-expanded="${!collapsed}" aria-controls="${target.id}">${icon(collapsed?'eye-off':'eye')}</button>`;}
   }
   const cursors=new Map(days.map(day=>[day,groups.get(day).querySelector('.day-tasks').firstElementChild]));
   for(const task of list){
@@ -495,7 +508,7 @@ function householdPicker(){return `<label class="field">Household<select id="hou
 function bindDaysSetting(){
  if($('#days-shown'))bindDayWheel($('#days-shown'),prefs.extendedDays,value=>{prefs.extendedDays=value;if(prefs.daysShown>1)prefs.daysShown=Math.max(boardVisible()?2:1,value);persist();render();});
 }
-function resetWorkspace(){$('#empty-state').after(dayControls);revealedTask=null;highlightedTask=null;clearTimeout(highlightTimer);desktopFinder.reset();desktopFinder.setVisible(false);grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];boardWaiting=false;$('#board-waiting').checked=false;pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];dailyState=null;renderedLayout='';picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
+function resetWorkspace(){clearTimeout(columnTimer);$('#task-list').classList.remove('column-transition');$('#empty-state').after(dayControls);revealedTask=null;highlightedTask=null;clearTimeout(highlightTimer);desktopFinder.reset();desktopFinder.setVisible(false);grocery?.reset();grocery?.show(false);completionPress?.cancel();tags=[];boardWaiting=false;$('#board-waiting').checked=false;pendingCompletions.clear();notices.clear();inlineEditor?.form.remove();inlineEditor=null;ready=false;picks=[];dailyState=null;renderedLayout='';picking=false;pickedDay='';spaceEpoch++;tasks=[];members={};profiles={};category='todo';view='today';pendingCreation=null;$('#new-title').value='';composerFields.reset();$('#task-list').replaceChildren();updateNavigation();}
 function switchHousehold(id){if(!id||!store?.selectSpace)return;close();const url=new URL(location.href);url.searchParams.set('household',id);history.replaceState(null,'',url);store.selectSpace(id);}
 function updateInstallManifest(){
   const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.set('household',currentSpace.id);const root=appRoot;
@@ -618,6 +631,7 @@ document.addEventListener('click',async event=>{
   if(button.hasAttribute('data-close'))close();
   if(button.id==='exit-preview'){store.exitPreview();const url=new URL(location.href);url.searchParams.set('household',currentSpace.id);history.replaceState(null,'',url);}
   if(button.dataset.days)await changeDays(button.dataset.days!=='today');
+  if(button.dataset.toggleColumn)await toggleColumn(button.dataset.toggleColumn);
   if(button.dataset.view&&!button.closest('#composer')){if(!await leaveInline())return;view=button.dataset.view;composerFields.setTiming(composerMode());if(button.closest('#dialog'))close();render();}
   if(button.dataset.category){if(!await leaveInline())return;if(category==='grocery'&&grocery.hasDraft()&&!await confirmAction('Leave this grocery draft?','The item has not been added.','Discard'))return;if(($('#new-title').value||$('#new-description').value)&&!await confirmAction('Discard this new task?','The new item has not been added.','Discard'))return;if(category==='grocery')grocery.discardDraft();category=button.dataset.category;view=category==='todo'?'today':'later';composerFields.reset();$('#new-title').value='';render();}
   if(button.dataset.filterTag)openSearch([button.dataset.filterTag]);

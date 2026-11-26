@@ -285,8 +285,15 @@ html:has(#dialog[open]){overflow:hidden}
  .quick-entry>.composer{min-width:0;margin-bottom:0}
  body.desktop-board .app-frame{max-width:1600px;padding-left:28px;padding-right:28px}
  body.desktop-board .quick-entry{max-width:none}
- body.desktop-board .compact-workspace #task-list{display:grid;grid-template-columns:minmax(300px,1.4fr) repeat(2,minmax(215px,1fr));gap:20px;align-items:start}
- body.desktop-board:has(.board-lane[data-lane=someday]) .compact-workspace #task-list{grid-template-columns:minmax(300px,1.4fr) repeat(3,minmax(215px,1fr))}
+ body.desktop-board .compact-workspace #task-list{display:grid;grid-template-columns:var(--board-columns);gap:20px;align-items:start}
+ body.desktop-board #task-list.column-transition{transition:grid-template-columns .36s cubic-bezier(.2,.8,.2,1)}
+ body.desktop-board .column-transition>.board-lane{overflow:clip}
+ body.desktop-board .board-lane:has(>.day-heading>.column-eye)>.day-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:37px}
+ .column-eye{width:32px;min-width:32px;height:32px;min-height:32px;color:var(--muted);opacity:.48}
+ .column-eye svg{width:16px;height:16px}
+ .column-eye:hover,.column-eye:focus-visible{opacity:1;color:var(--accent)}
+ body.desktop-board .board-lane[data-column-collapsed]>.day-heading{flex-direction:column-reverse;justify-content:flex-end;border-bottom:0;gap:12px}
+ .board-lane[data-column-collapsed] .lane-title{writing-mode:vertical-rl;color:var(--muted);font-size:12px;white-space:nowrap}
  body.desktop-board .day-group+.day-group{margin-top:0}
  body.desktop-board .board-lane .day-heading{display:block;margin:0 0 12px;color:var(--ink);font-size:14px;padding:8px 2px;border-bottom:2px solid var(--line)}
  body.desktop-board .board-lane.selected-lane .day-heading{border-bottom-color:var(--accent)}
@@ -295,8 +302,6 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .task-summary .task-content{flex-basis:90px}
  body.desktop-board .task-title{font-size:13px}
  body.desktop-board .day-tasks{gap:8px}
- body.desktop-board.merged-board .compact-workspace #task-list{grid-template-columns:minmax(420px,1.8fr) minmax(215px,1fr)}
- body.desktop-board.merged-board:has(.board-lane[data-lane=someday]) .compact-workspace #task-list{grid-template-columns:minmax(420px,1.8fr) repeat(2,minmax(215px,1fr))}
  .board-merged{min-width:0}
  .merged-heading{font-size:14px;margin:0 0 12px;padding:8px 2px;border-bottom:2px solid var(--accent)}
  body.desktop-board .board-merged .day-group{margin-top:18px}
@@ -304,7 +309,7 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .board-merged .day-tasks{min-height:64px;grid-template-columns:1fr}
  body.desktop-board .board-lane>.day-controls{margin-top:12px}
 }
-@media(prefers-reduced-motion:reduce){.task-row{transition:none}}
+@media(prefers-reduced-motion:reduce){.task-row,body.desktop-board #task-list.column-transition{transition:none}}
 dialog:has(.asana-review){width:min(900px,calc(100% - 28px));max-width:900px}
 .asana-review{min-width:0;font-size:13px}
 .review-summary{display:grid;gap:7px;margin:0 0 16px}

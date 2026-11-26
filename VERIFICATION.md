@@ -1,5 +1,11 @@
 # Verification — November 25, 2026
 
+## Collapsible Desktop Columns
+
+Later and Someday have subtle eye controls, independently collapsing to labeled 48px strips with interpolated grid widths and a restore fade. Layout choices are device-local and UID-scoped; tasks, audience filters and the synced Someday setting remain unchanged. Search and empty timing tabs reopen the destination column. Phone/single-list layouts never inherit hidden task containers. Screenshot inspected with both columns collapsed in the merged board.
+
+Passed the synthetic desktop-columns suite: intermediate animation widths, independent collapse/restore, reload persistence, five styles/four palettes/four desktop widths, search/tab reveal, keyboard focus, reduced motion, phone fallback, unchanged task payloads and account isolation. Also passed merged desktop/search, production (80 layouts), steady motion/daily controls (15), guide (60), offline shell, automatic updater and 57 pure tests. No database/rules changes or production task writes; physical devices were not tested.
+
 ## Desktop Merged Days and Inline Search
 
 The new desktop suite passes merged/collapsed Today+Week, full five-future-business-day coverage, weekend grouping, deduplication, actual cross-day drag/date persistence, live extended-day setting changes, keyboard/typo search, scrollable results, completed opt-in, temporary hidden-owner/Someday reveal, five-second highlight expiry, reduced motion and account-switch isolation. Layout checks span five styles and four palettes at 1100/1280/1440/1920px. Desktop screenshots were inspected. No real tasks were modified.
