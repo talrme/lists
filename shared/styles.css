@@ -286,6 +286,17 @@ html:has(#dialog[open]){overflow:hidden}
 .column-order-row .icon-button{width:36px;min-width:36px;height:36px;min-height:36px;color:var(--muted)}
 .column-order-row .icon-button:disabled{opacity:.25}
 .column-order-reset{margin-top:5px;color:var(--muted)}
+.completed-today{margin-top:18px;border-top:1px solid var(--line);padding-top:6px;min-width:0}
+.completed-today-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:38px;color:var(--muted)}
+.completed-today-heading h3{font-size:12px;font-weight:600;margin:0;overflow-wrap:anywhere}
+.completed-today-heading .icon-button{width:36px;min-width:36px;height:36px;opacity:.65}
+.completed-today-heading svg{width:16px;height:16px}
+.completed-today-items{display:grid;gap:2px;min-width:0}
+.completed-today-row{min-width:0;border-bottom:1px solid color-mix(in srgb,var(--line) 65%,transparent);color:var(--muted)}
+.completed-today-row .task-title{text-decoration:line-through;font-weight:400;font-size:13px}
+.completed-today-row .task-excerpt,.completed-today-row .row-tags,.completed-today-row .task-meta,.completed-today-row .waiting-badge{display:none}
+.has-today-completions.empty-day>.day-tasks{min-height:0!important;background:none}
+.has-today-completions.empty-day>.day-tasks:after{display:none}
 #desktop-column-order{margin:0 0 12px}
 #desktop-column-order>summary{font-size:12px;min-height:40px;padding:10px 0;cursor:pointer}
 @media(min-width:1100px){

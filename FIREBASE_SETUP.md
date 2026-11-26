@@ -4,7 +4,7 @@
 
 The Completed today feature needs optional numeric `completedAt` on tasks. The current rules accept that field without requiring it, so existing clients/tasks stay compatible. Private/shared permissions are unchanged. Completion time is the original action time, including offline actions, not the latest edit/upload time. Legacy tasks without a recorded completion time are not guessed into today's history.
 
-Before publishing the client feature, the owner must copy the complete current `firestore.rules` into [Firestore Rules](https://console.firebase.google.com/project/lists-95c4f/firestore/databases/-default-/security/rules) and click Publish, then confirm done. A GitHub push does not publish database rules. The optional-field rules passed 151 isolated demo-emulator checks; live publication still needs confirmation. Until then, keep the existing website release unchanged so ordinary completion is not disrupted by old rules.
+The owner confirmed publishing the complete updated rules in [Firestore Rules](https://console.firebase.google.com/project/lists-95c4f/firestore/databases/-default-/security/rules) on November 26, 2026, clearing the client release gate. This is owner confirmation, not an independent production-rules test. The optional-field rules passed 151 isolated demo-emulator checks. A GitHub push alone does not publish database rules; future schema expansions need the same rules-first deployment sequence.
 
 ## Groceries Update
 

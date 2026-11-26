@@ -1,5 +1,11 @@
 # Verification — November 26, 2026
 
+## Completed Today
+
+Default-on, crossed-out accomplishments from every To-do scheduling list appear beneath today's active tasks, including expanded/merged days. Eye control and Settings share a UID/device-local visibility preference. Owner filters/private authorization apply, with the owner's daily-pick exception. A separate keyed, non-sortable projection avoids active-row identity and motion collisions. Completion captures original action time, including offline; reopen clears it, Undo restores it (including legacy null), and editing a finished task never resets it. No updatedAt fallback or historical backfill. The section clears at Pacific midnight, not the completed records.
+
+Passed 71 pure tests, new phone/desktop accomplishments tests (all scheduling sources, legacy/yesterday exclusion, owner filtering, strikethrough, expanded placement, complete/reopen/Undo/edit, reload, hidden preference persistence, account switching, themes and midnight), actual Firebase SDK/demo-emulator cross-device completion and offline replay tests, and 151 rules checks. Regression passes: immediate completion (60 layouts), steady lists (15), Waiting board, Today rollover, production layouts (80), guide (60), offline shell and automatic updates. Phone/desktop screenshots inspected. No production task writes or physical-device testing. Compatible optional-field rules were pushed first; owner confirmed manual publication before client release. App57/CSS40/worker37 include the new offline module.
+
 ## Carryovers First at Daily Rollover
 
 Cause: overdue tasks were correctly projected into Today, but shared the same saved-rank comparator as newly due/newly created tasks, allowing their ranks to interleave. Today now prioritizes unfinished past due/follow-up dates, preserving saved rank within carryover and current-day groups. Destination scheduling is applied before ranking a move, and Today moves/precision fallback use only the matching priority group. New tasks and the daily pick cannot displace carryovers. Midnight does not rewrite task dates, ranks or revisions.

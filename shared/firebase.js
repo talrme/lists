@@ -2,11 +2,12 @@ import {candidateTasks,choose,dayKey} from './core.js?v=organizer1';
 import {belongsTo,householdDraft,isAdministrator,memberLabel,householdPeople} from './households.js?v=sharing2';
 import {photoUrl} from './task-fields.js?v=organizer1';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
-import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResults} from './device-store.js?v=2';
+import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResults} from './device-store.js?v=3';
 import {validateReview} from './asana-review-core.js?v=1';
 import {organizerStore} from './organizer.js?v=2';
 import {groceryStore} from './grocery-store.js?v=1';
 import {importDrafts} from './asana-import-core.js?v=1';
+import {completionPatch} from './completed-today.js?v=1';
 const VERSION='13.3.0';
 export async function connectFirebase(config,events) {
   const [appSdk,authSdk,dbSdk]=await Promise.all([
@@ -357,13 +358,14 @@ export async function connectFirebase(config,events) {
     },
     async write(id,patch,expectedRev){
       const task=tasks.find(task=>task.id===id);
+      patch=completionPatch(task,patch);
       if(!expectedRev&&task&&Object.entries(patch).every(([key,value])=>task[key]===value))return;
       const item=expectedRev?{id,type:'update',patch:task?changedFields(task,patch):patch,rev:expectedRev}:{id,type:'create',patch,createdAt:Date.now()};
       return mutateItems([item]);
     },
     async writeMany(changes){
       if(!changes.length||changes.length>400)throw new Error('Move fewer tasks at once.');
-      return mutateItems(changes.map(change=>({...change,type:'update'})));
+      return mutateItems(changes.map(change=>({...change,patch:completionPatch(tasks.find(task=>task.id===change.id),change.patch),type:'update'})));
     },
     async remove(id,rev){
       return mutateItems([{id,type:'remove',rev}]);

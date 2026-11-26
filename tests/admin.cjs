@@ -47,15 +47,16 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await tal.waitForFunction(()=>document.querySelector('#connection').textContent==='All synced');
   const imported=await tal.evaluate(async()=>{
    const synced=async()=>{for(let i=0;i<100;i++){if(!(await window.__testStore.pendingChanges()).length)return;await new Promise(resolve=>setTimeout(resolve,100));}throw new Error('Synthetic setup did not finish syncing.');};
+   const importReady=async plan=>{for(let i=0;i<100;i++){try{return await window.__testStore.importAsanaTasks(plan);}catch(error){if(!error.message.includes('Wait for household syncing'))throw error;await new Promise(resolve=>setTimeout(resolve,50));}}throw Error('Synthetic household never reached server readiness');};
    const plan={kind:'lists-asana-import',version:1,tasks:[['991','today',false],['992','week',false],['993','later',true],['994','someday',false]].map(([sourceId,destination,waiting])=>({sourceId,title:'Synthetic import '+sourceId,description:'Complete details\n\nSecond paragraph and https://example.com/source',destination,waiting}))};
-   const first=await window.__testStore.importAsanaTasks(plan);
+   const first=await importReady(plan);
    await window.__testStore.write('asana-991',{title:'User edited import'},1);
    await synced();
-   const second=await window.__testStore.importAsanaTasks(plan);
+   const second=await importReady(plan);
    await window.__testStore.remove('asana-991',2);for(const id of ['992','993','994'])await window.__testStore.remove('asana-'+id,1);
    await synced();
    const largePlan={kind:'lists-asana-import',version:1,tasks:Array.from({length:261},(_,i)=>({sourceId:String(20000+i),title:'Synthetic bulk import '+i,description:'Full multiline details\n\nItem '+i,destination:i<10?'later':['today','week','later','someday'][i%4],waiting:i<10}))};
-   const large=await window.__testStore.importAsanaTasks(largePlan);
+   const large=await importReady(largePlan);
    const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),apps=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js'),db=sdk.getFirestore(apps.getApp('lists')),batch=sdk.writeBatch(db);
    for(const task of largePlan.tasks)batch.delete(sdk.doc(db,'listSpaces','home','environments','staging','tasks','asana-'+task.sourceId));
    await batch.commit();return {first,second,large};
@@ -170,6 +171,13 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   assert.equal(await draw(talAgain,'2099-11-16'),firstPick,'Completion counts for today and must not cause a replacement');
   const nextPick=await draw(tal,'2099-11-17');assert(nextPick);assert.notEqual(nextPick,firstPick,'New date chooses from the remaining eligible tasks');
   assert.deepEqual(await readCollection('listSpaces/home/environments/staging/daily/2099-11-16/picks'),receiptsBefore,'Next day does not overwrite yesterday or change task due dates');
+  await ui.add(tal,'Cross-device accomplishment',{when:'later'});const historyId=await tal.locator('.task-row').filter({hasText:'Cross-device accomplishment'}).getAttribute('data-task');await tal.locator(`[data-task="${historyId}"] [data-complete]`).click();
+  await talAgain.locator(`[data-completed-task="${historyId}"]`).waitFor();
+  const historyBefore=(await readCollection('listSpaces/home/environments/staging/tasks')).find(doc=>doc.name.endsWith('/'+historyId)),historyAt=Number(historyBefore.fields.completedAt.integerValue||historyBefore.fields.completedAt.doubleValue);assert(historyAt>0,'Real adapter records completion time');
+  await talAgain.locator(`[data-completed-task="${historyId}"] [data-edit]`).click();await talAgain.locator('#edit-form [name=description]').fill('Edited after completing');await talAgain.locator('#edit-form .modal-footer [type=submit]').click();await talAgain.locator('#dialog').waitFor({state:'hidden'});
+  const historyEdited=(await readCollection('listSpaces/home/environments/staging/tasks')).find(doc=>doc.name.endsWith('/'+historyId));assert.equal(Number(historyEdited.fields.completedAt.integerValue||historyEdited.fields.completedAt.doubleValue),historyAt,'Editing never changes completion time');
+  await talAgain.locator(`[data-completed-task="${historyId}"] [data-complete]`).click();await talAgain.locator(`[data-completed-task="${historyId}"]`).waitFor({state:'detached'});await talAgain.locator('.toast-undo').last().click();await talAgain.locator(`[data-completed-task="${historyId}"]`).waitFor();
+  const historyUndone=(await readCollection('listSpaces/home/environments/staging/tasks')).find(doc=>doc.name.endsWith('/'+historyId));assert.equal(Number(historyUndone.fields.completedAt.integerValue||historyUndone.fields.completedAt.doubleValue),historyAt,'Undo reopening restores original completion time');
   await talAgainContext.close();
   await ui.scope(tal,'mine');await ui.scheduleView(tal,'today');await ui.scheduleView(sophie,'today');
   await ui.add(tal,'Offline merge task',{person:'shared'});await sophie.getByText('Offline merge task',{exact:true}).waitFor();
@@ -178,6 +186,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const merge=page=>page.locator(`[data-task="${mergeId}"]`),deleted=page=>page.locator('.task-row').filter({hasText:'Deleted elsewhere task'});
   await offlineResources(tal);await tal.context().setOffline(true);
   await merge(tal).locator('[data-complete]').click();await merge(tal).waitFor({state:'detached'});
+  const offlineCompletionAt=await tal.evaluate(async id=>{const module=await import('./shared/device-store.js?v=2'),device=await module.openDeviceStore('demo-lists-browser'),record=await device.read(module.scopeKey('test-tal','home','staging'));return module.projectTasks(record.tasks,record.operations).find(task=>task.id===id).completedAt;},mergeId);assert(offlineCompletionAt>0);
   await tal.evaluate(id=>window.__testStore.write(id,{title:'Offline title wins'},2),mergeId);
   await deleted(tal).locator('[data-edit]').click();await tal.locator('#edit-form [name=description]').fill('An unsent offline note');await tal.locator('#edit-form [type=submit]').last().click();await tal.locator('#edit-form').waitFor({state:'detached'});
   await ui.add(tal,'Created without service');await tal.getByText('Created without service',{exact:true}).waitFor();
@@ -194,6 +203,7 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await ui.scheduleView(sophie,'done');await merge(sophie).waitFor();await merge(sophie).locator('[data-edit]').click();assert.equal(await sophie.locator('#edit-form [name=title]').inputValue(),'Offline title wins','Same field uses last uploaded change');assert.equal(await sophie.locator('#edit-form [name=description]').inputValue(),'Edited on the other phone','Offline completion must preserve another device notes edits');await sophie.locator('#edit-form .cancel-editor').last().click();
   assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),0);
   const afterOffline=await readCollection('listSpaces/home/environments/staging/tasks');assert.equal(afterOffline.filter(doc=>doc.fields.title.stringValue==='Created without service').length,1,'Offline create uploaded once');assert(!afterOffline.some(doc=>doc.fields.title.stringValue==='Deleted elsewhere task'),'Replay must not resurrect a deleted task');
+  const uploadedCompletion=afterOffline.find(doc=>doc.name.endsWith('/'+mergeId));assert.equal(Number(uploadedCompletion.fields.completedAt.integerValue||uploadedCompletion.fields.completedAt.doubleValue),offlineCompletionAt,'Offline completion uploads its original action time, not reconnect/edit time');
   await ui.scheduleView(tal,'today');const offlineTask=tal.locator('.task-row').filter({hasText:'Created without service'});await offlineTask.waitFor();const offlineId=await offlineTask.getAttribute('data-task');
   await tal.context().setOffline(true);await tal.evaluate(async id=>{await window.__testStore.write(id,{visibility:'shared',assigneeUid:'test-outsider'},1);},offlineId);await tal.context().setOffline(false);
   await tal.getByText('Pending changes need access restored. They remain saved on this device.',{exact:true}).waitFor();assert.equal(await tal.evaluate(()=>window.__testStore.pendingChanges().then(changes=>changes.length)),1);

@@ -21,7 +21,7 @@ export function projectTasks(tasks,operations=[]){
 export function changedFields(task,patch){
  const changed=Object.fromEntries(Object.entries(patch).filter(([key,value])=>value!==task[key]&&!(value===null&&task[key]===undefined)));
  // Scheduling and assignment each form a single valid state, even across concurrent edits.
- for(const group of [['dueDate','waiting','followUp','someday'],['visibility','assigneeUid','assigneeEmail']])if(group.some(key=>key in changed)){
+ for(const group of [['dueDate','waiting','followUp','someday'],['visibility','assigneeUid','assigneeEmail'],['completed','completedAt']])if(group.some(key=>key in changed)){
   for(const key of group)if(key in patch||key in task)changed[key]=key in patch?patch[key]:task[key];
  }
  return changed;

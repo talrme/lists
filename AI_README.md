@@ -27,6 +27,7 @@ Current implementation and maintenance contract, reviewed 2026-11-22. This is no
 | `shared/device-store.js` | Account/household/environment IndexedDB records, atomic queue updates and task projections. |
 | `shared/gestures.js` | Vendored Sortable integration, hold-to-drag, directional swipes and surrounding-day reflow. |
 | `shared/completion-press.js` | Native-button pointer feedback, captured-touch cancellation and press-time render guard. |
+| `shared/completed-today.js` | Completion transition timestamps, Pacific-day filtering and separate keyed accomplishments projection. |
 | `shared/day-groups.js`, `shared/day-wheel.js` | Weekend grouping and accessible 1-10-day scroll-snap setting. |
 | `shared/visibility.js`, `shared/search.js` | Owner display filters and local title/description search. |
 | `shared/motion.js`, `shared/notices.js` | Effect preferences/cleanup and independent Undo notices. |
@@ -38,6 +39,8 @@ Current implementation and maintenance contract, reviewed 2026-11-22. This is no
 | `tools/build.mjs`, `tools/serve.cjs` | Generate root HTML/manifest and serve a no-store local preview on port 5195. |
 
 Icons, QR generation and sanitized read-only Markdown use vendored libraries. Use the existing Lucide icon set, not remote icon services. The details button is a rounded, thick-stroke double-chevron using theme `currentColor`; internal `leaf-options` naming is historical, not a visible leaf.
+
+Completed today is default-on below today's active tasks, including the first date group in expanded/merged views, across all To-do scheduling lists (not other apps). Apply private authorization and audience filters, allowing the owner's daily-pick receipt as with active Today. Rows use `data-completed-task`, not active `data-task`/`.task-row`, so Sortable and active FLIP never include them. Names open details; checked controls reopen. The eye and Settings toggle share `prefs.completedTodayVisibility[uid]`, local to this device. Clear projection on workspace changes and recompute at Pacific midnight. `completedAt` is optional numeric action time, written with the completed transition and replayed as a coherent pair; edits do not reset it. Reopen clears it; Undo restores the original value, including explicit legacy null. Never infer from updatedAt or retroactively date legacy completions. New fields require rules-first publication.
 
 ## Household Groceries
 
