@@ -50,6 +50,8 @@ Calendar dates use America/Los_Angeles. Business days mean Monday-Friday; public
 
 Today and Week do not overlap in the normal single-day view. Existing saved dates are never automatically rerolled. Later's optional approximate-date shortcuts choose a weekday around two weeks, one month, or two months away and show the chosen date before saving.
 
+**Carryovers first:** unfinished tasks with a due date (or Waiting follow-up) before today always sit above tasks scheduled for today. Each group keeps its saved manual order. New tasks start at the top of today's group, below carryovers, and reordering stays within the appropriate group. Midnight changes the view, not saved task dates or ranks. The daily From Later pick stays in today's non-carryover group.
+
 **One daily From Later pick:** eligible private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks form one pool. Undated and farther-out dated tasks qualify; completed, Waiting, and Someday tasks do not. The pick is saved per person, household, and Pacific date, so refreshes and devices agree. An initially empty pool can get its first pick when an eligible task is added.
 
 The pick starts at the bottom of Today, with the same styling as other tasks and a quiet From Later label. Drag it to change its position for your own daily view; its original Later ordering is unchanged.

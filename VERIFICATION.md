@@ -1,5 +1,11 @@
 # Verification — November 26, 2026
 
+## Carryovers First at Daily Rollover
+
+Cause: overdue tasks were correctly projected into Today, but shared the same saved-rank comparator as newly due/newly created tasks, allowing their ranks to interleave. Today now prioritizes unfinished past due/follow-up dates, preserving saved rank within carryover and current-day groups. Destination scheduling is applied before ranking a move, and Today moves/precision fallback use only the matching priority group. New tasks and the daily pick cannot displace carryovers. Midnight does not rewrite task dates, ranks or revisions.
+
+Passed 67 pure tests and a synthetic Pacific-midnight suite across phone, desktop single list, desktop board and merged board. Checks cover newly due tasks with lower ranks, manual reorder within each group, boundary-safe moves, new-task placement, overdue Waiting follow-ups, daily bottom, reload and exact preservation of task payloads at midnight. Also passed steady motion/daily controls (15), Waiting drag/edit/completion/Undo, cross-day reflow, delayed-drop stability, production layouts (80), desktop tab stability (80), guide (60), and offline shell. No database/rules changes or production task writes; no physical-device tests.
+
 ## Stable Desktop Timing Tabs
 
 Reproduced the global selected-tab formatting bug: clicking Later added Nov 26 under a Today task. Row metadata now follows its actual displayed column, including daily and farther-out date projections in merged Today, while Waiting copies retain follow-up dates. The global Someday page heading remains screen-reader-only on desktop boards, avoiding a second heading and board shift; phone/single-list Someday retains its heading.

@@ -10,7 +10,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=9';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=14';
+import {guideMarkup} from './guide.js?v=15';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -20,6 +20,7 @@ import {dayGroups,desktopDayGroups,groupDay} from './day-groups.js?v=2';
 import {desktopSearch} from './desktop-search.js?v=1';
 import {waitingOrder,waitingDrop} from './waiting-board.js?v=1';
 import {normalizeColumnOrder,visibleColumnOrder} from './column-order.js?v=1';
+import {carriedOver,todayOrder} from './today-order.js?v=1';
 import {accountDefaults,taskTags,matchingTags,tagName,tagKey,canonicalTag,bucket} from './organizer.js?v=2';
 import {bindTagField} from './tag-field.js?v=2';
 import {PLAYGROUND_ID,isPlayground} from './playground.js?v=1';
@@ -166,7 +167,7 @@ function currentTasks(targetView=view){
   return displayTasks().filter(task=>task.category===category&&(task.visibility==='shared'||task.ownerUid===user?.uid))
     .filter(task=>task.id===revealedTask||selectedTask(task,{uid:user?.uid,email:user?.email,selection:chosen,profiles})||category==='todo'&&view==='today'&&picks.includes(task.id)&&candidateTasks([{...task,dueDate:null}],user?.uid,user?.email,today).length)
     .filter(task=>category==='todo'?view==='today'?!!taskDay(task,today,picks)&&taskDay(task,today,picks)<=lastDay:inView(task,view,today,picks):view==='done'?task.completed:!task.completed)
-    .sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b)));
+    .sort((a,b)=>category==='todo'&&(boardVisible()||view==='today')?todayOrder(displayedOrder(a),displayedOrder(b),today):taskOrder(displayedOrder(a),displayedOrder(b)));
 }
 async function revealSearchTask(id){
  if(!await leaveInline()||gestures?.isActive()||completionPress?.isActive())return;
@@ -216,7 +217,7 @@ function render(){
   const captions={someday:'Someday / Maybe',today:'Today',upcoming:'Week',later:'Later',waiting:'Waiting for a response',done:'Completed'};$('#view-title').textContent=todo?captions[view]:names[category];$('#view-title').classList.toggle('sr-only',board||!todo||['today','upcoming','later'].includes(view));
   const boardViews=visibleColumnOrder(columnOrder(),{merged,someday:accountSettings.showSomeday||tasks.some(task=>task.id===revealedTask&&task.someday)});
   $('#task-list').style.setProperty('--board-columns',boardViews.map(lane=>columnCollapsed(lane)?'minmax(48px,0fr)':lane==='today'?merged?'minmax(420px,1.8fr)':'minmax(260px,1.4fr)':'minmax(170px,1fr)').join(' '));
-  const list=board?[...new Map(boardViews.filter(lane=>lane!=='waiting').flatMap(currentTasks).map(task=>[task.id,task])).values()].sort((a,b)=>taskOrder(displayedOrder(a),displayedOrder(b))):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row:not([data-waiting-copy])')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
+  const list=board?[...new Map(boardViews.filter(lane=>lane!=='waiting').flatMap(currentTasks).map(task=>[task.id,task])).values()].sort((a,b)=>todayOrder(displayedOrder(a),displayedOrder(b),today)):currentTasks(),host=$('#task-list'),ids=new Set(list.map(t=>t.id)),rows=new Map([...host.querySelectorAll('.task-row:not([data-waiting-copy])')].map(row=>[row.dataset.task,row])),completedIds=new Set(displayTasks().filter(task=>task.completed).map(task=>task.id));
   const todayBoardIds=new Set(board?currentTasks('today').map(task=>task.id):[]);
   let completionExit=false;
   // Preserve an open form node: a live snapshot must not dismiss a phone keyboard or erase a draft.
@@ -418,7 +419,7 @@ async function deferTask(task){
 async function moveTask(task,ids,day,{exact=false,lane=null,sourceLane=null}={}){
   if(preview||busy.has(task.id))return;
   ids=[...new Set(ids)];
-  const ordered=ids.map(id=>id===task.id?task:tasks.find(t=>t.id===id)).filter(Boolean).map(displayedOrder),rank=insertionOrder(ordered,task.id),patch={};
+  const patch={};
   if(day&&day!==(!exact&&category==='todo'&&(view==='today'||mergedBoard())?groupDay(taskDay(task,today,picks),visibleDays()):taskDay(task,today,picks))){if(task.waiting)patch.followUp=day;else patch.dueDate=day;}
   if(lane&&lane!==(sourceLane||actionView(task))){
     if(lane==='someday'&&(task.dueDate||task.waiting)&&!await confirmAction('Move to Someday / Maybe?','Its scheduled date and follow-up will be cleared.','Move to Someday'))return false;
@@ -427,6 +428,8 @@ async function moveTask(task,ids,day,{exact=false,lane=null,sourceLane=null}={})
   }
   if(day&&task.someday)patch.someday=false;
   const statusPatch=waitingDrop(task,{lane,sourceLane,day,today,weekDate:lane==='upcoming'?schedule('defer',today):null});if(statusPatch)Object.assign(patch,statusPatch);
+  const movingTask={...task,...patch},targetsToday=category==='todo'&&lane!=='waiting'&&(lane==='today'||day&&day<=today||!lane&&!day&&view==='today');
+  const ordered=ids.map(id=>id===task.id?movingTask:tasks.find(t=>t.id===id)).filter(Boolean).filter(item=>!targetsToday||carriedOver(item,today)===carriedOver(movingTask,today)).map(displayedOrder),rank=insertionOrder(ordered,task.id);
   const suggestion=(view==='today'||mergedBoard()||sourceLane==='today')?ordered.find(dailySuggestion):null;
   const receiptReorder=!!suggestion&&!Object.keys(patch).length;
   if(receiptReorder){
