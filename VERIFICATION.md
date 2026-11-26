@@ -1,5 +1,11 @@
 # Verification — November 25, 2026
 
+## Desktop Merged Days and Inline Search
+
+The new desktop suite passes merged/collapsed Today+Week, full five-future-business-day coverage, weekend grouping, deduplication, actual cross-day drag/date persistence, live extended-day setting changes, keyboard/typo search, scrollable results, completed opt-in, temporary hidden-owner/Someday reveal, five-second highlight expiry, reduced motion and account-switch isolation. Layout checks span five styles and four palettes at 1100/1280/1440/1920px. Desktop screenshots were inspected. No real tasks were modified.
+
+Also passed 57 pure tests (including merged ranges across weekends/year/DST), steady-list motion/daily controls (15 cases), production layouts (80), organizer, phone UX (30), existing day grouping/reflow, creation/search, guide (60), offline shell and automatic updater. Public shell cache includes the new local search module. No backend/rules changes; physical-device testing was not performed.
+
 ## Stable Lists and Daily Suggestion Controls
 
 Reproduced repeated row movement under startup/sync/completion: render temporarily revealed the hidden board toolbar, measuring every row 31px too low, then hid it before FLIP. Also removed automatic list re-entry calls, suppressed initial/hidden/layout-switch measurements, retained unchanged in-flight layout targets, and stopped unchanged appearance sync from clearing active animations. Completion confetti and travel effects remain.

@@ -79,7 +79,11 @@ Task details support up to 20 tags with autocomplete and in-place creation. New 
 
 Tap a tag to find its tasks, or use **Search -> Filter by tags**. Multiple tags match all selected tags. Typed search also matches tag names. Completed items remain opt-in. **Settings -> To-do settings -> Manage tags** supports rename, archive/restore and merge within the same privacy scope. Stable IDs keep completed history current; merging is irreversible. Counts include only tasks you can read. Archived tags remain on historical tasks, but leave suggestions.
 
-At widths of 1100px and above, To-do uses a board with a larger Today column, then Week, Later and optional Someday. A daily From Later task appears once, under Today. Drag across columns to change scheduling; drag within one to reorder. Waiting remains a status, with a **Waiting only** board filter. Disable **Desktop board** for the existing single-list desktop layout. Phones retain single-list navigation and expandable days. Opening an extended Today view temporarily uses the single-list day layout on desktop too.
+At widths of 1100px and above, To-do uses a board with a larger Today column, then Week, Later and optional Someday. **Show next N days**, at the bottom of Today, merges Today and Week into a wider dated column, leaving Later and Someday alongside it. The range always reaches through the fifth future business day, even if your extended calendar-day setting is shorter. Longer settings can also preview dated Later tasks. Each task appears once; dates are unchanged. Weekends share a group, overdue tasks stay under Today, and **Show today only** separates the columns again. The normal Back link also restores your own tasks and clears temporary search reveals.
+
+The top-right desktop search box searches names, descriptions and tags locally as you type, with small-typo tolerance, scrollable results and opt-in completed tasks. Select a result to reveal its list, scroll to it and highlight it for five seconds, without opening the editor. Hidden-owner and hidden-Someday results are revealed temporarily, without changing saved filters or enabling Someday. Arrow keys and Enter select results; Escape dismisses them.
+
+A daily From Later task appears once, under Today. Drag across columns or day groups to change scheduling; drag within one to reorder. Waiting remains a status, with a **Waiting only** board filter. Disable **Desktop board** for the single-list desktop layout. Phones retain single-list navigation and expandable days.
 
 ## Settings and Installation
 

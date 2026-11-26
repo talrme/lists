@@ -1,4 +1,11 @@
-import {addDays} from './core.js?v=timing3';
+import {addDays,weekHorizon} from './core.js?v=timing3';
+
+export function desktopDayGroups(today,count){
+ const horizon=weekHorizon(today);
+ let length=Math.max(2,Number.parseInt(count)||5);
+ while(addDays(today,length-1)<horizon)length++;
+ return dayGroups(today,length);
+}
 
 export function dayGroups(today,count){
  const length=Math.max(1,Math.min(14,Number.parseInt(count)||1));

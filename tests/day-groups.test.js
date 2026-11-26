@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayGroups,groupDay} from '../shared/day-groups.js';
+import {dayGroups,desktopDayGroups,groupDay} from '../shared/day-groups.js';
+import {addDays,weekHorizon} from '../shared/core.js';
+
+test('desktop merged days always cover Week, including weekends, year changes and DST',()=>{
+ for(const start of ['2026-11-21','2026-12-28','2026-10-30'])for(let offset=0;offset<7;offset++)for(const count of [1,2,5,10]){
+  const today=addDays(start,offset),groups=desktopDayGroups(today,count);
+  assert.equal(groups[0].start,today);assert(groups.at(-1).end>=weekHorizon(today));
+  assert(groups.at(-1).end>=addDays(today,Math.max(2,count)-1));
+  for(let i=1;i<groups.length;i++)assert.equal(groups[i].start,addDays(groups[i-1].end,1));
+ }
+});
 
 test('expanded days merge weekends and extend a Saturday ending through Sunday',()=>{
  const groups=dayGroups('2026-11-17',5);
