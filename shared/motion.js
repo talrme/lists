@@ -31,11 +31,11 @@ export function createMotion(getPrefs){
   const transform=moving?new DOMMatrixReadOnly(getComputedStyle(node).transform):null;
   return {rect,layout:{top:rect.top-(transform?.m42||0),left:rect.left-(transform?.m41||0)},node};
  }
- function snapshot(){if(!enabled('reorder')||document.querySelector('.task-edit-form'))return new Map();return new Map([...document.querySelectorAll('.task-row')].filter(node=>node.getBoundingClientRect().width>0).map(node=>[node.dataset.task,geometry(node)]));}
+ function snapshot(){if(!enabled('reorder')||document.querySelector('.task-edit-form'))return new Map();return new Map([...document.querySelectorAll('.task-row')].filter(node=>node.getBoundingClientRect().width>0).map(node=>[node.dataset.instance||node.dataset.task,geometry(node)]));}
  function rearrange(before,delay=0){
   if(!enabled('reorder')||document.querySelector('.task-edit-form'))return;
   for(const node of document.querySelectorAll('.task-row')){
-   const old=before.get(node.dataset.task);if(!old||old.node!==node)continue;
+   const old=before.get(node.dataset.instance||node.dataset.task);if(!old||old.node!==node)continue;
    const target=geometry(node).layout;
    // Sync/status renders must not restart an in-flight move to the same layout.
    if(Math.abs(old.layout.top-target.top)+Math.abs(old.layout.left-target.left)<=1)continue;

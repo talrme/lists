@@ -265,8 +265,6 @@ html:has(#dialog[open]){overflow:hidden}
 .search-tags{font-size:12px;margin:8px 0}
 .search-tags summary{cursor:pointer;min-height:32px}
 .search-tags small{color:var(--muted)}
-.board-tools{display:flex;justify-content:flex-end;margin:0 0 12px;font-size:12px;color:var(--muted)}
-.board-tools label{display:flex;align-items:center;gap:6px}
 .desktop-search{display:none;position:relative;min-width:0;z-index:8}
 .desktop-search-field{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:0 12px;min-height:44px;color:var(--muted)}
 .desktop-search-field svg{width:18px;height:18px;flex-shrink:0}
@@ -279,6 +277,10 @@ html:has(#dialog[open]){overflow:hidden}
 .desktop-search-count{font-size:11px;color:var(--muted);margin:10px 0 0}
 .task-row{outline:2px solid transparent;outline-offset:3px;transition:outline-color .65s ease}
 .task-row[data-search-highlight]{outline-color:var(--accent)}
+.task-row[data-linked-task]:not([data-search-highlight]){outline-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.stop-waiting{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);padding:4px;min-height:32px}
+.stop-waiting svg{width:15px;height:15px;flex-shrink:0}
+.stop-waiting:hover{color:var(--accent)}
 @media(min-width:1100px){
  .compact-workspace .quick-entry{display:grid;grid-template-columns:minmax(0,760px) minmax(240px,320px);align-items:start;justify-content:space-between;gap:32px;max-width:none;margin:0 0 12px}
  .quick-entry>.desktop-search{display:block;margin-top:7px}
@@ -288,7 +290,10 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .compact-workspace #task-list{display:grid;grid-template-columns:var(--board-columns);gap:20px;align-items:start}
  body.desktop-board #task-list.column-transition{transition:grid-template-columns .36s cubic-bezier(.2,.8,.2,1)}
  body.desktop-board .column-transition>.board-lane{overflow:clip}
- body.desktop-board .board-lane:has(>.day-heading>.column-eye)>.day-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:37px}
+ body.desktop-board .board-lane:has(>.day-heading>.column-eye)>.day-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:52px}
+ body.desktop-board .board-lane>.day-heading,body.desktop-board .merged-heading{min-height:52px;box-sizing:border-box}
+ body.desktop-board [data-waiting-copy] .task-summary{flex-wrap:wrap}
+ body.desktop-board [data-waiting-copy] .stop-waiting{margin-left:auto}
  .column-eye{width:32px;min-width:32px;height:32px;min-height:32px;color:var(--muted);opacity:.48}
  .column-eye svg{width:16px;height:16px}
  .column-eye:hover,.column-eye:focus-visible{opacity:1;color:var(--accent)}
@@ -301,7 +306,7 @@ html:has(#dialog[open]){overflow:hidden}
  body.desktop-board .board-lane.empty-day .day-tasks:after{content:'Nothing here yet';padding:20px 10px}
  body.desktop-board .task-summary .task-content{flex-basis:90px}
  body.desktop-board .task-title{font-size:13px}
- body.desktop-board .day-tasks{gap:8px}
+ body.desktop-board .day-tasks{gap:8px;grid-template-columns:minmax(0,1fr)}
  .board-merged{min-width:0}
  .merged-heading{font-size:14px;margin:0 0 12px;padding:8px 2px;border-bottom:2px solid var(--accent)}
  body.desktop-board .board-merged .day-group{margin-top:18px}

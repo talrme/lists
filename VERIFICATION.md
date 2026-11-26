@@ -1,5 +1,11 @@
 # Verification — November 25, 2026
 
+## Desktop Waiting Column
+
+Waiting is a collapsible desktop projection alongside Today/Week/Later/Someday, replacing Waiting-only. Paired rows share logical mutations and have distinct visual-instance motion keys. Hover/focus links both appearances; edits/completion/Undo apply to the same saved task. Drag into Waiting sets the flag with null dates; drag its Waiting appearance out clears the flag and uses Today/Week/Later or the actual merged day target. Same-column reorder keeps scheduling; No longer waiting preserves a dated follow-up with Undo. Phone Waiting remains one row per task.
+
+Passed 60 pure tests plus a new synthetic Waiting browser suite covering paired edits, duplicate-target drops, drag in/out of Today/Week/Later and merged days, follow-up dates, completion/Undo, hover, five styles/four palettes/three desktop widths, collapse persistence and phone fallback. Also passed desktop search/merged days, collapsible columns, organizer, production (80 layouts), steady-list motion (15 cases), immediate completion/search (60), guide (60), day reflow, offline shell and automatic updater. Existing organizer/production assertions now distinguish the intentionally added Waiting projection. Screenshots inspected. No database/rules changes or real task writes; physical devices were not tested.
+
 ## Collapsible Desktop Columns
 
 Later and Someday have subtle eye controls, independently collapsing to labeled 48px strips with interpolated grid widths and a restore fade. Layout choices are device-local and UID-scoped; tasks, audience filters and the synced Someday setting remain unchanged. Search and empty timing tabs reopen the destination column. Phone/single-list layouts never inherit hidden task containers. Screenshot inspected with both columns collapsed in the merged board.
