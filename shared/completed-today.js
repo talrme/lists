@@ -12,20 +12,19 @@ export function completedOn(task,day,timeZone='America/Los_Angeles'){
 
 export function completedOrder(a,b){return b.completedAt-a.completedAt||taskOrder(a,b);}
 
-export function createCompletedToday({icon,markup,onToggle}){
+export function createCompletedToday({onToggle}){
  const section=document.createElement('section');section.id='completed-today';section.className='completed-today';section.hidden=true;section.setAttribute('aria-label','Completed today');
- section.innerHTML=`<div class="completed-today-heading"><h3></h3><button type="button" class="icon-button" aria-controls="completed-today-items"></button></div><div id="completed-today-items" class="completed-today-items"></div>`;
+ section.innerHTML='<div id="completed-today-items" class="completed-today-items"></div><button type="button" class="completed-today-toggle" aria-controls="completed-today-items"></button>';
  const list=section.querySelector('.completed-today-items'),button=section.querySelector('button');button.onclick=onToggle;
  function render({tasks,parent,shown}){
   section.hidden=!parent||!tasks.length;
   if(!parent||!tasks.length){list.replaceChildren();section.remove();return 0;}
   if(section.parentNode!==parent)parent.append(section);
-  section.querySelector('h3').textContent='Completed today · '+tasks.length;
-  const label=(shown?'Hide':'Show')+' today’s completed tasks';button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-expanded',String(shown));button.innerHTML=icon(shown?'eye':'eye-off');list.hidden=!shown;
+  button.textContent=(shown?'Hide':'Show')+' completed tasks';button.setAttribute('aria-expanded',String(shown));list.hidden=!shown;
   const rows=new Map([...list.children].map(row=>[row.dataset.completedTask,row])),ids=new Set(tasks.map(task=>task.id));
   for(const [id,row] of rows)if(!ids.has(id))row.remove();
-  tasks.forEach((task,index)=>{let row=rows.get(task.id);if(!row){row=document.createElement('article');row.className='completed-today-row completed';row.dataset.completedTask=task.id;}
-   const html=markup(task);if(row._summary!==html){row.innerHTML=html;row._summary=html;}if(list.children[index]!==row)list.insertBefore(row,list.children[index]||null);
+  tasks.forEach((task,index)=>{let row=rows.get(task.id);if(!row){row=document.createElement('article');row.className='completed-today-row completed';row.dataset.completedTask=task.id;row.innerHTML='<button type="button" class="completed-today-name"><span class="task-title"><span class="task-name"></span></span></button>';row.querySelector('button').dataset.edit=task.id;}
+   if(row._title!==task.title){row.querySelector('.task-name').textContent=task.title;row.querySelector('button').setAttribute('aria-label','Completed task: '+task.title);row._title=task.title;}if(list.children[index]!==row)list.insertBefore(row,list.children[index]||null);
   });return tasks.length;
  }
  function reset(){list.replaceChildren();section.remove();section.hidden=true;}

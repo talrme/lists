@@ -1,5 +1,11 @@
 # Verification — November 26, 2026
 
+## Quiet Completed Tasks
+
+The compact completion projection now contains only muted, crossed-out task names. Removed the visible heading, count, dividing lines and all check/owner/waiting/action icons on both phone and desktop. Names still open task details. A small Hide completed tasks button follows the names and becomes Show completed tasks when collapsed, sharing the existing default-on Settings preference. Full Completed view retains reopening/Undo controls. Single-day Today places the projection beneath active tasks; expanded phone/list and merged desktop views place it outside date groups after the last displayed day, within the combined Today & Week column rather than below the entire board.
+
+Passed 77 pure tests and updated phone/desktop completion tests for header/check/icon/divider absence, strikethrough, bottom control order and keyboard activation, Settings/reload/account isolation, expand/collapse placement, details, reopening/Undo via Completed and midnight. Actual Firebase SDK/demo-emulator suite passed cross-device completion/detail edits/reopen/Undo and prior privacy/offline/order/grocery checks. Also passed production layouts (80), phone UX (30), exact Today rollover, guide (60), offline shell and automatic updates. Phone/desktop screenshots inspected. App61/CSS42/worker41 load completed-today2 and guide19. No backend/rules/data-model changes, production task mutations or physical-device testing.
+
 ## Free Today Order and Exact Rollover
 
 Removed the permanent carryover/current-day ordering boundary. Current Today order is an owner-private, scoped/date-stamped account preference. Any task, including a new item or the daily Later pick, can be moved anywhere. Reordering Today changes no task dates, ranks or revisions and does not rearrange a partner's Today list. Refresh and offline replay preserve the arrangement. At rollover, concatenate yesterday's unfinished Today queue in its arranged order with incoming dated tasks in their saved future-day order, then permit free rearrangement again. This is a starting queue, not a locked group policy. A renewed daily pick still starts last.

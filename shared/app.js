@@ -10,7 +10,7 @@ import {labels as effectLabels,presets as animationPresets,restore as restoreAni
 import {taskGestures} from './gestures.js?v=10';
 import {completionPress as bindCompletionPress} from './completion-press.js?v=1';
 import {createNotices} from './notices.js?v=3';
-import {guideMarkup} from './guide.js?v=18';
+import {guideMarkup} from './guide.js?v=19';
 import {setupUpdates} from './updates.js?v=6';
 import {drawerSwipe,modalViewport} from './mobile-ui.js?v=2';
 import {selectedTask,normalizeSelection} from './visibility.js?v=1';
@@ -21,7 +21,7 @@ import {desktopSearch} from './desktop-search.js?v=1';
 import {waitingOrder,waitingDrop} from './waiting-board.js?v=1';
 import {normalizeColumnOrder,visibleColumnOrder} from './column-order.js?v=1';
 import {todayOrder,savedTodayOrder,mergeTodayOrder} from './today-order.js?v=2';
-import {completedOn,completedOrder,createCompletedToday} from './completed-today.js?v=1';
+import {completedOn,completedOrder,createCompletedToday} from './completed-today.js?v=2';
 import {sectionDraft,createSectionAdd} from './section-add.js?v=1';
 import {accountDefaults,taskTags,matchingTags,tagName,tagKey,canonicalTag,bucket} from './organizer.js?v=3';
 import {bindTagField} from './tag-field.js?v=2';
@@ -108,7 +108,7 @@ const quickEntry=document.createElement('div');quickEntry.className='quick-entry
 const desktopFinder=desktopSearch({mount:quickEntry,getTasks:()=>displayTasks().filter(task=>task.category==='todo'&&(task.visibility==='shared'||task.ownerUid===user?.uid)).map(task=>({...task,description:(task.description||'')+' '+taskTags(task,tags).map(tag=>tag.name).join(' ')})),label:task=>task.completed?'Completed':laneLabels[laneOf(task)],select:revealSearchTask,icon,esc,icons});
 $('.list-heading').append($('#back-asap'));
 const phoneModal=modalViewport($('#dialog'));
-const completedToday=createCompletedToday({icon,markup:task=>rowMarkup(task,false,'completed-today'),onToggle:toggleCompletedToday});
+const completedToday=createCompletedToday({onToggle:toggleCompletedToday});
 const sectionAdd=createSectionAdd({icon,host:$('#task-list'),save:async(operation,target,origin)=>{
  if(preview||!ready||!user)throw new Error('Sign in to add a task.');
  const epoch=spaceEpoch;
@@ -309,7 +309,8 @@ function render(){
   const orderedGroups=board?boardViews.map(lane=>merged&&lane==='today'?combined:groups.get(lane)):days.map(day=>groups.get(day));
   orderedGroups.forEach((group,index)=>{if(host.children[index]!==group)host.insertBefore(group,host.children[index]||null);});
   sectionAdd.render(todo&&!preview&&ready?buckets.flatMap(bucket=>{const group=groups.get(bucket.start),heading=group.querySelector('.day-heading');return heading.hidden?[]:[{key:bucket.lane?'lane:'+bucket.lane:'day:'+bucket.start,label:heading.querySelector('.lane-title').textContent,heading,parent:group,lane:bucket.lane||null,day:bucket.lane?null:bucket.start,collapsed:group.hasAttribute('data-column-collapsed')}];}):[]);
-  const completionParent=todo&&(board||view==='today')?groups.get(board&&!merged?'today':today):null;
+  const expanded=merged||grouped&&prefs.daysShown>1;
+  const completionParent=todo&&(board||view==='today')?(merged?combined:expanded?host:groups.get(board?'today':today)):null;
   const accomplishments=completionParent?displayTasks().filter(task=>task.category==='todo'&&(task.visibility==='shared'||task.ownerUid===user?.uid)&&completedOn(task,today,config.timeZone)&&(selectedTask(task,{uid:user?.uid,email:user?.email,selection:selection(),profiles})||picks.includes(task.id))).sort(completedOrder):[];
   const completedCount=completedToday.render({tasks:accomplishments,parent:completionParent,shown:showCompletedToday()});
   for(const group of groups.values())group.classList.toggle('has-today-completions',group===completionParent&&completedCount>0);
@@ -688,7 +689,7 @@ function addSettingHelp(){
   'Show Someday / Maybe':'Shows a separate optional list. Items are never scheduled or selected as the daily Later task. Hiding it does not delete them.',
   'Desktop board':'On wide screens, show Today, Week, Waiting, Later and optional Someday side by side. Phones keep a single list.',
   'Desktop column order':'Saved for your account on this device. In the expanded view, Today and Week merge at whichever of their positions comes first. Hidden Someday keeps its saved position. Reset restores Today, Week, Waiting, Later, Someday.',
-  "Show today's completed tasks":"Shows crossed-out tasks completed today from any To-do list beneath today's active tasks, using your task-owner filters. Default on; the eye control changes the same setting. Saved for your account on this device. Older tasks without a recorded completion time are not guessed into today.",
+  "Show today's completed tasks":"Shows crossed-out tasks completed today from any To-do list below the active list (after the last day when expanded), using your task-owner filters. Default on; the Hide/Show completed tasks link changes the same setting. Saved for your account on this device. Older tasks without a recorded completion time are not guessed into today.",
   'Extended view: number of days':'Sets how many calendar days Show days opens in Today. Weekends are grouped together.',
   'Completion button':'Auto puts a wider completion check on the right below 768px, and keeps the circle on the left on larger screens. Override Left or Right for this device. Press, then release to complete; slide outside before releasing to cancel. Task text still opens editing.',
   'Open task details':'Choose a pop-up modal or expand details within the task list.',
