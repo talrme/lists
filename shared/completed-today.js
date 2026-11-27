@@ -14,9 +14,10 @@ export function completedOrder(a,b){return b.completedAt-a.completedAt||taskOrde
 
 export function createCompletedToday({onToggle}){
  const section=document.createElement('section');section.id='completed-today';section.className='completed-today';section.hidden=true;section.setAttribute('aria-label','Completed today');
- section.innerHTML='<div id="completed-today-items" class="completed-today-items"></div><button type="button" class="completed-today-toggle" aria-controls="completed-today-items"></button>';
- const list=section.querySelector('.completed-today-items'),button=section.querySelector('button');button.onclick=onToggle;
- function render({tasks,parent,shown}){
+ section.innerHTML='<h3 class="completed-today-heading" hidden></h3><div id="completed-today-items" class="completed-today-items"></div><button type="button" class="completed-today-toggle" aria-controls="completed-today-items"></button>';
+ const heading=section.querySelector('h3'),list=section.querySelector('.completed-today-items'),button=section.querySelector('button');heading.textContent="Today's completed tasks";button.onclick=onToggle;
+ function render({tasks,parent,shown,expanded=false}){
+  heading.hidden=!expanded;
   section.hidden=!parent||!tasks.length;
   if(!parent||!tasks.length){list.replaceChildren();section.remove();return 0;}
   if(section.parentNode!==parent)parent.append(section);

@@ -1,5 +1,11 @@
 # Verification — November 26, 2026
 
+## Expanded-Only Completed Heading
+
+Expanded multi-day views show a compact Today's completed tasks heading above the completed names at the bottom of the dated list. Today-only hides that heading. Counts, dividers and checkmarks remain absent; Hide/Show remains below the names. The section stays absent when nothing was completed today.
+
+Passed updated phone/desktop completed-task checks, including expanded/single-day heading toggling, label/geometry, placement, Hide/Show, Settings/reload/account isolation, details, full-view reopen/Undo and midnight. Production layouts (80), phone UX (30), offline shell and automatic updates passed. Phone screenshot inspected. App62/CSS43/worker42 load completed-today3. No backend/rules/task-data changes or physical-device testing.
+
 ## Quiet Completed Tasks
 
 The compact completion projection now contains only muted, crossed-out task names. Removed the visible heading, count, dividing lines and all check/owner/waiting/action icons on both phone and desktop. Names still open task details. A small Hide completed tasks button follows the names and becomes Show completed tasks when collapsed, sharing the existing default-on Settings preference. Full Completed view retains reopening/Undo controls. Single-day Today places the projection beneath active tasks; expanded phone/list and merged desktop views place it outside date groups after the last displayed day, within the combined Today & Week column rather than below the entire board.

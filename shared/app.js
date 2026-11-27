@@ -21,7 +21,7 @@ import {desktopSearch} from './desktop-search.js?v=1';
 import {waitingOrder,waitingDrop} from './waiting-board.js?v=1';
 import {normalizeColumnOrder,visibleColumnOrder} from './column-order.js?v=1';
 import {todayOrder,savedTodayOrder,mergeTodayOrder} from './today-order.js?v=2';
-import {completedOn,completedOrder,createCompletedToday} from './completed-today.js?v=2';
+import {completedOn,completedOrder,createCompletedToday} from './completed-today.js?v=3';
 import {sectionDraft,createSectionAdd} from './section-add.js?v=1';
 import {accountDefaults,taskTags,matchingTags,tagName,tagKey,canonicalTag,bucket} from './organizer.js?v=3';
 import {bindTagField} from './tag-field.js?v=2';
@@ -312,7 +312,7 @@ function render(){
   const expanded=merged||grouped&&prefs.daysShown>1;
   const completionParent=todo&&(board||view==='today')?(merged?combined:expanded?host:groups.get(board?'today':today)):null;
   const accomplishments=completionParent?displayTasks().filter(task=>task.category==='todo'&&(task.visibility==='shared'||task.ownerUid===user?.uid)&&completedOn(task,today,config.timeZone)&&(selectedTask(task,{uid:user?.uid,email:user?.email,selection:selection(),profiles})||picks.includes(task.id))).sort(completedOrder):[];
-  const completedCount=completedToday.render({tasks:accomplishments,parent:completionParent,shown:showCompletedToday()});
+  const completedCount=completedToday.render({tasks:accomplishments,parent:completionParent,shown:showCompletedToday(),expanded});
   for(const group of groups.values())group.classList.toggle('has-today-completions',group===completionParent&&completedCount>0);
   const controlHome=board?(merged?combined:groups.get('today')):null;if(controlHome){if(dayControls.parentNode!==controlHome||dayControls!==controlHome.lastElementChild)controlHome.append(dayControls);}else $('#empty-state').after(dayControls);
   for(const day of days){const group=groups.get(day);group.classList.toggle('empty-day',!group.querySelector('.task-row'));group.classList.toggle('has-day-heading',board||grouped&&prefs.daysShown>1);}
