@@ -12,26 +12,34 @@ export function bucket(task,day,dateTiming){return task.someday?'someday':({asap
 
 // Metadata has its own durable queue; it never participates in task projection.
 export function organizerStore({sdk,db,device,events}){
-  let uid=null,space=null,environment=null,preview=false,version=0,records=new Map(),unsub=[],flushing=false,retry=null,metadataError='';
+  let uid=null,space=null,environment=null,preview=false,version=0,records=new Map(),unsub=[],flushing=false,retry=null,metadataError='',preferencesReady=false;
   const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('lists-organizer'):null;
   const prefKey=()=>JSON.stringify([uid,'preferences']),tagCacheKey=()=>JSON.stringify([uid,space,environment,'tags']);
   const keyFor=kind=>kind==='preferences'?prefKey():tagCacheKey();
   const refFor=(kind,id)=>kind==='preferences'?sdk.doc(db,'listUsers',uid,'preferences','main'):sdk.doc(db,'listSpaces',space,'environments',environment,'tags',id);
-  function values(record){const value={...(record?.values||{})};for(const op of record?.operations||[])value[op.items[0].id]={...value[op.items[0].id],...op.items[0].patch};return value;}
+  function values(record){
+    const value={...(record?.values||{})};
+    for(const op of record?.operations||[]){
+      const {id,patch}=op.items[0],old=value[id]?.todayOrder,next=patch.todayOrder;
+      if(op.dailyBaseline&&old?.scope===next.scope&&old.day>=next.day)continue;
+      value[id]={...value[id],...patch};
+    }
+    return value;
+  }
   function emit(){
     if(!uid)return;
-    events.change({settings:{...accountDefaults,...values(records.get(prefKey())).main},tags:Object.entries(values(records.get(tagCacheKey()))).map(([id,data])=>({id,...data}))});
+    events.change({settings:{...accountDefaults,...values(records.get(prefKey())).main},tags:Object.entries(values(records.get(tagCacheKey()))).map(([id,data])=>({id,...data})),preferencesReady});
     events.status({pending:[...records.values()].reduce((sum,r)=>sum+(r.operations?.length||0),0),syncing:flushing,error:metadataError});
   }
   async function bind(account,household,env,readOnly=false){
-    version++;const run=version;unsub.forEach(stop=>stop());unsub=[];clearTimeout(retry);records=new Map();uid=account?.uid;space=household;environment=env;preview=readOnly;metadataError='';
+    version++;const run=version;unsub.forEach(stop=>stop());unsub=[];clearTimeout(retry);records=new Map();uid=account?.uid;space=household;environment=env;preview=readOnly;metadataError='';preferencesReady=false;
     if(!uid){events.status({pending:0,syncing:false,error:''});return;}
     const keys=[prefKey(),tagCacheKey()];
-    if(device&&!preview){for(const key of keys){const saved=await device.read(key);if(run!==version)return;if(saved)records.set(key,saved);}emit();}
+    if(device&&!preview){for(const key of keys){const saved=await device.read(key);if(run!==version)return;if(saved)records.set(key,saved);}preferencesReady=!navigator.onLine;emit();}
     else emit();
-    const receive=query=>sdk.onSnapshot(query,snapshot=>{
+    const receive=query=>sdk.onSnapshot(query,{includeMetadataChanges:true},snapshot=>{
       if(run!==version)return;const key=prefKey(),data=snapshot.exists()?{main:snapshot.data()}:{};
-      records.set(key,{...(records.get(key)||{key,operations:[]}),values:data});
+      records.set(key,{...(records.get(key)||{key,operations:[]}),values:data});preferencesReady||=!snapshot.metadata.fromCache||!navigator.onLine;
       emit();if(device&&!preview)void device.change(key,old=>({...old,values:data})).catch(error=>events.error(error));
       void flush();
     },error=>{if(run===version){metadataError='Account settings or tags could not sync. Publish the latest Firebase rules, then reopen Lists.';emit();}});
@@ -48,9 +56,9 @@ export function organizerStore({sdk,db,device,events}){
     }
     void flush();
   }
-  async function write(kind,id,patch){
+  async function write(kind,id,patch,{dailyBaseline=false}={}){
     if(preview||!uid)throw new Error('Exit read-only preview before changing settings or tags.');
-    const run=version,key=keyFor(kind),operation={id:crypto.randomUUID(),kind,items:[{id,patch}],at:Date.now()};
+    const run=version,key=keyFor(kind),operation={id:crypto.randomUUID(),kind,items:[{id,patch}],at:Date.now(),...(dailyBaseline&&kind==='preferences'&&patch.todayOrder?{dailyBaseline:true}:{})};
     if(!device)throw new Error('Device storage is required to safely save settings and tags.');
     const record=await device.change(key,old=>({...old,operations:[...(old.operations||[]),operation]}));
     if(run!==version)return;records.set(key,record);emit();channel?.postMessage(key);void flush();
@@ -63,15 +71,25 @@ export function organizerStore({sdk,db,device,events}){
       try{
         for(const key of keys){
           while(run===version&&navigator.onLine){
-            const saved=await device.read(key),operation=saved?.operations?.[0];if(!operation)break;
+            const saved=await device.read(key),operation=saved?.operations?.[0];if(run!==version||preview)return;
+            // Cross-tab notifications can retain a stale pending projection after replay.
+            if(!operation){records.set(key,saved||{...records.get(key),key,operations:[]});break;}
             const {id,patch}=operation.items[0],ref=operation.kind==='preferences'?sdk.doc(db,'listUsers',account,'preferences','main'):sdk.doc(db,'listSpaces',household,'environments',env,'tags',id);
-            await sdk.setDoc(ref,{...patch,updatedAt:sdk.serverTimestamp()},{merge:true});
-            const record=await device.change(key,old=>({...old,values:{...old.values,[id]:{...old.values?.[id],...patch}},operations:(old.operations||[]).filter(op=>op.id!==operation.id)}));
+            let applied=patch;
+            if(operation.dailyBaseline){
+              // An automatic morning snapshot must never replace an already arranged day.
+              applied=await sdk.runTransaction(db,async transaction=>{
+                const snapshot=await transaction.get(ref),old=snapshot.data()?.todayOrder,next=patch.todayOrder;
+                if(old?.scope===next.scope&&old.day>=next.day)return {todayOrder:old};
+                transaction.set(ref,{...patch,updatedAt:sdk.serverTimestamp()},{merge:true});return patch;
+              });
+            }else await sdk.setDoc(ref,{...patch,updatedAt:sdk.serverTimestamp()},{merge:true});
+            const record=await device.change(key,old=>({...old,values:{...old.values,[id]:{...old.values?.[id],...applied}},operations:(old.operations||[]).filter(op=>op.id!==operation.id)}));
             if(run!==version)return;records.set(key,record);metadataError='';emit();channel?.postMessage(key);
           }
         }
       }catch(error){if(run===version){const transient=['unavailable','deadline-exceeded','aborted','cancelled','resource-exhausted'].includes(error.code);metadataError=error.code==='permission-denied'?'Settings or tags are saved on this device but need the latest Firebase rules to sync.':'Settings or tags are saved on this device. Use Retry sync if this persists.';clearTimeout(retry);if(transient)retry=setTimeout(()=>void flush(),20000);}}
-      finally{flushing=false;if(run===version)emit();else void flush();}
+      finally{flushing=false;if(run===version){emit();if(!metadataError&&[...records.values()].some(record=>record.operations?.length))void flush();}else void flush();}
     };
     if(navigator.locks)await navigator.locks.request('lists-organizer:'+account,()=>work());else await work();
   }

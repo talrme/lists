@@ -4,7 +4,7 @@ import {photoUrl} from './task-fields.js?v=organizer1';
 import {PLAYGROUND_ID,isPlayground,playgroundEnvironment,playgroundDraft,playgroundSamples} from './playground.js?v=1';
 import {openDeviceStore,scopeKey,pointerKey,projectTasks,changedFields,mergeResults} from './device-store.js?v=3';
 import {validateReview} from './asana-review-core.js?v=1';
-import {organizerStore} from './organizer.js?v=2';
+import {organizerStore} from './organizer.js?v=3';
 import {groceryStore} from './grocery-store.js?v=1';
 import {importDrafts} from './asana-import-core.js?v=1';
 import {completionPatch} from './completed-today.js?v=1';
@@ -275,7 +275,7 @@ export async function connectFirebase(config,events) {
     activateGroceries:()=>groceries.activate(),
     groceryCommand:command=>groceries.command(command),
     groceryOlder:()=>groceries.older(),
-    savePreferences:patch=>organizer.write('preferences','main',patch),
+    savePreferences:(patch,options)=>organizer.write('preferences','main',patch,options),
     saveTag:(id,patch)=>organizer.write('tags',id,patch),
     async retrySync(){requireWritable();syncError='';syncStatus();if(navigator.onLine)await dbSdk.enableNetwork(db);await organizer.bind(subject(),activeId,activeEnvironment,false);await organizer.refresh();await groceries.retry();await flushQueue();},
     async logout(){if(saving)throw new Error('Wait for the current save to finish before signing out.');if(device&&await device.userPending(user.uid))throw new Error('There are changes saved on this device waiting to sync. Reconnect before signing out.');const uid=user?.uid;stop();await authSdk.signOut(auth);if(device&&uid)await device.clearUser(uid);},

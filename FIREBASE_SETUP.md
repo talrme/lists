@@ -1,5 +1,9 @@
 # Lists: Firebase Setup
 
+## Free Today Ordering
+
+Optional account preference `todayOrder` records a household/environment scope, Pacific date and up to 2,000 unique task IDs. It saves personal free ordering and the daily starting queue without changing task dates/ranks or another user's order. This is the exact permission already published and confirmed by the owner for commit 9de584f on November 26, 2026; it is now reinstated and used by the client. No additional owner step is needed based on that confirmation. This is not independent verification of live rules. Existing clients remain compatible. Preference hydration must finish before the app saves a new-day starting queue, so an old cache cannot overwrite a newer device's arrangement.
+
 ## Completed Today Preparation
 
 The Completed today feature needs optional numeric `completedAt` on tasks. The current rules accept that field without requiring it, so existing clients/tasks stay compatible. Private/shared permissions are unchanged. Completion time is the original action time, including offline actions, not the latest edit/upload time. Legacy tasks without a recorded completion time are not guessed into today's history.
@@ -40,8 +44,8 @@ No new project, public permissions, billing upgrade, service account, Cloud Func
 
 The November 25 update adds owner-only `dismissed` and `sortOrder` fields to each existing daily-pick receipt. Publish the current complete rules to enable Not today / Undo and saved daily placement. The chosen task ID and creation time remain immutable, and no task content, dates, ownership or completion changes are needed. Website publication alone does not enable these receipt writes.
 
-- Tasks, assignments, dates, completion and ordering: existing household task documents.
-- Style, color palette, enabled Someday list and task-audience filters: `listUsers/UID/preferences/main`, editable only by that user.
+- Tasks, assignments, dates, completion and canonical non-Today ordering: existing household task documents.
+- Style, color palette, enabled Someday list, task-audience filters and personal Today order: `listUsers/UID/preferences/main`, editable only by that user. Today order uses the existing durable metadata queue, including offline changes.
 - Tag directory: `listSpaces/HOUSEHOLD/environments/ENV/tags/TAG_ID`. Shared tags are readable/editable by household members; personal tags are private to their creator except the disclosed administrator read-only preview.
 - Daily Later pick: existing per-person/day receipt; Someday is explicitly ineligible.
 - Animations, gestures, editor mode, extended-day count and desktop-board preference remain device-local.

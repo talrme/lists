@@ -54,13 +54,13 @@ Calendar dates use America/Los_Angeles. Business days mean Monday-Friday; public
 
 Today and Week do not overlap in the normal single-day view. Existing saved dates are never automatically rerolled. Later's optional approximate-date shortcuts choose a weekday around two weeks, one month, or two months away and show the chosen date before saving.
 
-**Carryovers first:** unfinished tasks with a due date (or Waiting follow-up) before today always sit above tasks scheduled for today. Each group keeps its saved manual order. New tasks start at the top of today's group, below carryovers, and reordering stays within the appropriate group. Midnight changes the view, not saved task dates or ranks. The daily From Later pick stays in today's non-carryover group.
+**Carry yesterday's order forward:** each new day starts with yesterday's unfinished Today tasks in the order you arranged them, followed by the tasks already arranged for tomorrow in their order. After that, Today is completely free to rearrange: any task, including a new task or daily Later suggestion, can go above a carryover. There are no locked groups. Your Today arrangement is saved to your account across devices and works offline; new tasks start at the top. Midnight does not rewrite task dates or ranks. Completing/punting/removing tasks simply removes them from the visible queue.
 
 **One daily From Later pick:** eligible private tasks belonging to you, shared tasks assigned to you, and unassigned shared tasks form one pool. Undated and farther-out dated tasks qualify; completed, Waiting, and Someday tasks do not. The pick is saved per person, household, and Pacific date, so refreshes and devices agree. An initially empty pool can get its first pick when an eligible task is added.
 
 The pick starts at the bottom of Today, with the same styling as other tasks and a quiet From Later label. Drag it to change its position for your own daily view; its original Later ordering is unchanged.
 
-Completing, punting, deleting, or choosing **Not today** uses that day's pick; there is no replacement. Not today removes only today's suggestion, leaving the task unfinished in Later with its original date. Undo restores the same suggestion. These daily controls/positions sync for the same account across devices and survive reloads. Saving them requires a connection and the latest Firestore rules; cached state remains available offline. Tomorrow gets a new draw, which may choose an unfinished item again. The daily pick is a projection into Today, not a permanent date change.
+Completing, punting, deleting, or choosing **Not today** uses that day's pick; there is no replacement. Not today removes only today's suggestion, leaving the task unfinished in Later with its original date. Undo restores the same suggestion. Daily dismissal controls sync for the same account and require a connection; cached state remains available offline. Reordering the pick uses your normal Today arrangement and can be saved offline. Tomorrow gets a new draw, starting at the bottom, which may choose an unfinished item again. The daily pick is a projection into Today, not a permanent date change.
 
 Task lists open and switch without replaying entrance bounces. Completion keeps confetti and one smooth upward movement; repeated sync/status renders do not restart that movement.
 
@@ -69,7 +69,7 @@ Task lists open and switch without replaying entrance bounces. Completion keeps 
 - Swipe **right in Today** to punt to Week.
 - Swipe **right in Later**, or **left in Week**, to move to Today.
 - Quick Action icons offer the same actions. They default off on phones and on for larger screens; override this in Settings.
-- On touchscreens, hold a row briefly to drag it. Mouse dragging starts as soon as you move, with no hold requirement; a normal click still opens details. Moving between days changes its due/follow-up date. Shared-task ordering syncs across household members as well as devices.
+- On touchscreens, hold a row briefly to drag it. Mouse dragging starts as soon as you move, with no hold requirement; a normal click still opens details. Moving between days changes its due/follow-up date. Today order is personal and syncs across your devices; other shared-task list/date ordering still syncs across household members.
 - **Show N days** expands Today; **Show today only** collapses it. The day-count wheel in Settings ranges from 1-10, default 5. Weekends share a group. Extended Today intentionally previews future tasks too.
 - Reopening returns to Today while keeping your day-count preference, unless a draft, dialog, or active action needs protection.
 

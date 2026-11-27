@@ -65,6 +65,12 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const {page:talSecond,context:talSecondContext}=await openPerson('Tal');await talSecond.locator('#workspace').waitFor();
   await tal.evaluate(()=>window.__testStore.savePreferences({style:7,palette:'garden',showSomeday:true}));
   await talSecond.waitForFunction(()=>document.documentElement.dataset.palette==='garden'&&document.body.dataset.design==='7');
+  await ui.add(tal,'Daily order one');await ui.add(tal,'Daily order two');
+  const orderRow=(page,title)=>page.locator('.task-row').filter({hasText:title});
+  const orderIds=[await orderRow(tal,'Daily order one').getAttribute('data-task'),await orderRow(tal,'Daily order two').getAttribute('data-task')];
+  await orderRow(talSecond,'Daily order two').waitFor();
+  await ui.move(tal,orderRow(tal,'Daily order one'));await tal.locator('[data-move-direction="-1"]').click();
+  await talSecond.waitForFunction(()=>[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent).filter(name=>name.startsWith('Daily order ')).join('|')==='Daily order one|Daily order two');
   await talSecond.locator('#composer [data-view=someday]').waitFor();
   await talSecond.evaluate(()=>window.__testStore.savePreferences({palette:'cherry'}));
   await tal.waitForFunction(()=>document.documentElement.dataset.palette==='cherry');
@@ -76,14 +82,26 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   await talSecond.waitForFunction(()=>window.__metadataLockReady);
   await talSecondContext.setOffline(true);
   await talSecond.waitForFunction(()=>document.querySelector('#connection').textContent.includes('Offline'));
+  await ui.move(talSecond,orderRow(talSecond,'Daily order two'));await talSecond.locator('[data-move-direction="-1"]').click();
+  await talSecond.waitForFunction(()=>[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent).filter(name=>name.startsWith('Daily order ')).join('|')==='Daily order two|Daily order one');
+  assert.deepEqual(await talSecond.locator('.task-row .task-name').allTextContents(),['Daily order two','Daily order one'],'Today reordering works offline');
   await talSecond.evaluate(()=>window.__testStore.savePreferences({palette:'night'}));
   assert((await talSecond.evaluate(()=>window.__testStore.pendingChanges())).length>0,'Offline metadata is durable');
+  await offlineResources(talSecond);await talSecond.reload();await talSecond.locator('#workspace').waitFor();
+  await talSecond.waitForFunction(()=>[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent).filter(name=>name.startsWith('Daily order ')).join('|')==='Daily order two|Daily order one');
+  assert((await talSecond.evaluate(()=>window.__testStore.pendingChanges())).length>0,'Offline Today order survives a cold reload');
+  await talSecond.evaluate(()=>{window.__metadataLockReady=false;void navigator.locks.request('lists-organizer:test-tal',()=>{window.__metadataLockReady=true;return new Promise(release=>{window.__releaseMetadataLock=release;});});});await talSecond.waitForFunction(()=>window.__metadataLockReady);
   await talSecondContext.setOffline(false);
   await talSecond.waitForFunction(async()=>(await navigator.locks.query()).pending.some(lock=>lock.name==='lists-organizer:test-tal'));
   await talSecond.evaluate(()=>window.__releaseMetadataLock());
   await tal.waitForFunction(()=>document.documentElement.dataset.palette==='night');
+  await tal.waitForFunction(()=>[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent).filter(name=>name.startsWith('Daily order ')).join('|')==='Daily order two|Daily order one');
   await talSecond.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
   await tal.evaluate(()=>window.__testStore.savePreferences({style:1,palette:'original',showSomeday:false}));
+  await tal.evaluate(ids=>{const value=JSON.parse(localStorage.getItem('lists-account-settings-test-tal')).todayOrder;return window.__testStore.savePreferences({todayOrder:{...value,ids}},{dailyBaseline:true});},orderIds);
+  await tal.waitForFunction(async()=>!(await window.__testStore.pendingChanges()).length);
+  assert.deepEqual(await tal.locator('.task-row .task-name').allTextContents(),['Daily order two','Daily order one'],'A late automatic baseline cannot overwrite manual order');
+  await tal.evaluate(async ids=>{for(const id of ids)await window.__testStore.remove(id,1);},orderIds);
   await talSecondContext.close();
   await tal.evaluate(async()=>{
    const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk'),app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js'),db=sdk.getFirestore(app.getApp('lists'));
@@ -133,7 +151,8 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
   const ordering=page=>page.locator('.task-row').filter({hasText:'Shared sync during editing'});
   for(const page of [tal,sophie])assert.equal(await page.locator('.task-row .task-name').first().textContent(),'Shared sync during editing');
   await ui.move(sophie,ordering(sophie));await sophie.locator('[data-move-direction="1"]').click();
-  await tal.waitForFunction(()=>{const titles=[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent);return titles.indexOf('Shared sync during editing')>titles.indexOf('Shared across devices');});
+  await sophie.waitForFunction(()=>{const titles=[...document.querySelectorAll('.task-row .task-name')].map(node=>node.textContent);return titles.indexOf('Shared sync during editing')>titles.indexOf('Shared across devices');});
+  assert.equal(await tal.locator('.task-row .task-name').first().textContent(),'Shared sync during editing','Personal Today order does not rearrange the partner’s list');
   await shared(sophie).locator('[data-complete]').click();await shared(tal).waitFor({state:'detached'});await sophie.locator('.toast-undo').last().click();await shared(tal).waitFor();
   const bulk=await sophie.evaluate(async()=>{
     const rows=[...document.querySelectorAll('.task-row')],state=await Promise.all(rows.slice(0,2).map(async row=>{const id=row.dataset.task;const sdk=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js?real-emulator-sdk');const app=await import('https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js');const db=sdk.getFirestore(app.getApp('lists'));const snap=await sdk.getDoc(sdk.doc(db,'listSpaces','home','environments','staging','tasks',id));return {id,rev:snap.data().rev,patch:{sortOrder:rows.indexOf(row)*1024}};}));
@@ -277,6 +296,6 @@ const BASE=process.env.LISTS_TEST_URL||'http://127.0.0.1:5195/lists/',PROJECT='d
    await tal.locator('#household-form').screenshot({path:`/private/tmp/lists-admin-form-${design}.png`});await tal.getByRole('button',{name:'Close',exact:true}).click();
    await testing(tal);await tal.locator('.testing-guide>summary').click();for(const palette of ['original','night']){await tal.locator(`button[data-palette=${palette}]`).click();assert(await tal.locator('#dialog').evaluate(d=>d.scrollWidth<=d.clientWidth+1));}if(design===10){await tal.locator('#playground-actions').scrollIntoViewIfNeeded();await tal.locator('#dialog').screenshot({path:'/private/tmp/lists-playground-night.png'});}await tal.getByRole('button',{name:'Close',exact:true}).click();
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Household groceries, quantity sync, offline cold reload, purchase/Undo, shared saved-list arrival, simultaneous purchases/adds and forced metadata lock contention; Offline cold reload, durable queued create/edit/complete, automatic reconnect, last-uploaded-field wins, remote-field preservation, deleted-task non-resurrection, rejected queue discard, pending sign-out guard, sync indicator; household creation, shared completion/Undo and order sync, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',coverage:'Real Firestore SDK + actual emulator rules; synthetic Google identities only. Household groceries, quantity sync, offline cold reload, purchase/Undo, shared saved-list arrival, simultaneous purchases/adds and forced metadata lock contention; Offline cold reload, durable queued create/edit/complete, automatic reconnect, last-uploaded-field wins, remote-field preservation, deleted-task non-resurrection, rejected queue discard, pending sign-out guard, sync indicator; household creation, shared completion/Undo, same-account personal Today order sync, offline order cold reload and partner-order isolation, stale multi-row ordering rejection, nonadmin personal-task isolation, admin user directory, read-only preview of personal/shared tasks, adapter write/writeMany/delete/manage guards, no preview daily-pick creation, restoring actual user, duplicate protection, household switching, invitation revocation/reinstatement, all ten admin dialogs at 320px in light/dark, household-specific sharing/install; Playground creation, idempotent examples, private/shared two-account tests, live reset, no real-task changes, collision guards and mobile Testing controls',productionWrites:0}));
  }catch(error){for(const context of browser.contexts())for(const p of context.pages())console.error('STATE',await p.evaluate(async()=>({online:navigator.onLine,connection:document.querySelector('#connection')?.textContent,palette:document.documentElement.dataset.palette,pending:await window.__testStore?.pendingChanges()})).catch(()=>null));const page=browser.contexts()[0]?.pages()[0];if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'/private/tmp/lists-admin-failure.png',fullPage:true});}console.error(errors);console.error(logs.slice(-3500));throw error;}finally{await browser.close();emulator.kill('SIGTERM');await new Promise(resolve=>{if(emulator.exitCode!==null)return resolve();emulator.once('exit',resolve);});}
 })().catch(error=>{console.error(error);process.exitCode=1;});
